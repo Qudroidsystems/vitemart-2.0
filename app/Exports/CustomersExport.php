@@ -2,17 +2,16 @@
 
 namespace App\Exports;
 
-use App\Models\User;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithHeadings;
+use App\Models\Customer;
 use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
 
 class CustomersExport implements FromCollection, WithHeadings, WithMapping
 {
     public function collection()
     {
-        return User::customers()
-            ->withCount('orders')
+        return Customer::withCount('orders')
             ->withSum('orders', 'total_amount')
             ->get();
     }
@@ -20,19 +19,38 @@ class CustomersExport implements FromCollection, WithHeadings, WithMapping
     public function headings(): array
     {
         return [
-            'Name', 'Email', 'Phone', 'Orders', 'Total Spent', 'Joined Date'
+            'ID',
+            'Full Name',
+            'Email',
+            'Phone Number',
+            'Customer Type',
+            'Status',
+            'Total Orders',
+            'Total Spent',
+            'Credit Limit',
+            'Credit Balance',
+            'Loyalty Points',
+            'Company Name',
+            'Date Created'
         ];
     }
 
     public function map($customer): array
     {
         return [
-            $customer->full_name,
+            $customer->id,
+            $customer->first_name . ' ' . $customer->last_name,
             $customer->email,
-            $customer->phone_number ?? '—',
+            $customer->phone_number,
+            ucfirst($customer->customer_type),
+            ucfirst($customer->status),
             $customer->orders_count,
-            '$' . number_format($customer->orders_sum_total_amount ?? 0, 2),
-            $customer->created_at->format('d M Y'),
+            number_format($customer->orders_sum_total_amount ?? 0, 2),
+            number_format($customer->credit_limit, 2),
+            number_format($customer->credit_balance, 2),
+            $customer->loyalty_points,
+            $customer->company_name,
+            $customer->created_at->format('Y-m-d H:i:s'),
         ];
     }
 }

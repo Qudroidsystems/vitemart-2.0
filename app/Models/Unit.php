@@ -2,25 +2,43 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Unit extends Model
 {
-    use HasFactory;
     protected $fillable = [
         'name',
-        'abbreviation',
+        'short_name',
         'description',
+        'is_default',
+        'is_active',
     ];
 
-    /**
-     * Get products associated with the unit
-     */
+    protected $casts = [
+        'is_default' => 'boolean',
+        'is_active' => 'boolean',
+    ];
+
     public function products(): BelongsToMany
     {
         return $this->belongsToMany(Product::class, 'product_unit')
-            ->withPivot('quantity')
-            ->withTimestamps();
+                    ->withPivot('quantity_per_unit')
+                    ->withTimestamps();
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopeDefault($query)
+    {
+        return $query->where('is_default', true);
+    }
+
+    public function scopeAvailable($query)
+    {
+        return $query->where('is_active', true);
     }
 }

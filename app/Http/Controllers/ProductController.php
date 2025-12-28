@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Brand;
 use App\Models\Product;
 use App\Models\Category;
+use App\Models\Unit;
 use Illuminate\Http\Request;
 use App\Models\ProductReview;
 use App\Exports\ProductsExport;
@@ -28,7 +29,7 @@ class ProductController extends Controller
     {
         $pagetitle = "Product Management";
 
-        $query = Product::with(['brand', 'category', 'images'])
+        $query = Product::with(['brand', 'category', 'images', 'units'])
             ->withCount('variations')
             ->latest();
 
@@ -67,18 +68,21 @@ class ProductController extends Controller
         $products = $query->paginate(12)->appends($request->all());
         $brands = Brand::orderBy('name')->get();
         $categories = Category::whereNull('parent_id')->with('children')->orderBy('name')->get();
+        $units = Unit::orderBy('name')->get();
 
-        return view('products.index', compact('products', 'brands', 'categories', 'pagetitle'));
+        return view('products.index', compact('products', 'brands', 'categories', 'units', 'pagetitle'));
     }
 
     public function create()
     {
         $brands = Brand::orderBy('name')->get();
         $categories = Category::whereNull('parent_id')->with('children')->orderBy('name')->get();
+        $units = Unit::orderBy('name')->get();
 
         return response()->json([
             'brands' => $brands,
             'categories' => $categories,
+            'units' => $units,
         ]);
     }
 
@@ -89,8 +93,11 @@ class ProductController extends Controller
             'category',
             'images',
             'attributes',
-            'variations'
+            'variations',
+            'units'
         ])->findOrFail($id);
+
+        $units = Unit::orderBy('name')->get();
 
         return response()->json([
             'id'           => $product->id,
@@ -104,13 +111,19 @@ class ProductController extends Controller
             'is_featured'  => (bool) $product->is_featured,
             'brand_id'     => $product->brand_id,
             'category_id'  => $product->category_id,
-
+            'primary_unit_id' => $product->units->first()->id ?? null,
+            'additional_units' => $product->units->skip(1)->map(function ($unit) {
+                return [
+                    'unit_id' => $unit->id,
+                    'quantity_per_unit' => $unit->pivot->quantity_per_unit,
+                ];
+            })->toArray(),
             // Thumbnail
-            'thumbnail' => $product->thumbnail 
-                ? asset('storage/' . $product->thumbnail) 
+            'thumbnail' => $product->thumbnail
+                ? asset('storage/' . $product->thumbnail)
                 : null,
 
-            // Gallery Images
+            // Gallery
             'gallery' => $product->images->map(function ($img) {
                 return [
                     'id'  => $img->id,
@@ -122,8 +135,8 @@ class ProductController extends Controller
             'attributes' => $product->attributes->map(function ($attr) {
                 return [
                     'name'   => $attr->name,
-                    'values' => is_array($attr->values) 
-                        ? implode(', ', $attr->values) 
+                    'values' => is_array($attr->values)
+                        ? implode(', ', $attr->values)
                         : $attr->values
                 ];
             })->toArray(),
@@ -136,20 +149,21 @@ class ProductController extends Controller
                     'price'      => $var->price,
                     'sale_price' => $var->sale_price,
                     'stock'      => $var->stock,
-                    'image'      => $var->image 
-                        ? asset('storage/' . $var->image) 
+                    'image'      => $var->image
+                        ? asset('storage/' . $var->image)
                         : null,
                     'attributes' => is_array($var->attributes) ? $var->attributes : json_decode($var->attributes, true) ?? []
                 ];
             })->toArray(),
+
+            'units' => $units,
         ]);
     }
 
     public function store(Request $request)
     {
-        // ADD THIS LINE
         $request->merge(['is_featured' => $request->has('is_featured')]);
-        
+
         $rules = [
             'title'        => 'required|string|max:255',
             'sku'          => 'required|string|unique:products,sku',
@@ -160,9 +174,12 @@ class ProductController extends Controller
             'images.*'     => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
             'brand_id'     => 'nullable|exists:brands,id',
             'category_id'  => 'nullable|exists:categories,id',
+            'primary_unit_id' => 'required|exists:units,id',
             'description'  => 'nullable|string',
             'product_type' => 'required|in:simple,variable',
-            'is_featured'  => 'required|boolean', // now accepts true/false
+            'is_featured'  => 'required|boolean',
+            'units.*.unit_id' => 'nullable|exists:units,id|distinct',
+            'units.*.quantity_per_unit' => 'nullable|numeric|min:0.01',
         ];
 
         $validator = Validator::make($request->all(), $rules, [
@@ -197,13 +214,14 @@ class ProductController extends Controller
                 'category_id'  => $request->category_id,
             ]);
 
+            $this->syncUnits($product, $request);
             $this->syncImages($product, $request);
             $this->syncAttributesAndVariations($product, $request);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Product created successfully',
-                'product' => $product->load('variations')
+                'product' => $product->load('variations', 'units')
             ], 201);
 
         } catch (\Exception $e) {
@@ -218,8 +236,7 @@ class ProductController extends Controller
     {
         $product = Product::findOrFail($id);
 
-        // ADD THIS LINE
-       $request->merge(['is_featured' => $request->has('is_featured')]);
+        $request->merge(['is_featured' => $request->has('is_featured')]);
 
         $rules = [
             'title'        => 'required|string|max:255',
@@ -231,9 +248,12 @@ class ProductController extends Controller
             'images.*'     => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
             'brand_id'     => 'nullable|exists:brands,id',
             'category_id'  => 'nullable|exists:categories,id',
+            'primary_unit_id' => 'required|exists:units,id',
             'description'  => 'nullable|string',
             'product_type' => 'required|in:simple,variable',
-            'is_featured'  => 'required|boolean', // now accepts true/false
+            'is_featured'  => 'required|boolean',
+            'units.*.unit_id' => 'nullable|exists:units,id|distinct',
+            'units.*.quantity_per_unit' => 'nullable|numeric|min:0.01',
         ];
 
         $validator = Validator::make($request->all(), $rules, [
@@ -264,13 +284,14 @@ class ProductController extends Controller
 
             $product->update($data);
 
+            $this->syncUnits($product, $request);
             $this->syncImages($product, $request);
             $this->syncAttributesAndVariations($product, $request);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Product updated successfully',
-                'product' => $product->load('variations')
+                'product' => $product->load('variations', 'units')
             ]);
 
         } catch (\Exception $e) {
@@ -278,6 +299,29 @@ class ProductController extends Controller
                 'success' => false,
                 'message' => 'Failed to update product: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    private function syncUnits($product, $request)
+    {
+        $product->units()->detach();
+
+        // Attach primary unit with quantity_per_unit = 1
+        if ($request->primary_unit_id) {
+            $product->units()->attach($request->primary_unit_id, [
+                'quantity_per_unit' => 1
+            ]);
+        }
+
+        // Attach additional units
+        if ($request->has('units') && is_array($request->units)) {
+            foreach ($request->units as $u) {
+                if (!empty($u['unit_id']) && !empty($u['quantity_per_unit']) && $u['unit_id'] != $request->primary_unit_id) {
+                    $product->units()->attach($u['unit_id'], [
+                        'quantity_per_unit' => (float) $u['quantity_per_unit']
+                    ]);
+                }
+            }
         }
     }
 
@@ -303,6 +347,7 @@ class ProductController extends Controller
             $product->images()->delete();
             $product->attributes()->delete();
             $product->variations()->delete();
+            $product->units()->detach();
             $product->delete();
 
             return response()->json([
@@ -345,6 +390,7 @@ class ProductController extends Controller
             'brand',
             'category',
             'images',
+            'units',
             'reviews.user',
             'reviews' => fn($q) => $q->with(['user' => fn($q) => $q->select('id', 'first_name', 'last_name', 'profile_image')])->latest()
         ])
@@ -455,16 +501,50 @@ class ProductController extends Controller
     public function search(Request $request)
     {
         $query = $request->q;
-        $products = Product::where('title', 'like', "%{$query}%")
-            ->orWhere('sku', 'like', "%{$query}%")
+
+        // First, ensure default unit exists
+        $defaultUnit = Unit::where('is_default', true)->first();
+        if (!$defaultUnit) {
+            $defaultUnit = Unit::create([
+                'name' => 'Piece',
+                'short_name' => 'pc',
+                'is_default' => true,
+                'is_active' => true,
+            ]);
+        }
+
+        $products = Product::with('units')
+            ->where(function($q) use ($query) {
+                $q->where('title', 'like', "%{$query}%")
+                  ->orWhere('sku', 'like', "%{$query}%")
+                  ->orWhere('barcode', 'like', "%{$query}%");
+            })
             ->limit(10)
-            ->get(['id', 'title', 'sku', 'price', 'thumbnail']);
+            ->get()
+            ->map(function($product) use ($defaultUnit) {
+                // Ensure product has at least one unit
+                if ($product->units->isEmpty()) {
+                    $product->units()->attach($defaultUnit->id, [
+                        'quantity_per_unit' => 1
+                    ]);
+                    $product->load('units');
+                }
+
+                $primaryUnit = $product->units->first();
+
+                return [
+                    'id' => $product->id,
+                    'title' => $product->title,
+                    'sku' => $product->sku,
+                    'price' => $product->price,
+                    'thumbnail' => $product->thumbnail ? asset('storage/' . $product->thumbnail) : null,
+                    'primary_unit_id' => $primaryUnit->id,
+                    'primary_unit' => $primaryUnit->name,
+                ];
+            });
 
         return response()->json($products);
     }
-
-
-  
 
     public function inventoryLog($id)
     {
@@ -491,7 +571,7 @@ class ProductController extends Controller
                         'type_class' => $log->type_class
                     ];
                 });
-            
+
             return response()->json($logs);
         } catch (\Exception $e) {
             return response()->json([
@@ -500,13 +580,12 @@ class ProductController extends Controller
         }
     }
 
-
     public function template()
     {
         $headers = [
-            'title','sku','price','sale_price','stock','description','brand_id','category_id','is_featured'
+            'title','sku','price','sale_price','stock','description','brand_id','category_id','is_featured','primary_unit_id'
         ];
-        
+
         $callback = function() use ($headers) {
             $file = fopen('php://output', 'w');
             fputcsv($file, $headers);
@@ -519,14 +598,12 @@ class ProductController extends Controller
         ]);
     }
 
-    // ADD THIS - for real-time stock
     public function realtimeStock()
     {
         $products = Product::select('id', 'stock')->get();
         return response()->json($products);
     }
 
-    
     public function import(Request $request)
     {
         $request->validate(['file' => 'required|mimes:csv,txt']);
@@ -548,5 +625,12 @@ class ProductController extends Controller
         Product::whereIn('id', $ids)->update($data);
 
         return response()->json(['message' => 'Bulk update completed']);
+    }
+
+    // New method to get units
+    public function getUnits()
+    {
+        $units = Unit::orderBy('name')->get();
+        return response()->json($units);
     }
 }

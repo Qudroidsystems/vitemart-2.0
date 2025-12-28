@@ -14,6 +14,7 @@ class ProductPermissionTableSeeder extends Seeder
             'Create product',
             'Update product',
             'Delete product',
+            'Assign pos'
         ];
 
         foreach ($permissions as $permission) {

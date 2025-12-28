@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\User;
+use App\Models\Customer;
 use App\Models\Address;
 use App\Models\OrderItem;
 use App\Models\Transaction;
@@ -16,6 +17,7 @@ class Order extends Model
     protected $fillable = [
         'id',
         'user_id',
+        'customer_id', // Add this
         'status',
         'total_amount',
         'shipping_cost',
@@ -48,9 +50,22 @@ class Order extends Model
     protected $keyType = 'string';
     public $incrementing = false;
 
+    // Relationship with User (for backward compatibility)
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    // Relationship with Customer
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class);
+    }
+
+    // Get the customer (prefer customer over user)
+    public function getCustomer()
+    {
+        return $this->customer ?? $this->user;
     }
 
     public function items()
@@ -88,7 +103,7 @@ class Order extends Model
         if ($this->attributes['payment_status']) {
             return $this->attributes['payment_status'];
         }
-        
+
         return $this->transactions()->where('status', 'success')->exists() ? 'paid' : 'unpaid';
     }
 
@@ -161,7 +176,6 @@ class Order extends Model
     {
         return in_array($this->status, ['pending', 'processing']);
     }
-
 
     public function notes()
     {

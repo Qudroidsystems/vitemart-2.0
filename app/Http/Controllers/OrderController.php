@@ -13,6 +13,9 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Mail;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Models\Stock;
+use Illuminate\Support\Facades\DB;
+
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class OrderController extends Controller
@@ -87,11 +90,11 @@ class OrderController extends Controller
         $format = $request->get('format', 'xlsx');
         $filename = 'orders_' . now()->format('Y-m-d_His');
 
-        return Excel::download(new OrdersExport, "{$filename}.{$format}", 
+        return Excel::download(new OrdersExport, "{$filename}.{$format}",
             $format === 'csv' ? \Maatwebsite\Excel\Excel::CSV : \Maatwebsite\Excel\Excel::XLSX
         );
     }
-    
+
 
     public function show($id)
     {
@@ -208,5 +211,74 @@ class OrderController extends Controller
         $order = Order::with('items', 'shippingAddress')->findOrFail($id);
         $pdf = Pdf::loadView('orders.packing-slip', compact('order'));
         return $pdf->stream("packing-slip-{$order->invoice_number}.pdf");
+    }
+
+
+
+
+    public function savePosOrder(Request $request)
+{
+    $request->validate([
+        'items' => 'required|array|min:1',
+        'items.*.product_id' => 'required|exists:products,id',
+        'items.*.qty' => 'required|integer|min:1',
+        'items.*.unit_id' => 'required|exists:units,id',
+        'payment_method' => 'required|in:cash,card,transfer',
+    ]);
+
+    return DB::transaction(function () use ($request) {
+        $total = 0;
+        $orderItems = [];
+        $orderId = 'POS-' . now()->format('Ymd-His');
+
+        foreach ($request->items as $item) {
+            $product = Product::findOrFail($item['product_id']);
+            $unit = $product->units()->findOrFail($item['unit_id']);
+            $piecesToDeduct = $item['qty'] * $unit->pivot->quantity_per_unit;
+
+            $price = $item['sale_price'] ?? $product->sale_price ?? $product->price;
+            $subtotal = $price * $item['qty'];
+            $total += $subtotal;
+
+            $orderItems[] = [
+                'product_id' => $product->id,
+                'quantity' => $item['qty'],
+                'unit_price' => $price,
+                'total_price' => $subtotal,
+                'unit_name' => $unit->name,
+            ];
+
+            // Deduct stock in base units (pieces)
+            Stock::create([
+                'product_id' => $product->id,
+                'type' => 'out',
+                'quantity' => $piecesToDeduct,
+                'reference_type' => 'sale',
+                'reference_number' => $orderId,
+                'user_id' => auth()->id(),
+                'transaction_date' => now(),
+                'notes' => "Sold {$item['qty']} {$unit->name}(s)",
+            ]);
+        }
+
+        $order = Order::create([
+            'id' => $orderId,
+            'user_id' => $request->customer_id,
+            'total_amount' => $total,
+            'payment_method' => $request->payment_method,
+            'payment_status' => 'paid',
+            'status' => 'completed',
+            'order_date' => now(),
+        ]);
+
+        $order->items()->createMany($orderItems);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Order completed successfully!',
+            'order_id' => $orderId,
+            'total' => $total
+        ]);
+    });
     }
 }

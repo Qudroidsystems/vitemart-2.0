@@ -30,6 +30,7 @@ class Product extends Model
         'category_id',
         'brand_id',
         'is_nsfw',
+        'is_active',
     ];
 
     protected $casts = [
@@ -45,7 +46,7 @@ class Product extends Model
     protected static function boot()
     {
         parent::boot();
-        
+
         // Calculate stock from inventory when accessing stock attribute
         static::retrieved(function ($product) {
             if (isset($product->stock)) {
@@ -53,7 +54,7 @@ class Product extends Model
             }
         });
     }
-    
+
     /**
      * Calculate stock from inventory (for verification/display)
      */
@@ -61,17 +62,17 @@ class Product extends Model
     {
         $totalStock = Stock::where('product_id', $this->id)
             ->selectRaw('
-                SUM(CASE 
+                SUM(CASE
                     WHEN type IN ("in", "adjustment", "transfer_in", "return") THEN quantity
                     WHEN type IN ("out", "damage", "transfer") THEN -quantity
                     ELSE 0
                 END) as total
             ')
             ->value('total') ?? 0;
-        
+
         return max(0, $totalStock);
     }
-    
+
     /**
      * Get current stock from inventory (always fresh calculation)
      */
@@ -79,7 +80,7 @@ class Product extends Model
     {
         return $this->calculateStockFromInventory();
     }
-    
+
     /**
      * Stock relationship
      */
@@ -133,25 +134,25 @@ class Product extends Model
     {
         return $this->hasMany(OrderItem::class);
     }
-    
+
     // Add total sold calculation
     public function getTotalSoldAttribute()
     {
         return $this->orderItems()->sum('quantity');
     }
-    
+
     // Add reviews count accessor
     public function getReviewsCountAttribute()
     {
         return $this->reviews()->count();
     }
-    
+
     // Add average rating accessor
     public function getAverageRatingAttribute()
     {
         return $this->reviews()->avg('rating') ?? 0;
     }
-    
+
     // Add revenue calculation
     public function getRevenueAttribute()
     {
@@ -173,12 +174,12 @@ class Product extends Model
     {
         // Simple approach - check for common column names
         // Most Laravel applications use 'is_active' or 'status'
-        
+
         // If you're not sure, let's check safely
         if (\Schema::hasColumn($this->getTable(), 'is_active')) {
             return $query->where('is_active', true);
         }
-        
+
         // If no is_active column, just return all products
         return $query;
     }
@@ -191,7 +192,7 @@ class Product extends Model
         return $query->where('status', 'inactive')
                      ->orWhere('is_active', false);
     }
-    
+
     /**
      * Scope for low stock products
      */
@@ -200,7 +201,7 @@ class Product extends Model
         return $query->where('stock', '>', 0)
                      ->where('stock', '<=', 10);
     }
-    
+
     /**
      * Scope for out of stock products
      */
@@ -208,12 +209,28 @@ class Product extends Model
     {
         return $query->where('stock', '<=', 0);
     }
-    
+
     /**
      * Scope for in stock products
      */
     public function scopeInStock($query)
     {
         return $query->where('stock', '>', 10);
+    }
+
+
+    public function units()
+    {
+        return $this->belongsToMany(Unit::class, 'product_unit')
+                    ->withPivot('quantity_per_unit')
+                    ->withTimestamps();
+    }
+
+    public function primaryUnit()
+    {
+        return $this->belongsToMany(Unit::class, 'product_unit')
+                    ->withPivot('quantity_per_unit')
+                    ->orderBy('id')
+                    ->limit(1);
     }
 }

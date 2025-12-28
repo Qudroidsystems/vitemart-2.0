@@ -4,7 +4,13 @@
 <head>
 
     <meta charset="utf-8">
-    <title>{{ $pagetitle }} | Poultrilic</title>
+   <!-- Dynamic Title: Page Title | Supermarket Name -->
+    @php
+        $store = \App\Models\StoreSetting::getSettings();
+        $pageTitle = $pagetitle ?? 'Dashboard';
+        $storeName = $store?->store_name ?? 'Supermarket';
+    @endphp
+    <title>{{ $pageTitle }} | {{ $storeName }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta content="school management software" name="description">
     <meta content="" name="author">
@@ -25,7 +31,7 @@
         .pagination-wrap .disabled .page-link { pointer-events: none; opacity: 0.5; }
     </style>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    
+
     <!-- CSS includes for different routes -->
     @if (Route::is('dashboard'))
         @include('layouts.pages-assets.css.users-list-css')
@@ -59,6 +65,10 @@
         @include('layouts.pages-assets.css.users-list-css')
     @endif
 
+    @if (Route::is('pos.*'))
+        @include('layouts.pages-assets.css.users-list-css')
+    @endif
+
     @if (Route::is('inventory.*') || Route::is('stock-locations.*'))
          @include('layouts.pages-assets.css.users-list-css')
     @endif
@@ -70,7 +80,10 @@
     @if (Route::is('customers.*'))
          @include('layouts.pages-assets.css.users-list-css')
     @endif
-    
+
+   @if (Route::is('settings.store.*'))
+         @include('layouts.pages-assets.css.users-list-css')
+    @endif
 </head>
 
 <body>
@@ -82,22 +95,40 @@
         <div class="app-menu navbar-menu">
             <!-- LOGO -->
             <div class="navbar-brand-box">
-                <a href="index.html" class="logo logo-dark">
-                    <span class="logo-sm">
-                        <img src="{{ asset('theme/layouts/assets/images/logo-sm.png')}}" alt="" height="22">
-                    </span>
-                    <span class="logo-lg">
-                        <img src="{{ asset('theme/layouts/assets/images/logo-dark.png')}}" alt="" height="22">
-                    </span>
-                </a>
-                <a href="index.html" class="logo logo-light">
-                    <span class="logo-sm">
-                        <img src="{{ asset('theme/layouts/assets/images/logo-sm.png')}}" alt="" height="22">
-                    </span>
-                    <span class="logo-lg">
-                        <img src="{{ asset('theme/layouts/assets/images/logo-light.png')}}" alt="" height="22">
-                    </span>
-                </a>
+               <!-- Replace the old static logo with this dynamic one -->
+<a href="{{ route('dashboard') }}" class="logo logo-dark">
+    <span class="logo-sm">
+        @if($store?->logo)
+            <img src="{{ $store->getLogoUrlAttribute() }}" alt="{{ $storeName }} Logo" height="22">
+        @else
+            <img src="{{ asset('theme/layouts/assets/images/logo-sm.png') }}" alt="Default Logo" height="22">
+        @endif
+    </span>
+    <span class="logo-lg">
+        @if($store?->logo)
+            <img src="{{ $store->getLogoUrlAttribute() }}" alt="{{ $storeName }} Logo" height="60">
+        @else
+            <img src="{{ asset('theme/layouts/assets/images/logo-dark.png') }}" alt="Default Logo" height="60">
+        @endif
+    </span>
+</a>
+
+<a href="{{ route('dashboard') }}" class="logo logo-light">
+    <span class="logo-sm">
+        @if($store?->logo)
+            <img src="{{ $store->getLogoUrlAttribute() }}" alt="{{ $storeName }} Logo" height="22">
+        @else
+            <img src="{{ asset('theme/layouts/assets/images/logo-sm.png') }}" alt="Default Logo" height="60">
+        @endif
+    </span>
+    <span class="logo-lg">
+        @if($store?->logo)
+            <img src="{{ $store->getLogoUrlAttribute() }}" alt="{{ $storeName }} Logo" height="60">
+        @else
+            <img src="{{ asset('theme/layouts/assets/images/logo-light.png') }}" alt="Default Logo" height="60">
+        @endif
+    </span>
+</a>
                 <button type="button" class="btn btn-sm p-0 fs-3xl header-item float-end btn-vertical-sm-hover" id="vertical-hover">
                     <i class="ri-record-circle-line"></i>
                 </button>
@@ -120,7 +151,7 @@
                                     @can('dashboard')
                                         <li class="nav-item">
                                             <a href="{{ route('dashboard') }}" class="nav-link" data-key="t-analytics"> Administration Analytics </a>
-                                        </li> 
+                                        </li>
                                     @endcan
                                     @can('finance dashboard')
                                         <li class="nav-item">
@@ -132,7 +163,7 @@
                                             <a href="index.html" class="nav-link" data-key="t-ecommerce"> Academics Analytics </a>
                                         </li>
                                     @endcan
-                                    
+
                                     <!-- Inventory Dashboard -->
                                     @can('View inventory dashboard|View inventory')
                                         <li class="nav-item">
@@ -145,7 +176,7 @@
 
 
                         <li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-pages">USERS & PRIVILEDGES</span></li>
-                        
+
                         @can('View user')
                             <li class="nav-item">
                                 <a class="nav-link menu-link collapsed" href="#sidebarusers" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarAuth">
@@ -160,7 +191,7 @@
                                 </div>
                             </li>
                         @endcan
-                        
+
                         @can('View role')
                             <li class="nav-item">
                                 <a class="nav-link menu-link collapsed" href="#sidebarroles" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarPages">
@@ -182,7 +213,7 @@
                                 </div>
                             </li>
                         @endcan
-                      
+
 
                         <li class="nav-item">
                             <a class="nav-link menu-link collapsed" href="#sidebaraccount" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebaraccoun">
@@ -198,7 +229,7 @@
                         </li>
 
                         <li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-pages">INVENTORY MANAGEMENT</span></li>
-                        
+
                         @can('View banner')
                             <li class="nav-item">
                                 <a class="nav-link menu-link collapsed" href="#sidebarbanner" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarbanner">
@@ -213,7 +244,7 @@
                                 </div>
                             </li>
                         @endcan
-                        
+
                         @can('View category')
                             <li class="nav-item">
                                 <a class="nav-link menu-link collapsed" href="#sidebarcategories" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarcategories">
@@ -228,7 +259,7 @@
                                 </div>
                             </li>
                         @endcan
-                        
+
                         @can('View brand')
                             <li class="nav-item">
                                 <a class="nav-link menu-link collapsed" href="#sidebarbrand" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarbrand">
@@ -243,7 +274,7 @@
                                 </div>
                             </li>
                         @endcan
-                        
+
                         @can('View product')
                             <li class="nav-item">
                                 <a class="nav-link menu-link collapsed" href="#sidebarproduct" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarproduct">
@@ -259,10 +290,25 @@
                             </li>
                         @endcan
 
+                        @can('View pos')
+                            <li class="nav-item">
+                                <a class="nav-link menu-link collapsed" href="#sidebarpos" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarpos">
+                                    <i class="ph-user-circle"></i> <span data-key="t-authentication">Pos Managements</span>
+                                </a>
+                                <div class="collapse menu-dropdown" id="sidebarpos">
+                                    <ul class="nav nav-sm flex-column">
+                                        <li class="nav-item">
+                                            <a href="{{ route('pos.index') }}" class="nav-link" role="button" data-key="t-signin"> POS</a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </li>
+                        @endcan
+
                         <!-- =========================================== -->
                         <!-- INVENTORY MANAGEMENT MENU -->
                         <!-- =========================================== -->
-                        
+
                         @can('View inventory')
                             <li class="nav-item">
                                 <a class="nav-link menu-link collapsed" href="#sidebarmanageinventory" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarmanageinventory">
@@ -275,25 +321,25 @@
                                                 <a href="{{ route('inventory.index') }}" class="nav-link" role="button" data-key="t-signin"> Transactions </a>
                                             </li>
                                         @endcan
-                                        
+
                                         @can('View stock levels')
                                             <li class="nav-item">
                                                 <a href="{{ route('inventory.stock-levels') }}" class="nav-link" role="button" data-key="t-signin"> Stock Levels </a>
                                             </li>
                                         @endcan
-                                        
+
                                         @can('Manage stock locations')
                                             <li class="nav-item">
                                                 <a href="{{ route('stock-locations.index') }}" class="nav-link" role="button" data-key="t-signin"> Stock Locations </a>
                                             </li>
                                         @endcan
-                                        
+
                                         @can('View inventory reports')
                                             <li class="nav-item">
                                                 <a href="{{ route('inventory.stock-value-report') }}" class="nav-link" role="button" data-key="t-signin"> Stock Value Report </a>
                                             </li>
                                         @endcan
-                                        
+
                                         @can('View low stock alerts')
                                             <li class="nav-item">
                                                 <a href="{{ route('inventory.low-stock-alerts') }}" class="nav-link" role="button" data-key="t-signin"> Low Stock Alerts </a>
@@ -303,11 +349,11 @@
                                 </div>
                             </li>
                         @endcan
-                        
+
                         <!-- =========================================== -->
                         <!-- PRODUCT REVIEWS MENU -->
                         <!-- =========================================== -->
-                        
+
                         @can('View review')
                             <li class="nav-item">
                                 <a class="nav-link menu-link collapsed" href="#sidebarreviews" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarreviews">
@@ -353,6 +399,21 @@
                             </li>
                         @endcan
 
+                        <li class="menu-title"><span data-key="t-menu">Settings</span></li>
+                        @can('View store setting')
+                            <li class="nav-item">
+                                <a class="nav-link menu-link collapsed" href="#sidebarsetting" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarsetting">
+                                    <i class="ph-star"></i> <span data-key="t-authentication">Store Settings Management</span>
+                                </a>
+                                <div class="collapse menu-dropdown" id="sidebarsetting">
+                                    <ul class="nav nav-sm flex-column">
+                                        <li class="nav-item">
+                                            <a href="{{ route('settings.store.index') }}" class="nav-link" role="button" data-key="t-signin"> Store Settings </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </li>
+                        @endcan
                     </ul>
                 </div>
                 <!-- Sidebar -->
@@ -409,7 +470,7 @@
                                     <div class="dropdown-header">
                                         <h6 class="text-overflow text-muted mb-0 text-uppercase">Recent Searches</h6>
                                     </div>
-                
+
                                     <div class="dropdown-item bg-transparent text-wrap">
                                         <a href="index.html" class="btn btn-subtle-secondary btn-sm btn-rounded">how to setup <i class="mdi mdi-magnify ms-1"></i></a>
                                         <a href="index.html" class="btn btn-subtle-secondary btn-sm btn-rounded">buttons <i class="mdi mdi-magnify ms-1"></i></a>
@@ -418,30 +479,30 @@
                                     <div class="dropdown-header mt-2">
                                         <h6 class="text-overflow text-muted mb-1 text-uppercase">Pages</h6>
                                     </div>
-                
+
                                     <!-- item-->
                                     <a href="javascript:void(0);" class="dropdown-item notify-item">
                                         <i class="ri-bubble-chart-line align-middle fs-18 text-muted me-2"></i>
                                         <span>Analytics Dashboard</span>
                                     </a>
-                
+
                                     <!-- item-->
                                     <a href="javascript:void(0);" class="dropdown-item notify-item">
                                         <i class="ri-lifebuoy-line align-middle fs-18 text-muted me-2"></i>
                                         <span>Help Center</span>
                                     </a>
-                
+
                                     <!-- item-->
                                     <a href="javascript:void(0);" class="dropdown-item notify-item">
                                         <i class="ri-user-settings-line align-middle fs-18 text-muted me-2"></i>
                                         <span>My account settings</span>
                                     </a>
-                
+
                                     <!-- item-->
                                     <div class="dropdown-header mt-2">
                                         <h6 class="text-overflow text-muted mb-2 text-uppercase">Members</h6>
                                     </div>
-                
+
                                     <div class="notification-list">
                                         <!-- item -->
                                         <a href="javascript:void(0);" class="dropdown-item notify-item py-2">
@@ -475,7 +536,7 @@
                                         </a>
                                     </div>
                                 </div>
-                
+
                                 <div class="text-center pt-3 pb-1">
                                     <a href="#" class="btn btn-primary btn-sm">View All Results <i class="ri-arrow-right-line ms-1"></i></a>
                                 </div>
@@ -503,14 +564,14 @@
                                         use App\Models\User;
                                         $userdata = User::find(Auth::id());
                                     @endphp
-                                    
-                                    <?php 
+
+                                    <?php
                                         $image = "unnamed.png";
                                         if ($userdata && $userdata->avatar) {
                                             $image = $userdata->avatar;
                                         }
                                     ?>
-                                   
+
                                     @if($userdata)
                                         <img class="rounded-circle header-profile-user" src="{{ Storage::url('images/staffavatar/'.$image)}}" alt="{{ $userdata->name }}">
                                         <span class="text-start ms-xl-2">
@@ -530,29 +591,29 @@
                                 @if($userdata)
                                     <h6 class="dropdown-header">Welcome {{ $userdata->name }}!</h6>
                                     <a class="dropdown-item" href="{{ route('user.overview', $userdata->id) }}">
-                                        <i class="mdi mdi-account-circle text-muted fs-lg align-middle me-1"></i> 
+                                        <i class="mdi mdi-account-circle text-muted fs-lg align-middle me-1"></i>
                                         <span class="align-middle">Profile</span>
                                     </a>
                                     <div class="dropdown-divider"></div>
                                     <a class="dropdown-item" href="{{ route('user.settings', $userdata->id) }}">
-                                        <i class="mdi mdi-cog text-muted fs-lg align-middle me-1"></i> 
+                                        <i class="mdi mdi-cog text-muted fs-lg align-middle me-1"></i>
                                         <span class="align-middle">Settings</span>
                                     </a>
                                     <a class="dropdown-item" href="auth-lockscreen.html">
-                                        <i class="mdi mdi-lock text-muted fs-lg align-middle me-1"></i> 
+                                        <i class="mdi mdi-lock text-muted fs-lg align-middle me-1"></i>
                                         <span class="align-middle">Lock screen</span>
                                     </a>
-                                
+
                                     <form method="POST" action="{{ route('logout') }}">
                                         @csrf
                                         <a class="dropdown-item" href="{{ route('logout') }}" onclick="event.preventDefault(); this.closest('form').submit();">
-                                            <i class="mdi mdi-logout text-muted fs-lg align-middle me-1"></i> 
+                                            <i class="mdi mdi-logout text-muted fs-lg align-middle me-1"></i>
                                             <span class="align-middle" data-key="t-logout">Logout</span>
                                         </a>
                                     </form>
                                 @else
                                     <a class="dropdown-item" href="{{ route('login') }}">
-                                        <i class="mdi mdi-login text-muted fs-lg align-middle me-1"></i> 
+                                        <i class="mdi mdi-login text-muted fs-lg align-middle me-1"></i>
                                         <span class="align-middle">Login</span>
                                     </a>
                                 @endif
@@ -581,17 +642,17 @@
         </footer>
     </div>
     <!-- end main content-->
-    
+
     </div>
     <!-- END layout-wrapper -->
-    
-    
+
+
     <!--start back-to-top-->
     <button class="btn btn-dark btn-icon" id="back-to-top">
         <i class="bi bi-caret-up fs-3xl"></i>
     </button>
     <!--end back-to-top-->
-    
+
     <!--preloader-->
     <div id="preloader">
         <div id="status">
@@ -606,7 +667,7 @@
             <i class="bi bi-gear mb-1"></i> Customizer
         </div>
     </div>
-    
+
     <!-- Theme Settings -->
     <div class="offcanvas offcanvas-end border-0" tabindex="-1" id="theme-settings-offcanvas">
         <div class="d-flex align-items-center bg-primary bg-gradient p-3 offcanvas-header">
@@ -614,7 +675,7 @@
                 <h5 class="mb-1 text-white">Steex Builder</h5>
                 <p class="text-white text-opacity-75 mb-0">Choose your themes & layouts etc.</p>
             </div>
-            
+
             <button type="button" class="btn-close btn-close-white ms-auto" id="customizerclose-btn" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
         <div class="offcanvas-body p-0">
@@ -622,7 +683,7 @@
                 <div class="p-4">
                     <h6 class="fs-md mb-1">Layout</h6>
                     <p class="text-muted fs-sm">Choose your layout</p>
-            
+
                     <div class="row">
                         <div class="col-4">
                             <div class="form-check card-radio">
@@ -699,10 +760,10 @@
                         </div>
                         <!-- end col -->
                     </div>
-            
+
                     <h6 class="mt-4 fs-md mb-1">Theme</h6>
                     <p class="text-muted fs-sm">Choose your suitable Theme.</p>
-            
+
                     <div class="row">
                         <div class="col-6">
                             <div class="form-check card-radio">
@@ -760,10 +821,10 @@
                             <h5 class="fs-sm text-center fw-medium mt-2">Interaction</h5>
                         </div><!-- end col -->
                     </div>
-            
+
                     <h6 class="mt-4 fs-md mb-1">Color Scheme</h6>
                     <p class="text-muted fs-sm">Choose Light or Dark Scheme.</p>
-            
+
                     <div class="colorscheme-cardradio">
                         <div class="row g-3">
                             <div class="col-6">
@@ -775,7 +836,7 @@
                                 </div>
                                 <h5 class="fs-sm text-center fw-medium mt-2">Light</h5>
                             </div>
-            
+
                             <div class="col-6">
                                 <div class="form-check card-radio dark">
                                     <input class="form-check-input" type="radio" name="data-bs-theme" id="layout-mode-dark" value="dark">
@@ -787,11 +848,11 @@
                             </div>
                         </div>
                     </div>
-            
+
                     <div id="layout-width">
                         <h6 class="mt-4 fs-md mb-1">Layout Width</h6>
                         <p class="text-muted fs-sm">Choose Fluid or Boxed layout.</p>
-            
+
                         <div class="row">
                             <div class="col-4">
                                 <div class="form-check card-radio">
@@ -843,23 +904,23 @@
                             </div>
                         </div>
                     </div>
-            
+
                     <div id="layout-position">
                         <h6 class="mt-4 fs-md mb-1">Layout Position</h6>
                         <p class="text-muted fs-sm">Choose Fixed or Scrollable Layout Position.</p>
-            
+
                         <div class="btn-group radio" role="group">
                             <input type="radio" class="btn-check" name="data-layout-position" id="layout-position-fixed" value="fixed">
                             <label class="btn btn-light w-sm" for="layout-position-fixed">Fixed</label>
-            
+
                             <input type="radio" class="btn-check" name="data-layout-position" id="layout-position-scrollable" value="scrollable">
                             <label class="btn btn-light w-sm ms-0" for="layout-position-scrollable">Scrollable</label>
                         </div>
                     </div>
-            
+
                     <h6 class="mt-4 fs-md mb-1">Topbar Color</h6>
                     <p class="text-muted fs-sm">Choose Light or Dark Topbar Color.</p>
-            
+
                     <div class="row">
                         <div class="col-4">
                             <div class="form-check card-radio">
@@ -910,11 +971,11 @@
                             <h5 class="fs-sm text-center fw-medium mt-2">Dark</h5>
                         </div>
                     </div>
-            
+
                     <div id="sidebar-size">
                         <h6 class="mt-4 fs-md mb-1">Sidebar Size</h6>
                         <p class="text-muted fs-sm">Choose a size of Sidebar.</p>
-            
+
                         <div class="row">
                             <div class="col-4">
                                 <div class="form-check sidebar-setting card-radio">
@@ -940,7 +1001,7 @@
                                 </div>
                                 <h5 class="fs-sm text-center fw-medium mt-2">Default</h5>
                             </div>
-            
+
                             <div class="col-4">
                                 <div class="form-check sidebar-setting card-radio">
                                     <input class="form-check-input" type="radio" name="data-sidebar-size" id="sidebar-size-compact" value="md">
@@ -965,7 +1026,7 @@
                                 </div>
                                 <h5 class="fs-sm text-center fw-medium mt-2">Compact</h5>
                             </div>
-            
+
                             <div class="col-4">
                                 <div class="form-check sidebar-setting card-radio">
                                     <input class="form-check-input" type="radio" name="data-sidebar-size" id="sidebar-size-small" value="sm">
@@ -990,7 +1051,7 @@
                                 </div>
                                 <h5 class="fs-sm text-center fw-medium mt-2">Small (Icon View)</h5>
                             </div>
-            
+
                             <div class="col-4">
                                 <div class="form-check sidebar-setting card-radio">
                                     <input class="form-check-input" type="radio" name="data-sidebar-size" id="sidebar-size-small-hover" value="sm-hover">
@@ -1017,11 +1078,11 @@
                             </div>
                         </div>
                     </div>
-            
+
                     <div id="sidebar-view">
                         <h6 class="mt-4 fs-md mb-1">Sidebar View</h6>
                         <p class="text-muted fs-sm">Choose Default or Detached Sidebar view.</p>
-            
+
                         <div class="row">
                             <div class="col-4">
                                 <div class="form-check sidebar-setting card-radio">
@@ -1077,7 +1138,7 @@
                     <div id="sidebar-color">
                         <h6 class="mt-4 fs-md mb-1">Sidebar Color</h6>
                         <p class="text-muted fs-sm">Choose a color of Sidebar.</p>
-            
+
                         <div class="row">
                             <div class="col-4">
                                 <div class="form-check sidebar-setting card-radio" data-bs-toggle="collapse" data-bs-target="#collapseBgGradient.show">
@@ -1150,10 +1211,10 @@
                             </div>
                         </div>
                         <!-- end row -->
-            
+
                         <div class="collapse" id="collapseBgGradient">
                             <div class="d-flex gap-2 flex-wrap img-switch p-2 px-3 bg-light rounded">
-            
+
                                 <div class="form-check sidebar-setting card-radio">
                                     <input class="form-check-input" type="radio" name="data-sidebar" id="sidebar-color-gradient" value="gradient">
                                     <label class="form-check-label p-0 avatar-xs rounded-circle" for="sidebar-color-gradient">
@@ -1181,11 +1242,11 @@
                             </div>
                         </div>
                     </div>
-            
+
                     <div id="sidebar-img">
                         <h6 class="mt-4 fw-semibold fs-base">Sidebar Images</h6>
                         <p class="text-muted fs-sm">Choose a image of Sidebar.</p>
-            
+
                         <div class="d-flex gap-2 flex-wrap img-switch">
                             <div class="form-check sidebar-setting card-radio">
                                 <input class="form-check-input" type="radio" name="data-sidebar-image" id="sidebarimg-none" value="none">
@@ -1195,14 +1256,14 @@
                                     </span>
                                 </label>
                             </div>
-            
+
                             <div class="form-check sidebar-setting card-radio">
                                 <input class="form-check-input" type="radio" name="data-sidebar-image" id="sidebarimg-01" value="img-1">
                                 <label class="form-check-label p-0 avatar-sm h-auto" for="sidebarimg-01">
                                     <img src="{{ asset('theme/layouts/assets/images/sidebar/img-sm-1.jpg')}}" alt="" class="avatar-md w-auto object-cover">
                                 </label>
                             </div>
-            
+
                             <div class="form-check sidebar-setting card-radio">
                                 <input class="form-check-input" type="radio" name="data-sidebar-image" id="sidebarimg-02" value="img-2">
                                 <label class="form-check-label p-0 avatar-sm h-auto" for="sidebarimg-02">
@@ -1223,11 +1284,11 @@
                             </div>
                         </div>
                     </div>
-            
+
                     <div id="preloader-menu">
                         <h6 class="mt-4 fw-semibold fs-base">Preloader</h6>
                         <p class="text-muted fs-sm">Choose a preloader.</p>
-            
+
                         <div class="row">
                             <div class="col-4">
                                 <div class="form-check sidebar-setting card-radio">
@@ -1285,11 +1346,11 @@
                                 <h5 class="fs-sm text-center fw-medium mt-2">Disable</h5>
                             </div>
                         </div>
-            
+
                     </div><!-- end preloader-menu -->
                 </div>
             </div>
-            
+
         </div>
         <div class="offcanvas-footer border-top p-3 text-center">
             <div class="row">
@@ -1299,27 +1360,27 @@
             </div>
         </div>
     </div>
-      
+
 
       @if (Route::is('dashboard'))
             @include('layouts.pages-assets.js.dashboard-list-js')
       @endif
-      
+
       @if (Route::is('users.*'))
             @include('layouts.pages-assets.js.users-list-js')
-      @endif 
+      @endif
 
       @if (Route::is('roles.*'))
              @include('layouts.pages-assets.js.role-list-js')
-      @endif 
+      @endif
 
       @if (Route::is('permissions.*'))
             @include('layouts.pages-assets.js.permissions-list-js')
-      @endif  
+      @endif
 
       @if (Route::is('brands.*'))
             @include('layouts.pages-assets.js.brand-list-js')
-      @endif  
+      @endif
 
       @if (Route::is('categories.*'))
             @include('layouts.pages-assets.js.category-list-js')
@@ -1331,6 +1392,10 @@
 
       @if (Route::is('products.*'))
             @include('layouts.pages-assets.js.product-list-js')
+      @endif
+
+      @if (Route::is('pos.*'))
+            @include('layouts.pages-assets.js.pos-list-js')
       @endif
 
      @if (Route::is('inventory.*') || Route::is('stock-locations.*'))
@@ -1345,6 +1410,9 @@
                 @include('layouts.pages-assets.js.customer-list-js')
      @endif
 
+    @if (Route::is('settings.store.*'))
+                @include('layouts.pages-assets.js.storesetting-list-js')
+     @endif
       </body>
-      
+
       </html>

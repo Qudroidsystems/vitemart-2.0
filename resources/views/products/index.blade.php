@@ -6,7 +6,6 @@
 <div class="main-content">
     <div class="page-content">
         <div class="container-fluid">
-
             <!-- PAGE TITLE -->
             <div class="row">
                 <div class="col-12">
@@ -152,46 +151,36 @@
                                 <div class="flex-grow-1">
                                     <h5 class="card-title mb-0">
                                         Products <span class="badge bg-dark-subtle text-dark ms-1" id="totalProducts">{{ $products->total() }}</span>
-                                        <small class="text-muted ms-2">Drag to reorder</small>
                                     </h5>
                                 </div>
                                 <div class="flex-shrink-0">
                                     <div class="d-flex flex-wrap align-items-start gap-2">
-                                        <button class="btn btn-subtle-danger d-none" id="remove-actions" onclick="deleteMultiple()">Delete Selected</button>
-                                        <button type="button" class="btn btn-warning d-none" id="bulkEditBtn" data-bs-toggle="modal" data-bs-target="#bulkEditModal">Bulk Edit</button>
                                         @can('Create product')
-                                            <button type="button" class="btn btn-primary add-btn" data-bs-toggle="modal" data-bs-target="#showModal" onclick="resetForm()">Add Product</button>
+                                            <button type="button" class="btn btn-primary add-btn" data-bs-toggle="modal" data-bs-target="#showModal">Add Product</button>
                                         @endcan
                                         <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#importModal">Import CSV</button>
                                         <a href="{{ route('products.export') }}" class="btn btn-info">Export CSV</a>
                                     </div>
                                 </div>
                             </div>
-
                             <div class="card-body">
                                 <div class="table-responsive">
                                     <table class="table table-centered align-middle table-nowrap mb-0">
                                         <thead class="table-active">
                                             <tr>
-                                                <th></th>
-                                                <th><div class="form-check"><input class="form-check-input" type="checkbox" id="checkAll"><label class="form-check-label" for="checkAll"></label></div></th>
                                                 <th>Product</th>
                                                 <th>Category</th>
                                                 <th>Stock</th>
                                                 <th>Price</th>
                                                 <th>Sold</th>
                                                 <th>Featured</th>
-                                                <th>Published</th>
-                                                <th>Inventory</th>
                                                 <th>Action</th>
                                             </tr>
                                         </thead>
-                                        <tbody class="list form-check-all" id="sortableTableBody">
+                                        <tbody>
                                             @forelse($products as $product)
-                                                <tr data-product-id="{{ $product->id }}" class="draggable-row">
-                                                    <td class="text-center cursor-move"><i class="bi bi-grip-vertical text-muted fs-4"></i></td>
-                                                    <td><div class="form-check"><input class="form-check-input bulk-checkbox" type="checkbox" value="{{ $product->id }}"></div></td>
-                                                    <td class="title">
+                                                <tr>
+                                                    <td>
                                                         <div class="d-flex align-items-center">
                                                             <div class="avatar-sm bg-light rounded p-1 me-3">
                                                                 @if($product->thumbnail)
@@ -206,58 +195,76 @@
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td class="category">{{ $product->category?->name ?? 'Uncategorized' }}</td>
-                                                    <!-- FIXED: Added id and data-current-stock attributes -->
-                                                    <td class="stock" id="stock-{{ $product->id }}" data-current-stock="{{ $product->stock }}">
+                                                    <td>{{ $product->category?->name ?? 'Uncategorized' }}</td>
+                                                    <td id="stock-{{ $product->id }}" data-current-stock="{{ $product->stock }}">
+                                                        @php
+                                                            $primaryUnit = $product->units->first();
+                                                            $primaryShort = $primaryUnit ? $primaryUnit->short_name : '';
+                                                        @endphp
                                                         @if($product->stock > 10)
-                                                            <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle">{{ $product->stock }} in stock</span>
+                                                            <span class="badge bg-success-subtle text-success">{{ $product->stock }} {{ $primaryShort }} in stock</span>
                                                         @elseif($product->stock > 0)
-                                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">{{ $product->stock }} low stock</span>
+                                                            <span class="badge bg-warning-subtle text-warning">{{ $product->stock }} {{ $primaryShort }} low stock</span>
                                                         @else
-                                                            <span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle">Out of stock</span>
+                                                            <span class="badge bg-danger-subtle text-danger">Out of stock</span>
+                                                        @endif
+                                                        @if($product->units->count() > 1)
+                                                            <small class="text-muted d-block mt-1">
+                                                                @foreach($product->units->skip(1) as $unit)
+                                                                    {{ floor($product->stock / $unit->pivot->quantity_per_unit) }} {{ $unit->short_name }}<br>
+                                                                @endforeach
+                                                            </small>
                                                         @endif
                                                     </td>
-                                                    <td class="price">
+                                                    <td>
                                                         @if($product->sale_price && $product->sale_price < $product->price)
                                                             @php $discount = round((($product->price - $product->sale_price) / $product->price) * 100); @endphp
-                                                            <div class="position-relative d-inline-block">
-                                                                <del class="text-muted small">${{ number_format($product->price, 2) }}</del><br>
-                                                                <span class="text-danger fw-bold">${{ number_format($product->sale_price, 2) }}</span>
-                                                                <span class="badge bg-danger position-absolute" style="top:-8px;right:-32px;font-size:0.65rem;">-{{ $discount }}%</span>
-                                                            </div>
+                                                            <del class="text-muted small">${{ number_format($product->price, 2) }}</del><br>
+                                                            <span class="text-danger fw-bold">${{ number_format($product->sale_price, 2) }}</span>
+                                                            <span class="badge bg-danger position-relative" style="top:-8px;right:-32px;font-size:0.65rem;">-{{ $discount }}%</span>
                                                         @else
                                                             <span class="fw-bold">${{ number_format($product->price, 2) }}</span>
                                                         @endif
                                                     </td>
-                                                    <td class="sold text-center"><span class="fw-semibold">{{ $product->sold_quantity ?? 0 }}</span></td>
-                                                    <td class="featured">
+                                                    <td class="text-center"><span class="fw-semibold">{{ $product->sold_quantity ?? 0 }}</span></td>
+                                                    <td>
                                                         @if($product->is_featured)
-                                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
-                                                                <i class="bi bi-star-fill text-warning me-1"></i> Featured
-                                                            </span>
+                                                            <span class="badge bg-primary-subtle text-primary"><i class="bi bi-star-fill text-warning me-1"></i> Featured</span>
                                                         @else
-                                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Regular</span>
+                                                            <span class="badge bg-secondary-subtle text-secondary">Regular</span>
                                                         @endif
                                                     </td>
-                                                    <td class="created_at"><small class="text-muted">{{ $product->created_at->format('d M, Y') }}</small></td>
-                                                    <td><button type="button" class="btn btn-sm btn-outline-info inventory-btn" data-id="{{ $product->id }}" data-title="{{ $product->title }}">View Log</button></td>
                                                     <td>
                                                         <div class="dropdown">
                                                             <button class="btn btn-subtle-secondary btn-sm btn-icon" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
                                                             <ul class="dropdown-menu dropdown-menu-end">
                                                                 <li><a class="dropdown-item" href="{{ route('products.show', $product->id) }}">View</a></li>
                                                                 @can('Update product')
-                                                                    <li><a class="dropdown-item edit-item-btn" href="javascript:void(0);" data-id="{{ $product->id }}">Edit</a></li>
+                                                                    <li>
+                                                                        <a class="dropdown-item edit-item-btn"
+                                                                           href="javascript:void(0);"
+                                                                           data-id="{{ $product->id }}"
+                                                                           data-bs-toggle="modal"
+                                                                           data-bs-target="#showModal">
+                                                                            Edit
+                                                                        </a>
+                                                                    </li>
                                                                 @endcan
                                                                 @can('Delete product')
-                                                                    <li><a class="dropdown-item remove-item-btn text-danger" href="javascript:void(0);" data-id="{{ $product->id }}">Delete</a></li>
+                                                                    <li>
+                                                                        <a class="dropdown-item remove-item-btn text-danger"
+                                                                           href="javascript:void(0);"
+                                                                           data-id="{{ $product->id }}">
+                                                                            Delete
+                                                                        </a>
+                                                                    </li>
                                                                 @endcan
                                                             </ul>
                                                         </div>
                                                     </td>
                                                 </tr>
                                             @empty
-                                                <tr><td colspan="11" class="text-center py-5 text-muted">No products found</td></tr>
+                                                <tr><td colspan="7" class="text-center py-5 text-muted">No products found</td></tr>
                                             @endforelse
                                         </tbody>
                                     </table>
@@ -279,7 +286,7 @@
             </div>
 
             <!-- ADD/EDIT MODAL -->
-            <div class="modal fade" id="showModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+            <div class="modal fade" id="showModal" tabindex="-1" data-bs-backdrop="static">
                 <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
                     <div class="modal-content">
                         <form id="productForm" enctype="multipart/form-data">
@@ -287,7 +294,7 @@
                             <input type="hidden" name="id" id="product_id">
                             <div class="modal-header">
                                 <h5 class="modal-title" id="modalTitle">Add Product</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="resetForm()"></button>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                             </div>
                             <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
                                 <div class="row g-4">
@@ -296,13 +303,16 @@
                                             <div class="card-body">
                                                 <h6 class="card-title mb-3">Basic Information</h6>
                                                 <div class="row g-3">
-                                                    <div class="col-md-6"><label class="form-label">Title <span class="text-danger">*</span></label><input type="text" name="title" id="title" class="form-control" required></div>
-                                                    <div class="col-md-6"><label class="form-label">SKU <span class="text-danger">*</span></label><input type="text" name="sku" id="sku" class="form-control" required></div>
-                                                    <div class="col-md-4"><label class="form-label">Price <span class="text-danger">*</span></label><div class="input-group"><span class="input-group-text">$</span><input type="number" step="0.01" name="price" id="price" class="form-control" required min="0"></div></div>
-                                                    <div class="col-md-4"><label class="form-label">Discount %</label><input type="number" step="0.01" min="0" max="100" id="discount_percent" class="form-control" placeholder="e.g. 25"></div>
-                                                    <div class="col-md-4"><label class="form-label">Sale Price</label><div class="input-group"><span class="input-group-text">$</span><input type="number" step="0.01" name="sale_price" id="sale_price" class="form-control"></div><small class="text-success" id="sale_price_note" style="display:none;">Auto-calculated</small></div>
-                                                    <div class="col-md-4"><label class="form-label">Stock <span class="text-danger">*</span></label><input type="number" name="stock" id="stock" class="form-control" required min="0"></div>
-                                                    <div class="col-md-6"><label class="form-label">Product Type <span class="text-danger">*</span></label><select name="product_type" id="product_type" class="form-control" required><option value="simple">Simple Product</option><option value="variable">Variable Product</option></select></div>
+                                                    <div class="col-md-6"><label class="form-label">Title *</label><input type="text" name="title" id="title" class="form-control" required></div>
+                                                    <div class="col-md-6"><label class="form-label">SKU *</label><input type="text" name="sku" id="sku" class="form-control" required></div>
+                                                    <div class="col-md-4"><label class="form-label">Price *</label><div class="input-group"><span class="input-group-text">$</span><input type="number" step="0.01" name="price" id="price" class="form-control" required></div></div>
+                                                    <div class="col-md-4"><label class="form-label">Discount %</label><input type="number" min="0" max="100" id="discount_percent" class="form-control"></div>
+                                                    <div class="col-md-4"><label class="form-label">Sale Price</label><div class="input-group"><span class="input-group-text">$</span><input type="number" step="0.01" name="sale_price" id="sale_price" class="form-control"></div></div>
+                                                    <div class="col-md-4"><label class="form-label">Stock *</label><input type="number" name="stock" id="stock" class="form-control" required min="0"></div>
+                                                    <div class="col-md-6"><label class="form-label">Product Type *</label><select name="product_type" id="product_type" class="form-control" required>
+                                                        <option value="simple">Simple Product</option>
+                                                        <option value="variable">Variable Product</option>
+                                                    </select></div>
                                                     <div class="col-12"><label class="form-label">Description</label><textarea name="description" id="description" rows="4" class="form-control"></textarea></div>
                                                 </div>
                                             </div>
@@ -310,11 +320,11 @@
 
                                         <div id="variationsSection" style="display:none;">
                                             <div class="card mt-4">
-                                                <div class="card-header d-flex justify-content-between align-items-center">
+                                                <div class="card-header d-flex justify-content-between">
                                                     <h6 class="mb-0">Product Variations</h6>
                                                     <div>
-                                                        <input type="number" step="0.01" min="0" max="100" id="bulk_discount" class="form-control form-control-sm d-inline-block w-auto me-2" placeholder="Bulk %">
-                                                        <button type="button" class="btn btn-success btn-sm" id="applyBulkDiscount">Apply to All</button>
+                                                        <input type="number" min="0" max="100" id="bulk_discount" class="form-control form-control-sm d-inline w-auto me-2" placeholder="Bulk %">
+                                                        <button type="button" class="btn btn-success btn-sm" id="applyBulkDiscount">Apply</button>
                                                     </div>
                                                 </div>
                                                 <div class="card-body">
@@ -337,17 +347,17 @@
                                     <div class="col-lg-4">
                                         <div class="card mb-3">
                                             <div class="card-body">
-                                                <label class="form-label">Thumbnail Image</label>
+                                                <label class="form-label">Thumbnail</label>
                                                 <input type="file" name="thumbnail" id="thumbnail_input" class="form-control mb-2" accept="image/*">
                                                 <div class="text-center">
-                                                    <img id="thumbnail_preview" src="" class="img-fluid rounded" style="max-height:200px; display:none;">
-                                                    <div id="thumbnail_placeholder" class="text-muted"><i class="bi bi-image display-4"></i><p class="mt-2">No image selected</p></div>
+                                                    <img id="thumbnail_preview" src="" class="img-fluid rounded" style="max-height:200px;display:none;">
+                                                    <div id="thumbnail_placeholder" class="text-muted"><i class="bi bi-image display-4"></i><p>No image</p></div>
                                                 </div>
                                             </div>
                                         </div>
                                         <div class="card mb-3">
                                             <div class="card-body">
-                                                <label class="form-label">Gallery Images</label>
+                                                <label class="form-label">Gallery</label>
                                                 <input type="file" name="images[]" id="gallery_input" multiple class="form-control mb-3" accept="image/*">
                                                 <div id="imageGallery" class="row g-2"></div>
                                             </div>
@@ -363,18 +373,34 @@
                                                         @endforeach
                                                     </select>
                                                 </div>
-                                                <div class="mb-0">
+                                                <div class="mb-3">
                                                     <label class="form-label">Category</label>
                                                     <select name="category_id" id="category_id" class="form-control">
                                                         <option value="">Select Category</option>
                                                         @foreach($categories as $cat)
                                                             <option value="{{ $cat->id }}">{{ $cat->name }}</option>
-                                                            @foreach($cat->children as $child)
-                                                                <option value="{{ $child->id }}">— {{ $child->name }}</option>
-                                                            @endforeach
                                                         @endforeach
                                                     </select>
                                                 </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Primary Unit *</label>
+                                                    <select name="primary_unit_id" id="primary_unit_id" class="form-control" required>
+                                                        <option value="">Select Unit</option>
+                                                        @foreach($units as $unit)
+                                                            <option value="{{ $unit->id }}">{{ $unit->name }} ({{ $unit->short_name }})</option>
+                                                        @endforeach
+                                                    </select>
+                                                    <small class="text-muted">Default unit for selling this product</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="card mb-3">
+                                            <div class="card-body">
+                                                <h6 class="mb-3">Additional Units</h6>
+                                                <div id="unitsContainer">
+                                                    <!-- Dynamic unit rows will be added here -->
+                                                </div>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm mt-2" id="addUnit">+ Add Unit</button>
                                             </div>
                                         </div>
                                         <div class="card">
@@ -388,8 +414,8 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="modal-footer border-top pt-3 bg-light">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="resetForm()">Cancel</button>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                                 <button type="submit" class="btn btn-primary" id="submitBtn">
                                     <span class="spinner-border spinner-border-sm d-none me-1" id="submitSpinner"></span>
                                     Save Product
@@ -399,158 +425,23 @@
                     </div>
                 </div>
             </div>
-
-            <!-- IMPORT MODAL -->
-            <div class="modal fade" id="importModal" tabindex="-1">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Import Products</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <form id="importForm" enctype="multipart/form-data">
-                            @csrf
-                            <div class="modal-body">
-                                <div class="mb-3">
-                                    <label class="form-label">Choose CSV File</label>
-                                    <input type="file" name="file" class="form-control" accept=".csv,.xlsx" required>
-                                    <small class="text-muted">Download <a href="{{ asset('samples/products_sample.csv') }}" class="text-primary">sample template</a></small>
-                                </div>
-                                <div class="progress mb-3" style="display:none;" id="importProgress">
-                                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width:0%">0%</div>
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                <button type="submit" class="btn btn-success">Start Import</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            <!-- BULK EDIT MODAL -->
-            <div class="modal fade" id="bulkEditModal" tabindex="-1">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Bulk Edit (<span id="bulkCount">0</span> Products)</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <form id="bulkEditForm">
-                            @csrf
-                            <input type="hidden" name="ids" id="bulk_product_ids">
-                            <div class="modal-body">
-                                <div class="mb-3">
-                                    <label class="form-label">Price Adjustment</label>
-                                    <div class="input-group">
-                                        <select name="price_action" class="form-control">
-                                            <option value="">No Change</option>
-                                            <option value="increase">Increase by</option>
-                                            <option value="decrease">Decrease by</option>
-                                            <option value="set">Set to</option>
-                                        </select>
-                                        <input type="number" step="0.01" name="price_value" class="form-control" placeholder="Value">
-                                        <span class="input-group-text">% / $</span>
-                                    </div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Stock Adjustment</label>
-                                    <div class="input-group">
-                                        <select name="stock_action" class="form-control">
-                                            <option value="">No Change</option>
-                                            <option value="increase">Increase by</option>
-                                            <option value="decrease">Decrease by</option>
-                                            <option value="set">Set to</option>
-                                        </select>
-                                        <input type="number" name="stock_value" class="form-control" placeholder="Quantity">
-                                    </div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Category</label>
-                                    <select name="category_id" class="form-control">
-                                        <option value="">No Change</option>
-                                        @foreach($categories as $cat)
-                                            <option value="{{ $cat->id }}">{{ $cat->name }}</option>
-                                            @foreach($cat->children as $child)
-                                                <option value="{{ $child->id }}">— {{ $child->name }}</option>
-                                            @endforeach
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="mb-0">
-                                    <label class="form-label">Featured Status</label>
-                                    <select name="is_featured" class="form-control">
-                                        <option value="">No Change</option>
-                                        <option value="1">Mark as Featured</option>
-                                        <option value="0">Remove Featured</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                <button type="submit" class="btn btn-primary">Apply Changes</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            <!-- INVENTORY LOG MODAL -->
-            <div class="modal fade" id="inventoryModal" tabindex="-1">
-                <div class="modal-dialog modal-lg modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Inventory Log - <span id="inventoryTitle"></span></h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="table-responsive">
-                                <table class="table table-bordered mb-0">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Date & Time</th>
-                                            <th>Type</th>
-                                            <th>Quantity</th>
-                                            <th>Reference</th>
-                                            <th>Previous Stock</th>
-                                            <th>New Stock</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="inventoryLogBody">
-                                        <!-- Dynamic content will be loaded here -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
         </div>
     </div>
 </div>
 
-
-<!-- COMPLETE JAVASCRIPT -->
+<!-- JavaScript -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="https://cdn.jsdelivr.net/npm/list.js@2.3.1/dist/list.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    // Set CSRF token for all axios requests
-    axios.defaults.headers.common['X-CSRF-TOKEN'] = '{{ csrf_token() }}';
-    axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+    const csrfToken = document.querySelector('meta[name="csrf-token"]');
+    if (csrfToken) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken.getAttribute('content');
+    }
 
-    // Initialize Sales Chart
+    // Sales Chart
     const salesChartCtx = document.getElementById('salesChart');
     if (salesChartCtx) {
         new Chart(salesChartCtx, {
@@ -570,1098 +461,385 @@ document.addEventListener('DOMContentLoaded', function () {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                        labels: { color: '#495057' }
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: { display: false },
-                        ticks: { color: '#6c757d' }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        grid: { color: 'rgba(0,0,0,0.05)' },
-                        ticks: {
-                            color: '#6c757d',
-                            callback: function(value) {
-                                return '$' + value;
-                            }
-                        }
-                    }
-                }
+                plugins: { legend: { position: 'top' } },
+                scales: { x: { grid: { display: false } }, y: { beginAtZero: true } }
             }
         });
     }
 
-    // Initialize List.js for product filtering
-    const productListOptions = {
-        valueNames: ['title', 'category', 'stock', 'price', 'sold', 'created_at', 'featured'],
-        page: 15,
-        pagination: true
-    };
-    
-    if (document.getElementById('productList')) {
-        new List('productList', productListOptions);
-    }
-
-    // Initialize drag and drop for product reordering
-    const tbody = document.getElementById('sortableTableBody');
-    if (tbody) {
-        new Sortable(tbody, {
-            animation: 150,
-            ghostClass: 'bg-light',
-            handle: '.cursor-move',
-            filter: '.ignore-drag',
-            preventOnFilter: false,
-            onEnd: function () {
-                const items = Array.from(tbody.querySelectorAll('.draggable-row'));
-                const newOrder = items.map((row, i) => ({
-                    id: row.dataset.productId,
-                    position: i + 1
-                }));
-                
-                axios.post('/products/reorder', { order: newOrder })
-                    .then(() => {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Order Saved!',
-                            text: 'Product order has been updated successfully.',
-                            timer: 1500,
-                            showConfirmButton: false
-                        });
-                    })
-                    .catch((error) => {
-                        console.error('Reorder error:', error);
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: 'Failed to save product order. Please try again.',
-                            timer: 2000
-                        });
-                        location.reload();
-                    });
-            }
-        });
-    }
-
-    // Bulk selection functionality
-    const checkAll = document.getElementById('checkAll');
-    if (checkAll) {
-        checkAll.addEventListener('change', function() {
-            const checkboxes = document.querySelectorAll('.bulk-checkbox');
-            checkboxes.forEach(cb => cb.checked = this.checked);
-            updateBulkActions();
-        });
-    }
-
-    function updateBulkActions() {
-        const checkedBoxes = document.querySelectorAll('.bulk-checkbox:checked');
-        const count = checkedBoxes.length;
-        
-        const removeActionsBtn = document.getElementById('remove-actions');
-        const bulkEditBtn = document.getElementById('bulkEditBtn');
-        const bulkCountSpan = document.getElementById('bulkCount');
-        const bulkProductIdsInput = document.getElementById('bulk_product_ids');
-        
-        if (removeActionsBtn) removeActionsBtn.classList.toggle('d-none', count === 0);
-        if (bulkEditBtn) bulkEditBtn.classList.toggle('d-none', count === 0);
-        if (bulkCountSpan) bulkCountSpan.textContent = count;
-        if (bulkProductIdsInput) {
-            bulkProductIdsInput.value = Array.from(checkedBoxes).map(cb => cb.value).join(',');
-        }
-    }
-
-    // Attach change event to all bulk checkboxes
-    document.querySelectorAll('.bulk-checkbox').forEach(cb => {
-        cb.addEventListener('change', updateBulkActions);
-    });
-
-    // Delete multiple products
-    window.deleteMultiple = function () {
-        const ids = Array.from(document.querySelectorAll('.bulk-checkbox:checked')).map(cb => cb.value);
-        if (!ids.length) {
-            Swal.fire('Info', 'Please select products to delete.', 'info');
-            return;
-        }
-        
-        Swal.fire({
-            title: `Delete ${ids.length} product(s)?`,
-            text: "This action cannot be undone!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Yes, delete them!',
-            cancelButtonText: 'Cancel'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                Swal.fire({
-                    title: 'Deleting...',
-                    allowOutsideClick: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
-                
-                // Delete products one by one
-                const deletePromises = ids.map(id => axios.delete(`/products/${id}`));
-                Promise.all(deletePromises)
-                    .then(() => {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Deleted!',
-                            text: `${ids.length} product(s) have been deleted.`,
-                            timer: 1500,
-                            showConfirmButton: false
-                        }).then(() => {
-                            location.reload();
-                        });
-                    })
-                    .catch(error => {
-                        console.error('Delete error:', error);
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: 'Failed to delete some products. Please try again.'
-                        });
-                    });
-            }
-        });
-    };
-
-    // Initialize Choices.js for select elements
-    if (typeof Choices !== 'undefined') {
-        const brandSelect = document.getElementById('brand_id');
-        if (brandSelect) {
-            new Choices(brandSelect, {
-                removeItemButton: true,
-                searchEnabled: true,
-                placeholderValue: 'Select a brand',
-                searchPlaceholderValue: 'Search brands...'
-            });
-        }
-        
-        const categorySelect = document.getElementById('category_id');
-        if (categorySelect) {
-            new Choices(categorySelect, {
-                removeItemButton: true,
-                searchEnabled: true,
-                placeholderValue: 'Select a category',
-                searchPlaceholderValue: 'Search categories...'
-            });
-        }
-    }
-
-    // ============ REAL-TIME STOCK UPDATES ============
-
-    // Function to update stock display for a single product
-    function updateStockDisplay(productId, newStock) {
-        const cell = document.querySelector(`#stock-${productId}`);
-        if (!cell) {
-            console.log(`Stock cell not found for product ${productId}`);
-            return;
-        }
-        
-        const currentStock = parseInt(cell.getAttribute('data-current-stock') || 0);
-        
-        // Only update if stock has changed
-        if (currentStock !== newStock) {
-            console.log(`Updating stock for product ${productId}: ${currentStock} → ${newStock}`);
-            
-            let badgeClass, text;
-            if (newStock > 10) {
-                badgeClass = 'bg-success-subtle text-success-emphasis border border-success-subtle';
-                text = `${newStock} in stock`;
-            } else if (newStock > 0) {
-                badgeClass = 'bg-warning-subtle text-warning-emphasis border border-warning-subtle';
-                text = `${newStock} low stock`;
-            } else {
-                badgeClass = 'bg-danger-subtle text-danger-emphasis border border-danger-subtle';
-                text = 'Out of stock';
-            }
-            
-            // Update the display
-            cell.innerHTML = `<span class="badge ${badgeClass}">${text}</span>`;
-            
-            // Update the data attribute
-            cell.setAttribute('data-current-stock', newStock);
-            
-            // Highlight change with animation
-            cell.style.transition = 'all 0.3s';
-            
-            if (newStock > currentStock) {
-                // Stock increased - green highlight
-                cell.style.backgroundColor = '#d4edda';
-                const badge = cell.querySelector('.badge');
-                if (badge) {
-                    badge.style.animation = 'pulse 0.5s';
-                }
-            } else if (newStock < currentStock) {
-                // Stock decreased - red highlight
-                cell.style.backgroundColor = '#f8d7da';
-                const badge = cell.querySelector('.badge');
-                if (badge) {
-                    badge.style.animation = 'pulse 0.5s';
-                }
-            }
-            
-            // Remove highlight after 1 second
-            setTimeout(() => {
-                cell.style.backgroundColor = '';
-            }, 1000);
-        }
-    }
-
-    // Function to fetch and update all product stocks
-    function fetchRealTimeStock() {
-        console.log('Fetching real-time stock updates...');
-        axios.get('/inventory/realtime-product-stock')
-            .then(response => {
-                if (response.data && Array.isArray(response.data)) {
-                    console.log(`Received ${response.data.length} product stock updates`);
-                    response.data.forEach(item => {
-                        updateStockDisplay(item.id, item.stock);
-                    });
-                } else {
-                    console.log('No stock data received or invalid format');
-                }
-            })
-            .catch(error => {
-                console.error('Real-time stock update error:', error);
-                // Check if route exists
-                if (error.response && error.response.status === 404) {
-                    console.error('Route /inventory/realtime-product-stock not found!');
-                    console.error('Please add this route to routes/web.php:');
-                    console.error("Route::get('/inventory/realtime-product-stock', [InventoryController::class, 'realtimeProductStock']);");
-                }
-            });
-    }
-
-    // Start polling every 5 seconds (5000ms)
-    let stockPollingInterval = setInterval(fetchRealTimeStock, 5000);
-
-    // Initial fetch after 1 second
-    setTimeout(fetchRealTimeStock, 1000);
-
-    // Add CSS animation for pulse effect
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-        .stock-updated {
-            animation: pulse 0.5s ease-in-out;
-        }
-    `;
-    document.head.appendChild(style);
-
-    // ============ PRODUCT FORM HANDLERS ============
-
-    // Function to toggle variations section
-    function toggleVariationsSection() {
-        const productTypeSelect = document.getElementById('product_type');
-        const variationsSection = document.getElementById('variationsSection');
-        
-        if (productTypeSelect && variationsSection) {
-            // Show variations section only for "variable" product type
-            if (productTypeSelect.value === 'variable') {
-                variationsSection.style.display = 'block';
-                console.log('Variations section shown');
-            } else {
-                variationsSection.style.display = 'none';
-                console.log('Variations section hidden');
-            }
-        }
-    }
-
-    // Product type change handler - INITIALIZATION
+    // Toggle Variations
     const productTypeSelect = document.getElementById('product_type');
-    if (productTypeSelect) {
-        // Set initial state
-        toggleVariationsSection();
-        
-        // Add change event listener
-        productTypeSelect.addEventListener('change', toggleVariationsSection);
-        
-        // Also trigger on modal show for edit cases
-        const modalElement = document.getElementById('showModal');
-        if (modalElement) {
-            modalElement.addEventListener('shown.bs.modal', function() {
-                toggleVariationsSection();
-            });
+    const variationsSection = document.getElementById('variationsSection');
+    function toggleVariationsSection() {
+        if (productTypeSelect && variationsSection) {
+            variationsSection.style.display = productTypeSelect.value === 'variable' ? 'block' : 'none';
         }
     }
+    productTypeSelect?.addEventListener('change', toggleVariationsSection);
+    toggleVariationsSection();
 
-    // Variables for product form
-    let attrIndex = 1;
-    let priceChanging = false;
-    let discountChanging = false;
-    let salePriceChanging = false;
-
-    // Add attribute button
-    const addAttributeBtn = document.getElementById('addAttribute');
-    if (addAttributeBtn) {
-        addAttributeBtn.addEventListener('click', () => {
-            const html = `
-                <div class="row g-3 align-items-end attribute-row mt-3">
-                    <div class="col-md-5">
-                        <input type="text" class="form-control" placeholder="e.g. Size" name="attributes[${attrIndex}][name]">
-                    </div>
-                    <div class="col-md-6">
-                        <input type="text" class="form-control" placeholder="S, M, L" name="attributes[${attrIndex}][values]">
-                    </div>
-                    <div class="col-md-1">
-                        <button type="button" class="btn btn-danger btn-sm remove-attribute">Remove</button>
-                    </div>
-                </div>
-            `;
-            document.getElementById('attributesContainer').insertAdjacentHTML('beforeend', html);
-            attrIndex++;
-        });
-    }
-
-    // Price calculation handlers
+    // Price calculation
     const priceInput = document.getElementById('price');
     const discountInput = document.getElementById('discount_percent');
     const salePriceInput = document.getElementById('sale_price');
-
-    if (priceInput) {
-        priceInput.addEventListener('input', () => {
-            if (!priceChanging) {
-                priceChanging = true;
-                calculateFromPrice();
-                priceChanging = false;
-            }
-        });
-    }
-
-    if (discountInput) {
-        discountInput.addEventListener('input', () => {
-            if (!discountChanging) {
-                discountChanging = true;
-                calculateFromDiscount();
-                discountChanging = false;
-            }
-        });
-    }
-
-    if (salePriceInput) {
-        salePriceInput.addEventListener('input', () => {
-            if (!salePriceChanging) {
-                salePriceChanging = true;
-                calculateFromSalePrice();
-                salePriceChanging = false;
-            }
-        });
-    }
-
-    function calculateFromPrice() {
-        const price = parseFloat(priceInput.value) || 0;
-        const discount = parseFloat(discountInput.value) || 0;
-        if (discount > 0 && discount <= 100) {
+    function calculateSalePrice() {
+        const price = parseFloat(priceInput?.value) || 0;
+        const discount = parseFloat(discountInput?.value) || 0;
+        if (price > 0 && discount > 0 && discount <= 100) {
             salePriceInput.value = (price * (1 - discount / 100)).toFixed(2);
-            document.getElementById('sale_price_note').style.display = 'block';
         }
     }
+    priceInput?.addEventListener('input', calculateSalePrice);
+    discountInput?.addEventListener('input', calculateSalePrice);
 
-    function calculateFromDiscount() {
-        const price = parseFloat(priceInput.value) || 0;
-        const discount = parseFloat(discountInput.value) || 0;
-        if (price && discount) {
-            salePriceInput.value = (price * (1 - discount / 100)).toFixed(2);
-            document.getElementById('sale_price_note').style.display = 'block';
+    // Bulk discount
+    document.getElementById('applyBulkDiscount')?.addEventListener('click', function () {
+        const bulk = parseFloat(document.getElementById('bulk_discount').value) || 0;
+        if (bulk < 0 || bulk > 100) return Swal.fire('Invalid', 'Discount 0-100', 'warning');
+        document.querySelectorAll('#variationsTable tbody tr').forEach(row => {
+            const priceIn = row.querySelector('input[name*="price"]');
+            const saleIn = row.querySelector('input[name*="sale_price"]');
+            const price = parseFloat(priceIn?.value) || 0;
+            if (price > 0) saleIn.value = (price * (1 - bulk / 100)).toFixed(2);
+        });
+        Swal.fire('Applied!', `${bulk}% discount applied`, 'success');
+    });
+
+    // Add/Remove Attributes
+    let attrIndex = 1;
+    document.getElementById('addAttribute')?.addEventListener('click', () => {
+        const html = `<div class="row g-3 align-items-end attribute-row mt-3">
+            <div class="col-md-5"><input type="text" class="form-control" placeholder="e.g. Size" name="attributes[${attrIndex}][name]"></div>
+            <div class="col-md-6"><input type="text" class="form-control" placeholder="S, M, L" name="attributes[${attrIndex}][values]"></div>
+            <div class="col-md-1"><button type="button" class="btn btn-danger btn-sm remove-attribute">Remove</button></div>
+        </div>`;
+        document.getElementById('attributesContainer').insertAdjacentHTML('beforeend', html);
+        attrIndex++;
+    });
+
+    // Add/Remove Units
+    let unitIndex = 0;
+    document.getElementById('addUnit')?.addEventListener('click', () => {
+        const html = `
+            <div class="row g-3 align-items-end unit-row mt-3">
+                <div class="col-md-5">
+                    <select name="units[${unitIndex}][unit_id]" class="form-control">
+                        <option value="">Select Unit</option>
+                        @foreach($units as $unit)
+                            <option value="{{ $unit->id }}">{{ $unit->name }} ({{ $unit->short_name }})</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <input type="number" step="0.01" name="units[${unitIndex}][quantity_per_unit]" class="form-control" placeholder="Qty per primary unit">
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-danger btn-sm remove-unit">Remove</button>
+                </div>
+            </div>`;
+        document.getElementById('unitsContainer').insertAdjacentHTML('beforeend', html);
+        unitIndex++;
+    });
+
+    // Remove events
+    document.addEventListener('click', e => {
+        if (e.target.classList.contains('remove-attribute')) e.target.closest('.attribute-row').remove();
+        if (e.target.classList.contains('remove-unit')) e.target.closest('.unit-row').remove();
+        if (e.target.classList.contains('remove-variation')) e.target.closest('tr').remove();
+    });
+
+    document.getElementById('generateVariations')?.addEventListener('click', () => {
+        const attrs = [];
+        document.querySelectorAll('.attribute-row').forEach(row => {
+            const name = row.querySelector('input[name$="[name]"]')?.value.trim();
+            const values = row.querySelector('input[name$="[values]"]')?.value.split(',').map(v => v.trim()).filter(v => v);
+            if (name && values.length) attrs.push({ name, values });
+        });
+
+        if (attrs.length === 0) {
+            document.getElementById('variationsTable').innerHTML = '<p class="text-muted">Add at least one attribute</p>';
+            return;
         }
-    }
 
-    function calculateFromSalePrice() {
-        const price = parseFloat(priceInput.value) || 0;
-        const sale = parseFloat(salePriceInput.value) || 0;
-        if (price && sale && sale < price) {
-            const discount = ((price - sale) / price) * 100;
-            discountInput.value = discount.toFixed(2);
-            document.getElementById('sale_price_note').style.display = 'block';
-        }
-    }
+        const combinations = attrs.reduce((acc, attr) =>
+            acc.flatMap(obj => attr.values.map(val => ({ ...obj, [attr.name]: val })))
+        , [{}]);
 
-    // Apply bulk discount to variations
-    const applyBulkDiscountBtn = document.getElementById('applyBulkDiscount');
-    if (applyBulkDiscountBtn) {
-        applyBulkDiscountBtn.addEventListener('click', () => {
-            const bulkDiscount = parseFloat(document.getElementById('bulk_discount').value) || 0;
-            if (bulkDiscount < 0 || bulkDiscount > 100) {
-                Swal.fire('Warning', 'Please enter a valid discount percentage (0-100).', 'warning');
-                return;
-            }
-            
-            document.querySelectorAll('#variationsTable tbody tr').forEach(row => {
-                const priceInput = row.querySelector('input[name*="price"]');
-                const saleInput = row.querySelector('input[name*="sale_price"]');
-                const price = parseFloat(priceInput.value) || 0;
-                if (price > 0) {
-                    saleInput.value = (price * (1 - bulkDiscount / 100)).toFixed(2);
-                }
-            });
-            
-            Swal.fire('Success', `Applied ${bulkDiscount}% discount to all variations.`, 'success');
+        let tableHTML = `<table class="table table-bordered"><thead><tr>
+            <th>Variant</th><th>SKU</th><th>Price</th><th>Sale Price</th><th>Stock</th><th>Image</th><th>Action</th>
+        </tr></thead><tbody>`;
+
+        combinations.forEach((combo, i) => {
+            const variantName = Object.entries(combo).map(([k, v]) => `${k}: ${v}`).join(' | ');
+            tableHTML += `<tr>
+                <td><small>${variantName}</small>${Object.entries(combo).map(([k, v]) =>
+                    `<input type="hidden" name="variations[${i}][attributes][${k}]" value="${v}">`).join('')}
+                </td>
+                <td><input type="text" name="variations[${i}][sku]" class="form-control form-control-sm" required></td>
+                <td><input type="number" step="0.01" name="variations[${i}][price]" class="form-control form-control-sm" required></td>
+                <td><input type="number" step="0.01" name="variations[${i}][sale_price]" class="form-control form-control-sm"></td>
+                <td><input type="number" name="variations[${i}][stock]" class="form-control form-control-sm" required min="0"></td>
+                <td>
+                    <input type="file" name="variations[${i}][image]" class="form-control form-control-sm variation-image" accept="image/*">
+                    <img class="variation-preview mt-2 img-fluid rounded" style="max-height:80px;display:none;">
+                </td>
+                <td><button type="button" class="btn btn-danger btn-sm remove-variation">Remove</button></td>
+            </tr>`;
         });
-    }
 
-    // Generate variations button
-    const generateVariationsBtn = document.getElementById('generateVariations');
-    if (generateVariationsBtn) {
-        generateVariationsBtn.addEventListener('click', () => {
-            const attrs = [];
-            document.querySelectorAll('.attribute-row').forEach(row => {
-                const name = row.querySelector('input[name$="[name]"]').value.trim();
-                const values = row.querySelector('input[name$="[values]"]').value.split(',').map(v => v.trim()).filter(v => v);
-                if (name && values.length) attrs.push({name, values});
-            });
-            
-            if (!attrs.length) {
-                document.getElementById('variationsTable').innerHTML = '<p class="text-muted">Please add attributes first</p>';
-                return;
-            }
-            
-            // Generate all combinations
-            const combos = attrs.reduce((accumulator, currentAttr) => 
-                accumulator.flatMap(combo => 
-                    currentAttr.values.map(value => ({...combo, [currentAttr.name]: value}))
-                ), 
-                [{}]
-            ).filter(combo => Object.keys(combo).length > 0);
-            
-            let html = `
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Variant</th>
-                            <th>SKU</th>
-                            <th>Price</th>
-                            <th>Sale Price</th>
-                            <th>Stock</th>
-                            <th>Image</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>`;
-            
-            combos.forEach((combo, i) => {
-                const name = Object.entries(combo).map(([key, value]) => `${key}: ${value}`).join(' | ');
-                html += `
-                    <tr>
-                        <td>
-                            <small>${name}</small>
-                            ${Object.entries(combo).map(([key, value]) => 
-                                `<input type="hidden" name="variations[${i}][attributes][${key}]" value="${value}">`
-                            ).join('')}
-                        </td>
-                        <td>
-                            <input type="text" name="variations[${i}][sku]" class="form-control form-control-sm" required>
-                        </td>
-                        <td>
-                            <input type="number" step="0.01" name="variations[${i}][price]" class="form-control form-control-sm" required>
-                        </td>
-                        <td>
-                            <input type="number" step="0.01" name="variations[${i}][sale_price]" class="form-control form-control-sm">
-                        </td>
-                        <td>
-                            <input type="number" name="variations[${i}][stock]" class="form-control form-control-sm" required>
-                        </td>
-                        <td>
-                            <input type="file" name="variations[${i}][image]" class="form-control form-control-sm variation-image" accept="image/*">
-                            <img class="variation-preview mt-2 img-fluid rounded" style="max-height:80px;display:none;">
-                        </td>
-                        <td>
-                            <button type="button" class="btn btn-danger btn-sm remove-variation">Remove</button>
-                        </td>
-                    </tr>
-                `;
-            });
-            
-            html += `</tbody></table>`;
-            document.getElementById('variationsTable').innerHTML = html;
-        });
-    }
+        tableHTML += `</tbody></table>`;
+        document.getElementById('variationsTable').innerHTML = tableHTML;
+    });
 
-    // Thumbnail image preview
-    const thumbnailInput = document.getElementById('thumbnail_input');
-    if (thumbnailInput) {
-        thumbnailInput.addEventListener('change', function(e) {
-            if (e.target.files && e.target.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    document.getElementById('thumbnail_preview').src = event.target.result;
-                    document.getElementById('thumbnail_preview').style.display = 'block';
-                    document.getElementById('thumbnail_placeholder').style.display = 'none';
-                };
-                reader.readAsDataURL(e.target.files[0]);
-            }
-        });
-    }
-
-    // Gallery images preview
-    const galleryInput = document.getElementById('gallery_input');
-    if (galleryInput) {
-        galleryInput.addEventListener('change', function(e) {
-            const container = document.getElementById('imageGallery');
-            container.innerHTML = '';
-            
-            Array.from(e.target.files).forEach((file, index) => {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    const div = document.createElement('div');
-                    div.className = 'col-6 col-md-4 position-relative';
-                    div.innerHTML = `
-                        <img src="${event.target.result}" class="img-fluid rounded" style="height:100px;object-fit:cover;">
-                        <button type="button" class="btn-close position-absolute top-0 end-0 bg-white" onclick="this.parentElement.remove()"></button>
-                    `;
-                    container.appendChild(div);
-                };
-                reader.readAsDataURL(file);
-            });
-        });
-    }
-
-    // Make gallery sortable
-    const imageGallery = document.getElementById('imageGallery');
-    if (imageGallery) {
-        new Sortable(imageGallery, {
-            animation: 150,
-            ghostClass: 'bg-light'
-        });
-    }
-
-    // Variation image preview
-    document.addEventListener('change', function(e) {
-        if (e.target.classList.contains('variation-image') && e.target.files && e.target.files[0]) {
+    // Image previews (thumbnail, gallery, variation)
+    document.getElementById('thumbnail_input')?.addEventListener('change', function(e) {
+        if (e.target.files[0]) {
             const reader = new FileReader();
-            reader.onload = function(event) {
-                const previewImg = e.target.closest('td').querySelector('.variation-preview');
-                if (previewImg) {
-                    previewImg.src = event.target.result;
-                    previewImg.style.display = 'block';
+            reader.onload = ev => {
+                const preview = document.getElementById('thumbnail_preview');
+                const placeholder = document.getElementById('thumbnail_placeholder');
+                preview.src = ev.target.result;
+                preview.style.display = 'block';
+                placeholder.style.display = 'none';
+            };
+            reader.readAsDataURL(e.target.files[0]);
+        }
+    });
+
+    document.getElementById('gallery_input')?.addEventListener('change', function(e) {
+        const container = document.getElementById('imageGallery');
+        container.innerHTML = '';
+        Array.from(e.target.files).forEach(file => {
+            const reader = new FileReader();
+            reader.onload = ev => {
+                container.innerHTML += `
+                    <div class="col-4 position-relative">
+                        <img src="${ev.target.result}" class="img-fluid rounded" style="height:100px;object-fit:cover;">
+                        <button type="button" class="btn-close position-absolute top-0 end-0 bg-white" onclick="this.parentElement.remove()"></button>
+                    </div>`;
+            };
+            reader.readAsDataURL(file);
+        });
+    });
+
+    document.addEventListener('change', e => {
+        if (e.target.classList.contains('variation-image') && e.target.files[0]) {
+            const reader = new FileReader();
+            reader.onload = ev => {
+                const preview = e.target.closest('td')?.querySelector('.variation-preview');
+                if (preview) {
+                    preview.src = ev.target.result;
+                    preview.style.display = 'block';
                 }
             };
             reader.readAsDataURL(e.target.files[0]);
         }
     });
 
-    // Remove attribute and variation buttons
+    // Reset form
+    window.resetForm = function () {
+        document.getElementById('productForm').reset();
+        document.getElementById('product_id').value = '';
+        document.getElementById('modalTitle').textContent = 'Add Product';
+        document.getElementById('submitBtn').innerHTML = '<span class="spinner-border spinner-border-sm d-none me-1" id="submitSpinner"></span> Save Product';
+        toggleVariationsSection();
+        document.getElementById('attributesContainer').innerHTML = `
+            <div class="row g-3 align-items-end attribute-row">
+                <div class="col-md-5"><input type="text" class="form-control" placeholder="e.g. Color" name="attributes[0][name]"></div>
+                <div class="col-md-6"><input type="text" class="form-control" placeholder="Red, Blue, Green" name="attributes[0][values]"></div>
+                <div class="col-md-1"><button type="button" class="btn btn-danger btn-sm remove-attribute">Remove</button></div>
+            </div>`;
+        document.getElementById('variationsTable').innerHTML = '';
+        document.getElementById('imageGallery').innerHTML = '';
+        document.getElementById('thumbnail_preview').style.display = 'none';
+        document.getElementById('thumbnail_placeholder').style.display = 'block';
+        document.querySelectorAll('.variation-preview').forEach(img => img.style.display = 'none');
+        document.getElementById('unitsContainer').innerHTML = '';
+        attrIndex = 1;
+        unitIndex = 0;
+    };
+
+    // EDIT PRODUCT - Load data
     document.addEventListener('click', function(e) {
-        if (e.target.classList.contains('remove-attribute')) {
-            e.target.closest('.attribute-row').remove();
-        }
-        
-        if (e.target.classList.contains('remove-variation')) {
-            e.target.closest('tr').remove();
+        if (e.target.matches('.edit-item-btn') || e.target.closest('.edit-item-btn')) {
+            const btn = e.target.matches('.edit-item-btn') ? e.target : e.target.closest('.edit-item-btn');
+            const id = btn.dataset.id || localStorage.getItem('editProductId');
+            if (!id) return;
+            localStorage.removeItem('editProductId');
+
+            Swal.fire({ title: 'Loading...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+            axios.get(`/products/${id}/edit`)
+                .then(response => {
+                    const p = response.data;
+
+                    document.getElementById('product_id').value = p.id;
+                    document.getElementById('title').value = p.title || '';
+                    document.getElementById('sku').value = p.sku || '';
+                    document.getElementById('price').value = p.price || '';
+                    document.getElementById('sale_price').value = p.sale_price || '';
+                    document.getElementById('stock').value = p.stock || 0;
+                    document.getElementById('description').value = p.description || '';
+                    document.getElementById('product_type').value = p.product_type || 'simple';
+                    document.getElementById('brand_id').value = p.brand_id || '';
+                    document.getElementById('category_id').value = p.category_id || '';
+                    document.getElementById('primary_unit_id').value = p.primary_unit_id || '';
+                    document.getElementById('is_featured').checked = !!p.is_featured;
+
+                    // Thumbnail
+                    const thumbPrev = document.getElementById('thumbnail_preview');
+                    const thumbPlace = document.getElementById('thumbnail_placeholder');
+                    if (p.thumbnail) {
+                        thumbPrev.src = p.thumbnail;
+                        thumbPrev.style.display = 'block';
+                        thumbPlace.style.display = 'none';
+                    } else {
+                        thumbPrev.style.display = 'none';
+                        thumbPlace.style.display = 'block';
+                    }
+
+                    // Gallery
+                    const gallery = document.getElementById('imageGallery');
+                    gallery.innerHTML = '';
+                    if (p.gallery?.length) {
+                        p.gallery.forEach(img => {
+                            gallery.innerHTML += `
+                                <div class="col-4 position-relative">
+                                    <img src="${img.url}" class="img-fluid rounded" style="height:100px;object-fit:cover;">
+                                    <button type="button" class="btn-close position-absolute top-0 end-0 bg-white" onclick="this.parentElement.remove()"></button>
+                                </div>`;
+                        });
+                    }
+
+                    // Additional Units
+                    if (p.additional_units?.length) {
+                        p.additional_units.forEach(u => {
+                            document.getElementById('addUnit').click();
+                            const rows = document.querySelectorAll('.unit-row');
+                            const row = rows[rows.length - 1];
+                            row.querySelector('select[name*="unit_id"]').value = u.unit_id;
+                            row.querySelector('input[name*="quantity_per_unit"]').value = u.quantity_per_unit;
+                        });
+                    }
+
+                    // Variations
+                    toggleVariationsSection();
+                    if (p.product_type === 'variable' && p.attributes?.length && p.variations?.length) {
+                        document.getElementById('attributesContainer').innerHTML = `
+                            <div class="row g-3 align-items-end attribute-row">
+                                <div class="col-md-5"><input type="text" class="form-control" placeholder="e.g. Color" name="attributes[0][name]"></div>
+                                <div class="col-md-6"><input type="text" class="form-control" placeholder="Red, Blue, Green" name="attributes[0][values]"></div>
+                                <div class="col-md-1"><button type="button" class="btn btn-danger btn-sm remove-attribute">Remove</button></div>
+                            </div>`;
+
+                        attrIndex = 0;
+                        p.attributes.forEach(attr => {
+                            if (attrIndex > 0) document.getElementById('addAttribute').click();
+                            const row = document.querySelectorAll('.attribute-row')[attrIndex];
+                            row.querySelector('input[name$="[name]"]').value = attr.name;
+                            row.querySelector('input[name$="[values]"]').value = attr.values.join(', ');
+                            attrIndex++;
+                        });
+
+                        setTimeout(() => {
+                            document.getElementById('generateVariations').click();
+                            setTimeout(() => {
+                                p.variations.forEach((v, i) => {
+                                    const row = document.querySelectorAll('#variationsTable tbody tr')[i];
+                                    if (row) {
+                                        row.querySelector('input[name*="sku"]').value = v.sku || '';
+                                        row.querySelector('input[name*="price"]').value = v.price || '';
+                                        row.querySelector('input[name*="sale_price"]').value = v.sale_price || '';
+                                        row.querySelector('input[name*="stock"]').value = v.stock || 0;
+
+                                        if (v.image) {
+                                            const preview = row.querySelector('.variation-preview');
+                                            preview.src = v.image;
+                                            preview.style.display = 'block';
+                                        }
+
+                                        if (v.attributes) {
+                                            Object.entries(v.attributes).forEach(([key, val]) => {
+                                                const hidden = row.querySelector(`input[name="variations[${i}][attributes][${key}]"]`);
+                                                if (hidden) hidden.value = val;
+                                            });
+                                        }
+                                    }
+                                });
+                            }, 100);
+                        }, 100);
+                    }
+
+                    document.getElementById('modalTitle').textContent = 'Edit Product';
+                    const modal = new bootstrap.Modal(document.getElementById('showModal'));
+                    modal.show();
+                    Swal.close();
+                })
+                .catch(err => {
+                    console.error(err);
+                    Swal.fire('Error', 'Failed to load product', 'error');
+                });
         }
     });
 
-    // ============ EVENT DELEGATION FOR DYNAMIC ELEMENTS ============
-
+    // DELETE PRODUCT
     document.addEventListener('click', function(e) {
-        // Inventory button click
-        if (e.target.classList.contains('inventory-btn')) {
-            const id = e.target.dataset.id;
-            const title = e.target.dataset.title;
-            document.getElementById('inventoryTitle').textContent = title;
-            
-            axios.get(`/products/${id}/inventory`)
-                .then(response => {
-                    const tbody = document.getElementById('inventoryLogBody');
-                    if (response.data && response.data.length > 0) {
-                        tbody.innerHTML = response.data.map(log => `
-                            <tr>
-                                <td>${new Date(log.created_at).toLocaleString()}</td>
-                                <td>
-                                    <span class="badge bg-${log.type === 'in' ? 'success' : 'danger'}">
-                                        ${log.type === 'in' ? 'Added' : 'Removed'}
-                                    </span>
-                                </td>
-                                <td><strong>${log.quantity}</strong></td>
-                                <td>${log.reference || '-'}</td>
-                                <td>${log.previous_stock}</td>
-                                <td><strong>${log.new_stock}</strong></td>
-                            </tr>
-                        `).join('');
-                    } else {
-                        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No inventory records found</td></tr>';
-                    }
-                    
-                    // Show the inventory modal
-                    const inventoryModal = new bootstrap.Modal(document.getElementById('inventoryModal'));
-                    inventoryModal.show();
-                })
-                .catch(error => {
-                    console.error('Inventory load error:', error);
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: 'Failed to load inventory data. Please try again.'
-                    });
-                });
-        }
-
-        // Edit button click
-        if (e.target.closest('.edit-item-btn')) {
-            const btn = e.target.closest('.edit-item-btn');
+        if (e.target.matches('.remove-item-btn') || e.target.closest('.remove-item-btn')) {
+            const btn = e.target.matches('.remove-item-btn') ? e.target : e.target.closest('.remove-item-btn');
             const id = btn.dataset.id;
-            
-            // Show loading state
+
             Swal.fire({
-                title: 'Loading product data...',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-            
-            axios.get(`/products/${id}/edit`)
-                .then(response => {
-                    Swal.close();
-                    const product = response.data;
-
-                    // Reset form first
-                    resetForm();
-                    
-                    // Fill form with product data
-                    document.getElementById('product_id').value = product.id;
-                    document.getElementById('title').value = product.title || '';
-                    document.getElementById('sku').value = product.sku || '';
-                    document.getElementById('price').value = product.price || '';
-                    document.getElementById('sale_price').value = product.sale_price || '';
-                    document.getElementById('stock').value = product.stock || '';
-                    document.getElementById('description').value = product.description || '';
-                    document.getElementById('brand_id').value = product.brand_id || '';
-                    document.getElementById('category_id').value = product.category_id || '';
-                    document.getElementById('product_type').value = product.product_type || 'simple';
-                    document.getElementById('is_featured').checked = !!product.is_featured;
-
-                    // Handle thumbnail image
-                    const thumbPreview = document.getElementById('thumbnail_preview');
-                    const thumbPlaceholder = document.getElementById('thumbnail_placeholder');
-                    if (product.thumbnail) {
-                        const thumbnailUrl = product.thumbnail.includes('http') ? product.thumbnail : `/storage/${product.thumbnail}`;
-                        thumbPreview.src = thumbnailUrl;
-                        thumbPreview.style.display = 'block';
-                        thumbPlaceholder.style.display = 'none';
-                    } else {
-                        thumbPreview.style.display = 'none';
-                        thumbPlaceholder.style.display = 'block';
-                    }
-
-                    // Handle gallery images
-                    const gallery = document.getElementById('imageGallery');
-                    gallery.innerHTML = '';
-                    if (product.gallery && product.gallery.length > 0) {
-                        product.gallery.forEach((img, index) => {
-                            const div = document.createElement('div');
-                            div.className = 'col-6 col-md-4 position-relative';
-                            const imgUrl = img.url || img;
-                            div.innerHTML = `
-                                <img src="${imgUrl}" class="img-fluid rounded" style="height:100px;object-fit:cover;">
-                                <input type="hidden" name="existing_images[]" value="${imgUrl}">
-                                <button type="button" class="btn-close position-absolute top-0 end-0 bg-white" onclick="this.parentElement.remove()"></button>
-                            `;
-                            gallery.appendChild(div);
-                        });
-                    }
-
-                    // Handle sale price calculation
-                    calculateFromSalePrice();
-
-                    // Handle variations for variable products
-                    const variationsSection = document.getElementById('variationsSection');
-                    if (product.product_type === 'variable' && product.variations && product.variations.length > 0) {
-                        variationsSection.style.display = 'block';
-                        
-                        // Clear existing attributes
-                        const container = document.getElementById('attributesContainer');
-                        container.innerHTML = '';
-                        
-                        // Add attributes if they exist
-                        if (product.attributes && product.attributes.length > 0) {
-                            product.attributes.forEach((attr, index) => {
-                                const attrHtml = `
-                                    <div class="row g-3 align-items-end attribute-row ${index > 0 ? 'mt-3' : ''}">
-                                        <div class="col-md-5">
-                                            <input type="text" class="form-control" placeholder="e.g. Color" 
-                                                   name="attributes[${index}][name]" value="${attr.name}">
-                                        </div>
-                                        <div class="col-md-6">
-                                            <input type="text" class="form-control" placeholder="Red, Blue, Green" 
-                                                   name="attributes[${index}][values]" value="${attr.values ? attr.values.join(', ') : ''}">
-                                        </div>
-                                        <div class="col-md-1">
-                                            <button type="button" class="btn btn-danger btn-sm remove-attribute">Remove</button>
-                                        </div>
-                                    </div>
-                                `;
-                                container.insertAdjacentHTML('beforeend', attrHtml);
-                            });
-                            attrIndex = product.attributes.length;
-                        } else {
-                            // Add default attribute row
-                            const defaultRow = `
-                                <div class="row g-3 align-items-end attribute-row">
-                                    <div class="col-md-5">
-                                        <input type="text" class="form-control" placeholder="e.g. Color" name="attributes[0][name]">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <input type="text" class="form-control" placeholder="Red, Blue, Green" name="attributes[0][values]">
-                                    </div>
-                                    <div class="col-md-1">
-                                        <button type="button" class="btn btn-danger btn-sm remove-attribute">Remove</button>
-                                    </div>
-                                </div>
-                            `;
-                            container.innerHTML = defaultRow;
-                            attrIndex = 1;
-                        }
-
-                        // Generate variations table
-                        let variationsHtml = `
-                            <table class="table table-bordered">
-                                <thead>
-                                    <tr>
-                                        <th>Variant</th>
-                                        <th>SKU</th>
-                                        <th>Price</th>
-                                        <th>Sale Price</th>
-                                        <th>Stock</th>
-                                        <th>Image</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody>`;
-                        
-                        product.variations.forEach((variation, index) => {
-                            const name = Object.entries(variation.attributes || {}).map(([key, value]) => `${key}: ${value}`).join(' | ') || 'Default';
-                            const hiddenInputs = Object.entries(variation.attributes || {}).map(([key, value]) => 
-                                `<input type="hidden" name="variations[${index}][attributes][${key}]" value="${value}">`
-                            ).join('');
-                            
-                            variationsHtml += `
-                                <tr>
-                                    <td>
-                                        <small>${name}</small>
-                                        ${hiddenInputs}
-                                        <input type="hidden" name="variations[${index}][id]" value="${variation.id || ''}">
-                                    </td>
-                                    <td>
-                                        <input type="text" name="variations[${index}][sku]" value="${variation.sku || ''}" 
-                                               class="form-control form-control-sm" required>
-                                    </td>
-                                    <td>
-                                        <input type="number" step="0.01" name="variations[${index}][price]" value="${variation.price}" 
-                                               class="form-control form-control-sm" required>
-                                    </td>
-                                    <td>
-                                        <input type="number" step="0.01" name="variations[${index}][sale_price]" value="${variation.sale_price || ''}" 
-                                               class="form-control form-control-sm">
-                                    </td>
-                                    <td>
-                                        <input type="number" name="variations[${index}][stock]" value="${variation.stock}" 
-                                               class="form-control form-control-sm" required>
-                                    </td>
-                                    <td>
-                                        <input type="file" name="variations[${index}][image]" class="form-control form-control-sm variation-image" accept="image/*">
-                                        ${variation.image ? `<img src="${variation.image}" class="variation-preview mt-2 img-fluid rounded" style="max-height:80px;">` : ''}
-                                    </td>
-                                    <td>
-                                        <button type="button" class="btn btn-danger btn-sm remove-variation">Remove</button>
-                                    </td>
-                                </tr>
-                            `;
-                        });
-                        
-                        variationsHtml += `</tbody></table>`;
-                        document.getElementById('variationsTable').innerHTML = variationsHtml;
-                    } else {
-                        variationsSection.style.display = 'none';
-                    }
-
-                    // Update modal title and button
-                    document.getElementById('modalTitle').textContent = 'Edit Product';
-                    document.getElementById('submitBtn').innerHTML = '<span class="spinner-border spinner-border-sm d-none me-1" id="submitSpinner"></span> Update Product';
-                    
-                    // Show the modal
-                    const modalElement = document.getElementById('showModal');
-                    const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
-                    modal.show();
-                    
-                })
-                .catch(error => {
-                    Swal.close();
-                    console.error('Error loading product:', error);
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: 'Failed to load product data. Please try again.'
-                    });
-                });
-        }
-
-        // Delete button click
-        if (e.target.closest('.remove-item-btn')) {
-            const id = e.target.closest('.remove-item-btn').dataset.id;
-            Swal.fire({
-                title: 'Are you sure?',
-                text: "This product will be permanently deleted!",
+                title: 'Delete Product?',
+                text: "This action cannot be undone!",
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#d33',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, delete it!',
-                cancelButtonText: 'Cancel'
-            }).then((result) => {
+                confirmButtonText: 'Yes, delete!'
+            }).then(result => {
                 if (result.isConfirmed) {
                     axios.delete(`/products/${id}`)
-                        .then(() => {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Deleted!',
-                                text: 'Product has been deleted successfully.',
-                                timer: 1500,
-                                showConfirmButton: false
-                            }).then(() => {
-                                location.reload();
-                            });
+                        .then(res => {
+                            Swal.fire('Deleted!', res.data.message || 'Product deleted', 'success')
+                                .then(() => location.reload());
                         })
-                        .catch(error => {
-                            console.error('Delete error:', error);
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Error',
-                                text: 'Failed to delete product. Please try again.'
-                            });
-                        });
+                        .catch(() => Swal.fire('Error!', 'Failed to delete', 'error'));
                 }
             });
         }
     });
 
-    // Import form submission
-    const importForm = document.getElementById('importForm');
-    if (importForm) {
-        importForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-            const progress = document.getElementById('importProgress');
-            const bar = progress.querySelector('.progress-bar');
-            
-            progress.style.display = 'block';
-            bar.style.width = '0%';
-            bar.textContent = '0%';
-            
-            axios.post('{{ route("products.import") }}', formData, {
-                headers: {'Content-Type': 'multipart/form-data'},
-                onUploadProgress: function(progressEvent) {
-                    const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-                    bar.style.width = percent + '%';
-                    bar.textContent = percent + '%';
-                }
-            })
-            .then(() => {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success!',
-                    text: 'Import completed successfully.',
-                    confirmButtonText: 'OK'
-                }).then(() => {
-                    location.reload();
-                });
-            })
-            .catch(error => {
-                console.error('Import error:', error);
-                let errorMessage = 'Import failed. Please try again.';
-                if (error.response && error.response.data && error.response.data.message) {
-                    errorMessage = error.response.data.message;
-                }
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error!',
-                    text: errorMessage
-                });
-                progress.style.display = 'none';
-            });
-        });
-    }
+    // FORM SUBMIT
+    document.getElementById('productForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const id = document.getElementById('product_id').value;
+        if (id) formData.append('_method', 'PUT');
 
-    // Bulk edit form submission
-    const bulkEditForm = document.getElementById('bulkEditForm');
-    if (bulkEditForm) {
-        bulkEditForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            Swal.fire({
-                title: 'Applying changes...',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-            
-            axios.post('{{ route("products.bulkUpdate") }}', new FormData(this))
-                .then(() => {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Success!',
-                        text: 'Bulk update completed successfully.',
-                        confirmButtonText: 'OK'
-                    }).then(() => {
-                        location.reload();
-                    });
-                })
-                .catch(error => {
-                    console.error('Bulk update error:', error);
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error!',
-                        text: 'Bulk update failed. Please try again.'
-                    });
-                });
-        });
-    }
+        const url = id ? `/products/${id}` : '/products';
+        const btn = document.getElementById('submitBtn');
+        const spinner = document.getElementById('submitSpinner');
+        btn.disabled = true;
+        spinner.classList.remove('d-none');
 
-    // Product form submission
-    const productForm = document.getElementById('productForm');
-    if (productForm) {
-        productForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const productId = document.getElementById('product_id').value;
-            const url = productId ? `/products/${productId}` : '/products';
-            const formData = new FormData(this);
-            
-            if (productId) {
-                formData.append('_method', 'PUT');
-            }
-            
-            const btn = document.getElementById('submitBtn');
-            const spinner = document.getElementById('submitSpinner');
-            btn.disabled = true;
-            spinner.classList.remove('d-none');
-            
-            axios.post(url, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
+        axios.post(url, formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+            .then(res => {
+                Swal.fire('Success!', res.data.message || 'Saved!', 'success')
+                    .then(() => location.reload());
             })
-            .then(response => {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success!',
-                    text: response.data.message || 'Product saved successfully.',
-                    confirmButtonText: 'OK'
-                }).then(() => {
-                    location.reload();
-                });
-            })
-            .catch(error => {
-                console.error('Save error:', error);
-                let errorMessage = 'Error saving product. Please try again.';
-                
-                if (error.response && error.response.data) {
-                    if (error.response.data.message) {
-                        errorMessage = error.response.data.message;
-                    } else if (error.response.data.errors) {
-                        const errors = Object.values(error.response.data.errors).flat();
-                        errorMessage = errors.join('<br>');
-                    }
+            .catch(err => {
+                let msg = 'Error occurred';
+                if (err.response?.data?.errors) {
+                    msg = Object.values(err.response.data.errors).flat().join('<br>');
+                } else if (err.response?.data?.message) {
+                    msg = err.response.data.message;
                 }
-                
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error!',
-                    html: errorMessage
-                });
+                Swal.fire('Error', msg, 'error');
             })
             .finally(() => {
                 btn.disabled = false;
                 spinner.classList.add('d-none');
             });
-        });
-    }
-
-    // Reset form function
-    window.resetForm = function() {
-        // Reset form inputs
-        const productForm = document.getElementById('productForm');
-        if (productForm) {
-            productForm.reset();
-        }
-        
-        // Clear hidden fields
-        document.getElementById('product_id').value = '';
-        
-        // Reset product type to "simple" by default
-        if (productTypeSelect) {
-            productTypeSelect.value = 'simple';
-            toggleVariationsSection(); // Update the display immediately
-        }
-        
-        // Reset modal title and button
-        document.getElementById('modalTitle').textContent = 'Add Product';
-        document.getElementById('submitBtn').innerHTML = '<span class="spinner-border spinner-border-sm d-none me-1" id="submitSpinner"></span> Save Product';
-        
-        // Reset attributes container
-        const container = document.getElementById('attributesContainer');
-        if (container) {
-            container.innerHTML = `
-                <div class="row g-3 align-items-end attribute-row">
-                    <div class="col-md-5">
-                        <input type="text" class="form-control" placeholder="e.g. Color" name="attributes[0][name]">
-                    </div>
-                    <div class="col-md-6">
-                        <input type="text" class="form-control" placeholder="Red, Blue, Green" name="attributes[0][values]">
-                    </div>
-                    <div class="col-md-1">
-                        <button type="button" class="btn btn-danger btn-sm remove-attribute">Remove</button>
-                    </div>
-                </div>`;
-        }
-        
-        // Clear variations table
-        document.getElementById('variationsTable').innerHTML = '';
-        
-        // Clear image gallery
-        document.getElementById('imageGallery').innerHTML = '';
-        
-        // Reset thumbnail preview
-        const thumbPreview = document.getElementById('thumbnail_preview');
-        const thumbPlaceholder = document.getElementById('thumbnail_placeholder');
-        if (thumbPreview && thumbPlaceholder) {
-            thumbPreview.style.display = 'none';
-            thumbPreview.src = '';
-            thumbPlaceholder.style.display = 'block';
-        }
-        
-        // Reset sale price note
-        const salePriceNote = document.getElementById('sale_price_note');
-        if (salePriceNote) {
-            salePriceNote.style.display = 'none';
-        }
-        
-        // Reset attribute index
-        attrIndex = 1;
-        
-        // Close modal if open
-        const modalElement = document.getElementById('showModal');
-        if (modalElement) {
-            const modal = bootstrap.Modal.getInstance(modalElement);
-            if (modal) {
-                modal.hide();
-            }
-        }
-    };
+    });
 });
 </script>
 @endsection
