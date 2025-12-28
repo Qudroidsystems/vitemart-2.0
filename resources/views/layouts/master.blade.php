@@ -16,7 +16,22 @@
     <meta content="" name="author">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <!-- App favicon -->
-    <link rel="shortcut icon" href="{{ asset('theme/layouts/assets/images/favicon.ico')}}">
+   <head>
+    <!-- Other meta tags, title, css, etc. -->
+
+    <!-- Dynamic Favicon -->
+    @if($store?->logo)
+        <link rel="shortcut icon" href="{{ $store->getLogoUrlAttribute() }}" type="image/png">
+        <link rel="icon" href="{{ $store->getLogoUrlAttribute() }}" type="image/png">
+        <link rel="apple-touch-icon" href="{{ $store->getLogoUrlAttribute() }}">
+    @else
+        <link rel="shortcut icon" href="{{ asset('theme/layouts/assets/images/favicon.ico') }}">
+        <link rel="icon" href="{{ asset('theme/layouts/assets/images/favicon.ico') }}">
+        <link rel="apple-touch-icon" href="{{ asset('theme/layouts/assets/images/favicon.ico') }}">
+    @endif
+
+    <!-- Rest of head -->
+</head>
 
     <!-- Fonts css load -->
     <link rel="preconnect" href="https://fonts.googleapis.com/">
