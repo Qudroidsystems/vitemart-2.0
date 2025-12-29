@@ -99,15 +99,10 @@ class PosController extends Controller
                 $orderItems = [];
                 $orderId = 'POS-' . now()->format('Ymd-His') . '-' . Str::random(4);
 
-                // SAFE: No duplicate entry error
-                $defaultLocation = StockLocation::updateOrCreate(
-                    ['code' => 'MAIN'],
-                    [
-                        'name'       => 'Main Store',
-                        'is_default' => true,
-                        'is_active'  => true,
-                    ]
-                );
+                // CORRECT APPROACH: Only fetch the default location - do NOT create/update it here
+                $defaultLocation = StockLocation::where('is_default', true)
+                    ->orWhere('code', 'MAIN')
+                    ->firstOrFail();
 
                 foreach ($request->items as $item) {
                     $product = Product::with('units')->findOrFail($item['product_id']);
@@ -152,7 +147,7 @@ class PosController extends Controller
                         'unit_name'        => $selectedUnit->name ?? null,
                     ];
 
-                    // Stock deduction
+                    // Stock deduction - insert into stocks table only
                     $previous = $product->stock;
                     $new = max(0, $previous - $piecesToDeduct);
 
@@ -362,15 +357,10 @@ class PosController extends Controller
             DB::transaction(function () use ($orderId) {
                 $order = Order::with('items.product.units')->where('id', $orderId)->firstOrFail();
 
-                // SAFE: No duplicate entry
-                $defaultLocation = StockLocation::updateOrCreate(
-                    ['code' => 'MAIN'],
-                    [
-                        'name'       => 'Main Store',
-                        'is_default' => true,
-                        'is_active'  => true,
-                    ]
-                );
+                // CORRECT APPROACH: Only fetch the default location
+                $defaultLocation = StockLocation::where('is_default', true)
+                    ->orWhere('code', 'MAIN')
+                    ->firstOrFail();
 
                 foreach ($order->items as $item) {
                     $product = $item->product;
