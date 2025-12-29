@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Auth;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 
 class LoginController extends Controller
@@ -41,7 +40,7 @@ class LoginController extends Controller
     }
 
     /**
-     * The user has been logged in.
+     * The user has been authenticated.
      *
      * @param  \Illuminate\Http\Request  $request
      * @param  mixed  $user
@@ -49,18 +48,8 @@ class LoginController extends Controller
      */
     protected function authenticated(Request $request, $user)
     {
-        // Check if the user has 'staff' in the role column
-        if ($user->role !== 'staff') {
-            // Log out the user immediately
-            auth()->logout();
-
-            // Throw validation exception to mimic login failure
-            throw ValidationException::withMessages([
-                $this->username() => [trans('auth.failed_staff_role')],
-            ]);
-        }
-
-        // If role check passes, proceed to default redirect
+        // No role check anymore
+        // All authenticated users are allowed to proceed
         return redirect()->intended($this->redirectPath());
     }
 }

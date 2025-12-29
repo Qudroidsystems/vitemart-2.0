@@ -56,6 +56,10 @@
         @include('layouts.pages-assets.css.users-list-css')
     @endif
 
+     @if (Route::is('user.*'))
+        @include('layouts.pages-assets.css.users-list-css')
+    @endif
+
     @if (Route::is('roles.*'))
         @include('layouts.pages-assets.css.roles-list-css')
     @endif
@@ -370,7 +374,7 @@
                         <!-- =========================================== -->
 
                         @can('View review')
-                            <li class="nav-item">
+                            {{-- <li class="nav-item">
                                 <a class="nav-link menu-link collapsed" href="#sidebarreviews" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarreviews">
                                     <i class="ph-star"></i> <span data-key="t-authentication">Reviews Management</span>
                                 </a>
@@ -381,7 +385,7 @@
                                         </li>
                                     </ul>
                                 </div>
-                            </li>
+                            </li> --}}
                         @endcan
 
                          @can('View order')
@@ -588,7 +592,7 @@
                                     ?>
 
                                     @if($userdata)
-                                        <img class="rounded-circle header-profile-user" src="{{ Storage::url('images/staffavatar/'.$image)}}" alt="{{ $userdata->name }}">
+                                        <img class="rounded-circle header-profile-user" src="{{ asset('storage/' . $userdata->profile_image) }}"  alt="{{ $userdata->name }}">
                                         <span class="text-start ms-xl-2">
                                             <span class="d-none d-xl-inline-block ms-1 fw-medium user-name-text">{{ $userdata->name }}</span>
                                             <span class="d-none d-xl-block ms-1 fs-sm user-name-sub-text">{{ $userdata->roles->first()->name ?? 'User' }}</span>
@@ -609,11 +613,11 @@
                                         <i class="mdi mdi-account-circle text-muted fs-lg align-middle me-1"></i>
                                         <span class="align-middle">Profile</span>
                                     </a>
-                                    <div class="dropdown-divider"></div>
+                                    {{-- <div class="dropdown-divider"></div>
                                     <a class="dropdown-item" href="{{ route('user.settings', $userdata->id) }}">
                                         <i class="mdi mdi-cog text-muted fs-lg align-middle me-1"></i>
                                         <span class="align-middle">Settings</span>
-                                    </a>
+                                    </a> --}}
                                     <a class="dropdown-item" href="auth-lockscreen.html">
                                         <i class="mdi mdi-lock text-muted fs-lg align-middle me-1"></i>
                                         <span class="align-middle">Lock screen</span>
@@ -1382,6 +1386,10 @@
       @endif
 
       @if (Route::is('users.*'))
+            @include('layouts.pages-assets.js.users-list-js')
+      @endif
+
+      @if (Route::is('user.*'))
             @include('layouts.pages-assets.js.users-list-js')
       @endif
 

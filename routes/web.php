@@ -59,13 +59,15 @@ Route::middleware(['auth'])->group(function () {
 
     // Users Management
     Route::resource('users', UserController::class);
+    Route::get('/users/{user}', [UserController::class, 'show'])->name('users.show');
+    Route::get('/users/{user}/overview', [UserController::class, 'overview'])->name('user.overview');
     Route::get('/users/all', [UserController::class, 'allUsers'])->name('users.all');
     Route::get('/users/paginate', [UserController::class, 'paginate'])->name('users.paginate');
     Route::get('/users/roles', [UserController::class, 'roles'])->name('users.roles');
 
     // Biodata / Profile
     Route::resource('biodata', BiodataController::class);
-    Route::get('/users/{user}/overview', [OverviewController::class, 'show'])->name('user.overview');
+
     Route::get('/users/{user}/settings', [BiodataController::class, 'show'])->name('user.settings');
 
     // Banner Management
