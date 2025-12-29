@@ -34,10 +34,13 @@
                             </div>
 
                             <div class="table-responsive flex-grow-1 position-relative">
+                                <!-- Loading Overlay -->
                                 <div id="searchLoading" class="position-absolute top-0 start-0 w-100 h-100 bg-white bg-opacity-75 d-none" style="z-index: 10;">
                                     <div class="d-flex justify-content-center align-items-center h-100">
                                         <div class="text-center">
-                                            <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
+                                            <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
+                                                <span class="visually-hidden">Loading...</span>
+                                            </div>
                                             <h5 class="text-primary">Searching products...</h5>
                                         </div>
                                     </div>
@@ -82,15 +85,34 @@
                         <div class="card-body d-flex flex-column">
                             <!-- Customer Selection -->
                             <div class="mb-4">
-                                <label class="form-label fw-semibold">Customer</label>
-                                <select class="form-select form-select-lg" id="customerSelect">
-                                    <option value="">Walk-in Customer</option>
-                                    @foreach($customers as $customer)
-                                        <option value="{{ $customer->id }}">
-                                            {{ $customer->first_name }} {{ $customer->last_name }} @if($customer->phone_number) - {{ $customer->phone_number }} @endif
-                                        </option>
-                                    @endforeach
-                                </select>
+                                <label class="form-label fw-semibold d-flex justify-content-between align-items-center">
+                                    <span>Customer</span>
+                                    <a href="javascript:void(0)" class="text-decoration-none fs-6"
+                                       data-bs-toggle="tooltip" data-bs-title="Quick customer management">
+                                        <i class="bi bi-person-plus"></i>
+                                    </a>
+                                </label>
+                                <div class="position-relative">
+                                    <select class="form-select form-select-lg customer-select-dropdown"
+                                            id="customerSelect"
+                                            style="padding-right: 40px; z-index: 1000;">
+                                        <option value="">Walk-in Customer</option>
+                                        @foreach($customers as $customer)
+                                            <option value="{{ $customer->id }}">
+                                                {{ $customer->first_name }} {{ $customer->last_name }}
+                                                @if($customer->phone_number)
+                                                    - {{ $customer->phone_number }}
+                                                @endif
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <div class="position-absolute top-50 end-0 translate-middle-y me-3">
+                                        <i class="bi bi-chevron-down text-muted"></i>
+                                    </div>
+                                </div>
+                                <small class="text-muted mt-1 d-block">
+                                    <span id="customerCount">{{ count($customers) }}</span> customers available
+                                </small>
                             </div>
 
                             <!-- Loyalty Points Section -->
@@ -133,7 +155,7 @@
                                 </div>
                             </div>
 
-                            <!-- Order Discount -->
+                            <!-- Order-Level Discount -->
                             <div class="border-top pt-3 mb-3">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                     <span class="fw-semibold">Order Discount</span>
@@ -143,7 +165,7 @@
                                             <option value="fixed">₦</option>
                                             <option value="percent" selected>%</option>
                                         </select>
-                                        <button class="btn btn-outline-primary" id="applyDiscountBtn">
+                                        <button class="btn btn-outline-primary" type="button" id="applyDiscountBtn">
                                             <i class="bi bi-check-lg"></i>
                                         </button>
                                     </div>
@@ -316,8 +338,11 @@
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+// MAIN POS SCRIPT
 document.addEventListener('DOMContentLoaded', function () {
-    // Elements
+    // ============================================
+    // INITIALIZATION
+    // ============================================
     const input = document.getElementById('barcodeInput');
     const resultsBody = document.getElementById('resultsBody');
     const emptySearchRow = document.getElementById('emptySearchRow');
@@ -344,22 +369,30 @@ document.addEventListener('DOMContentLoaded', function () {
     const applyRedeemBtn = document.getElementById('applyRedeemBtn');
     const redeemInfo = document.getElementById('redeemInfo');
 
-    // State
+    // Initialize Bootstrap tooltips
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+    // State management
     let cart = [];
     let selectedProducts = [];
     let currentSearchQuery = '';
+    let loadOrderModalInstance = new bootstrap.Modal(document.getElementById('loadOrderModal'));
     let currentProduct = null;
-    let currentItemIndex = null;
+    let quantityModalInstance = null;
     let productQuantityCache = {};
     let lastSearchResults = [];
     let discountType = 'percent';
     let discountValue = 0;
+    let currentItemIndex = null;
     let customerPoints = 0;
     let redeemRate = {{ config('loyalty.redeem_rate', 100) }};
 
     input.focus();
 
-    // Loyalty points load
+    // ============================================
+    // LOYALTY POINTS
+    // ============================================
     customerSelect.addEventListener('change', function () {
         const customerId = this.value;
         if (customerId) {
@@ -372,7 +405,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         loyaltySection.style.display = 'block';
                     }
                 })
-                .catch(() => {
+                .catch(err => {
+                    console.error('Failed to load points', err);
                     loyaltySection.style.display = 'none';
                 });
         } else {
@@ -382,7 +416,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Redeem points
     applyRedeemBtn.addEventListener('click', function () {
         const points = parseInt(redeemPointsInput.value) || 0;
         if (points > customerPoints) {
@@ -399,15 +432,24 @@ document.addEventListener('DOMContentLoaded', function () {
         Swal.fire('Points Redeemed!', `₦${discountValue} discount applied`, 'success');
     });
 
-    // Order discount
+    // ============================================
+    // DISCOUNT FUNCTIONALITY
+    // ============================================
     document.getElementById('discountType').addEventListener('change', function () {
         discountType = this.value;
+    });
+
+    document.getElementById('discountValue').addEventListener('input', function () {
+        const val = parseFloat(this.value) || 0;
+        if (discountType === 'percent' && val > 100) {
+            this.value = 100;
+        }
     });
 
     document.getElementById('applyDiscountBtn').addEventListener('click', function () {
         discountValue = parseFloat(document.getElementById('discountValue').value) || 0;
         if (discountType === 'percent' && discountValue > 100) {
-            Swal.fire('Invalid', 'Percentage cannot exceed 100%', 'warning');
+            Swal.fire('Invalid', 'Percentage discount cannot exceed 100%', 'warning');
             discountValue = 100;
             document.getElementById('discountValue').value = 100;
         }
@@ -418,7 +460,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.addEventListener('click', function (e) {
         if (e.target.classList.contains('item-discount-btn') || e.target.closest('.item-discount-btn')) {
             const btn = e.target.closest('.item-discount-btn');
-            currentItemIndex = cart.findIndex(item => item.product_id == btn.dataset.productId);
+            currentItemIndex = cart.findIndex(item => item.product_id === parseInt(btn.dataset.productId));
             if (currentItemIndex === -1) return;
 
             const item = cart[currentItemIndex];
@@ -448,7 +490,9 @@ document.addEventListener('DOMContentLoaded', function () {
         bootstrap.Modal.getInstance(document.getElementById('itemDiscountModal')).hide();
     });
 
-    // Search
+    // ============================================
+    // SEARCH & CART LOGIC
+    // ============================================
     input.addEventListener('input', debounce(() => {
         const q = input.value.trim();
         currentSearchQuery = q;
@@ -564,12 +608,11 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
-    // Quantity Modal
+    // Quantity Modal Events
     document.addEventListener('click', function (e) {
         if (e.target.classList.contains('qty-btn') || e.target.closest('.qty-btn')) {
             const btn = e.target.classList.contains('qty-btn') ? e.target : e.target.closest('.qty-btn');
-            if (btn.disabled) return;
-            openQuantityModal(btn);
+            if (!btn.disabled) openQuantityModal(btn);
         }
 
         if (e.target.classList.contains('remove-from-table-btn') || e.target.closest('.remove-from-table-btn')) {
@@ -620,7 +663,6 @@ document.addEventListener('DOMContentLoaded', function () {
         totalPriceDisplay.textContent = `Total: ₦${(qty * price).toFixed(2)}`;
     }
 
-    // Cart functions
     function addToSelectedProducts(product) {
         if (!selectedProducts.some(p => p.id === product.id)) selectedProducts.push({...product});
     }
@@ -879,7 +921,7 @@ document.addEventListener('DOMContentLoaded', function () {
             html += '</div>';
             list.innerHTML = html;
         }
-        new bootstrap.Modal(document.getElementById('loadOrderModal')).show();
+        loadOrderModalInstance.show();
     }
 
     document.addEventListener('click', function (e) {
@@ -932,7 +974,7 @@ document.addEventListener('DOMContentLoaded', function () {
         redeemPointsInput.value = '';
         updateCart();
         renderAllProducts();
-        new bootstrap.Modal(document.getElementById('loadOrderModal')).hide();
+        loadOrderModalInstance.hide();
         Swal.fire('Loaded!', '', 'success');
     }
 
@@ -1017,10 +1059,33 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 <style>
-.qty-btn, .qty-btn-cart { min-width: 120px; }
-.qty-btn-cart { min-width: 60px; font-weight: bold; }
+.modal.fade .modal-content { transform: scale(0.95); transition: transform 0.3s ease-out; }
+.modal.show .modal-content { transform: scale(1); }
+.product-icon { transition: all 0.3s ease; }
+.modal.show .product-icon { animation: pulse 0.6s ease; }
+@keyframes pulse { 0%{transform:scale(1)} 50%{transform:scale(1.1)} 100%{transform:scale(1)} }
+#modalQty:focus { box-shadow: 0 0 0 0.25rem rgba(13,110,253,0.25); border-color:#86b7fe; transform:scale(1.02); }
+.btn-outline-secondary:hover { background:#6c757d; color:white; transform:translateY(-2px); }
+.selected-product-row { background-color:rgba(25,135,84,0.1)!important; border-left:4px solid #198754; }
+.qty-btn, .qty-btn-cart { min-width:120px; }
+.qty-btn-cart { min-width:60px; font-weight:bold; }
+.qty-btn-cart:hover { transform:translateY(-1px); box-shadow:0 2px 5px rgba(0,0,0,0.1); }
 .qty-btn:disabled { cursor: not-allowed; opacity: 0.65; pointer-events: none; }
-.selected-product-row { background-color: rgba(25,135,84,0.1)!important; border-left: 4px solid #198754; }
+#searchLoading { backdrop-filter:blur(2px); }
+.list-group-item:hover { background:#f8f9fa; }
+@media (max-width:576px) { .modal-dialog{margin:0.5rem;} #modalQty{font-size:1.5rem!important;height:50px!important;} }
+.btn-danger.rounded-circle { width:30px;height:30px;display:flex;align-items:center;justify-content:center;padding:0; }
+.customer-select-dropdown { background:#f8f9fa; border:1px solid #ced4da; border-radius:0.375rem; transition:all 0.2s ease; }
+.customer-select-dropdown:focus { background:#fff; border-color:#86b7fe; box-shadow:0 0 0 0.25rem rgba(13,110,253,0.25); }
+#totalPriceDisplay { font-size:1.1rem; font-weight:bold; }
+.btn-outline-secondary { width:30px;height:30px;display:flex;align-items:center;justify-content:center;padding:0; }
+.badge { font-size:0.75em; padding:0.35em 0.65em; }
+.table-primary th { background:#0d6efd; color:white; }
+.table-dark th { background:#212529; color:white; }
+.btn-check:checked + .btn-outline-success { background:#198754; color:white; border-color:#198754; }
+.btn-check:checked + .btn-outline-primary { background:#0d6efd; color:white; border-color:#0d6efd; }
+.btn-check:checked + .btn-outline-info { background:#0dcaf0; color:white; border-color:#0dcaf0; }
+#cartBody tr:hover { background:rgba(0,0,0,0.02); }
 .item-discount-btn { font-size: 0.8rem; }
 </style>
 @endsection
