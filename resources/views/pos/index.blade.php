@@ -34,10 +34,13 @@
                             </div>
 
                             <div class="table-responsive flex-grow-1 position-relative">
+                                <!-- Loading Overlay -->
                                 <div id="searchLoading" class="position-absolute top-0 start-0 w-100 h-100 bg-white bg-opacity-75 d-none" style="z-index: 10;">
                                     <div class="d-flex justify-content-center align-items-center h-100">
                                         <div class="text-center">
-                                            <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
+                                            <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
+                                                <span class="visually-hidden">Loading...</span>
+                                            </div>
                                             <h5 class="text-primary">Searching products...</h5>
                                         </div>
                                     </div>
@@ -82,28 +85,34 @@
                         <div class="card-body d-flex flex-column">
                             <!-- Customer Selection -->
                             <div class="mb-4">
-                                <label class="form-label fw-semibold">Customer</label>
-                                <select class="form-select form-select-lg" id="customerSelect">
-                                    <option value="">Walk-in Customer</option>
-                                    @foreach($customers as $customer)
-                                        <option value="{{ $customer->id }}">
-                                            {{ $customer->first_name }} {{ $customer->last_name }} @if($customer->phone_number) - {{ $customer->phone_number }} @endif
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <!-- Loyalty Points Section -->
-                            <div class="mb-4" id="loyaltySection" style="display:none;">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="fw-semibold">Loyalty Points</span>
-                                    <span id="customerPoints" class="text-primary fw-bold">0 points</span>
+                                <label class="form-label fw-semibold d-flex justify-content-between align-items-center">
+                                    <span>Customer</span>
+                                    <a href="javascript:void(0)" class="text-decoration-none fs-6"
+                                       data-bs-toggle="tooltip" data-bs-title="Quick customer management">
+                                        <i class="bi bi-person-plus"></i>
+                                    </a>
+                                </label>
+                                <div class="position-relative">
+                                    <select class="form-select form-select-lg customer-select-dropdown"
+                                            id="customerSelect"
+                                            style="padding-right: 40px; z-index: 1000;">
+                                        <option value="">Walk-in Customer</option>
+                                        @foreach($customers as $customer)
+                                            <option value="{{ $customer->id }}">
+                                                {{ $customer->first_name }} {{ $customer->last_name }}
+                                                @if($customer->phone_number)
+                                                    - {{ $customer->phone_number }}
+                                                @endif
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <div class="position-absolute top-50 end-0 translate-middle-y me-3">
+                                        <i class="bi bi-chevron-down text-muted"></i>
+                                    </div>
                                 </div>
-                                <div class="input-group input-group-sm">
-                                    <input type="number" id="redeemPoints" class="form-control" min="0" placeholder="Redeem points">
-                                    <button class="btn btn-success" id="applyRedeemBtn">Apply</button>
-                                </div>
-                                <small class="text-muted mt-1" id="redeemInfo">100 points = ₦100 discount</small>
+                                <small class="text-muted mt-1 d-block">
+                                    <span id="customerCount">{{ count($customers) }}</span> customers available
+                                </small>
                             </div>
 
                             <div class="flex-grow-1 mb-4">
@@ -133,7 +142,7 @@
                                 </div>
                             </div>
 
-                            <!-- Order Discount -->
+                            <!-- Order-Level Discount -->
                             <div class="border-top pt-3 mb-3">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                     <span class="fw-semibold">Order Discount</span>
@@ -143,7 +152,7 @@
                                             <option value="fixed">₦</option>
                                             <option value="percent" selected>%</option>
                                         </select>
-                                        <button class="btn btn-outline-primary" id="applyDiscountBtn">
+                                        <button class="btn btn-outline-primary" type="button" id="applyDiscountBtn">
                                             <i class="bi bi-check-lg"></i>
                                         </button>
                                     </div>
@@ -294,7 +303,7 @@
     </div>
 </div>
 
-<!-- Load Held Order Modal -->
+<!-- Load Order Modal -->
 <div class="modal fade" id="loadOrderModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -318,7 +327,9 @@
 <script>
 // MAIN POS SCRIPT
 document.addEventListener('DOMContentLoaded', function () {
-    // Elements
+    // ============================================
+    // INITIALIZATION
+    // ============================================
     const input = document.getElementById('barcodeInput');
     const resultsBody = document.getElementById('resultsBody');
     const emptySearchRow = document.getElementById('emptySearchRow');
@@ -339,74 +350,29 @@ document.addEventListener('DOMContentLoaded', function () {
     const modalProductUnit = document.getElementById('modalProductUnit');
     const previousQtyText = document.getElementById('previousQtyText');
     const totalPriceDisplay = document.getElementById('totalPriceDisplay');
-    const loyaltySection = document.getElementById('loyaltySection');
-    const customerPoints = document.getElementById('customerPoints');
-    const redeemPoints = document.getElementById('redeemPoints');
-    const applyRedeemBtn = document.getElementById('applyRedeemBtn');
-    const redeemInfo = document.getElementById('redeemInfo');
 
-    // State
+    // Initialize Bootstrap tooltips
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+    // State management
     let cart = [];
     let selectedProducts = [];
     let currentSearchQuery = '';
+    let loadOrderModalInstance = new bootstrap.Modal(document.getElementById('loadOrderModal'));
     let currentProduct = null;
-    let currentItemIndex = null;
+    let quantityModalInstance = null;
     let productQuantityCache = {};
     let lastSearchResults = [];
     let discountType = 'percent';
     let discountValue = 0;
-    let customerCurrentPoints = 0;
-    const redeemRate = 100; // 100 points = ₦100
+    let currentItemIndex = null;
 
     input.focus();
 
-    // Loyalty: Fetch points when customer selected
-    customerSelect.addEventListener('change', function () {
-        const customerId = this.value;
-        if (customerId) {
-            axios.get(`/pos/customer-points/${customerId}`)
-                .then(res => {
-                    if (res.data.success) {
-                        customerCurrentPoints = res.data.points;
-                        customerPoints.textContent = `${customerCurrentPoints} points (₦${(customerCurrentPoints / redeemRate).toFixed(2)})`;
-                        redeemInfo.textContent = `${redeemRate} points = ₦100 discount`;
-                        loyaltySection.style.display = 'block';
-                    }
-                })
-                .catch(() => {
-                    loyaltySection.style.display = 'none';
-                });
-        } else {
-            loyaltySection.style.display = 'none';
-            customerCurrentPoints = 0;
-        }
-    });
-
-    // Loyalty: Apply redemption
-    applyRedeemBtn.addEventListener('click', function () {
-        const points = parseInt(redeemPoints.value) || 0;
-        if (points <= 0) {
-            redeemPoints.value = '';
-            updateCart();
-            return;
-        }
-        if (points > customerCurrentPoints) {
-            Swal.fire('Insufficient Points', `You only have ${customerCurrentPoints} points`, 'warning');
-            return;
-        }
-        if (points % redeemRate !== 0) {
-            Swal.fire('Invalid Amount', `Points must be multiple of ${redeemRate}`, 'warning');
-            return;
-        }
-
-        discountValue = points / redeemRate;
-        discountType = 'fixed';
-        updateCart();
-
-        Swal.fire('Points Redeemed!', `${points} points = ₦${discountValue} discount`, 'success');
-    });
-
-    // Input search
+    // ============================================
+    // EVENT LISTENERS
+    // ============================================
     input.addEventListener('input', debounce(() => {
         const q = input.value.trim();
         currentSearchQuery = q;
@@ -424,40 +390,100 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    customerSelect.addEventListener('touchstart', function() {
+        if (window.innerWidth < 768) this.style.fontSize = '16px';
+    });
+
+    // Quantity Modal Events
+    quantityModal.addEventListener('show.bs.modal', updateTotalPrice);
+    quantityModal.addEventListener('shown.bs.modal', () => {
+        setTimeout(() => { modalQty.focus(); modalQty.select(); }, 100);
+    });
+    quantityModal.addEventListener('hidden.bs.modal', () => {
+        setTimeout(() => { input.focus(); input.select(); }, 100);
+    });
+
+    modalQty.addEventListener('input', updateTotalPrice);
+    modalQty.addEventListener('change', updateTotalPrice);
+
+    document.getElementById('increaseQty').addEventListener('click', () => {
+        modalQty.value = (parseInt(modalQty.value) || 1) + 1;
+        updateTotalPrice();
+        modalQty.focus(); modalQty.select();
+    });
+
+    document.getElementById('decreaseQty').addEventListener('click', () => {
+        const val = parseInt(modalQty.value) || 1;
+        if (val > 1) {
+            modalQty.value = val - 1;
+            updateTotalPrice();
+            modalQty.focus(); modalQty.select();
+        }
+    });
+
+    document.querySelectorAll('[data-qty]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            modalQty.value = btn.dataset.qty;
+            updateTotalPrice();
+            modalQty.focus(); modalQty.select();
+        });
+    });
+
+    modalQty.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            confirmAddBtn.click();
+        }
+    });
+
+    document.getElementById('loadOrderModal').addEventListener('hidden.bs.modal', () => {
+        setTimeout(() => { input.focus(); input.select(); }, 100);
+    });
+
+    // Refocus search input
+    document.addEventListener('click', e => {
+        const isModalOpen = document.querySelector('.modal.show');
+        const isModalElement = e.target.closest('.modal');
+        const isBackdrop = e.target.classList.contains('modal-backdrop');
+        const isSearch = e.target === input || input.contains(e.target);
+        const isCustomer = e.target === customerSelect || customerSelect.contains(e.target);
+
+        if (!isModalOpen && !isModalElement && !isBackdrop && !isSearch && !isCustomer) {
+            setTimeout(() => input.focus(), 50);
+        }
+    });
+
     // Click handlers
     document.addEventListener('click', function(e) {
-        // Quantity button
         if (e.target.classList.contains('qty-btn') || e.target.closest('.qty-btn')) {
             const btn = e.target.classList.contains('qty-btn') ? e.target : e.target.closest('.qty-btn');
             if (!btn.disabled) openQuantityModal(btn);
         }
 
-        // Remove from search results
         if (e.target.classList.contains('remove-from-table-btn') || e.target.closest('.remove-from-table-btn')) {
             const btn = e.target.classList.contains('remove-from-table-btn') ? e.target : e.target.closest('.remove-from-table-btn');
             removeProductFromSelection(btn.dataset.productId);
         }
 
-        // Cart quantity button
         if (e.target.classList.contains('qty-btn-cart') || e.target.closest('.qty-btn-cart')) {
             const btn = e.target.classList.contains('qty-btn-cart') ? e.target : e.target.closest('.qty-btn-cart');
             openQuantityModal(btn);
         }
 
-        // Per-item discount button
         if (e.target.classList.contains('item-discount-btn') || e.target.closest('.item-discount-btn')) {
             const btn = e.target.classList.contains('item-discount-btn') ? e.target : e.target.closest('.item-discount-btn');
-            currentItemIndex = cart.findIndex(item => item.product_id == btn.dataset.productId);
-            if (currentItemIndex !== -1) {
-                const item = cart[currentItemIndex];
-                document.getElementById('itemName').textContent = item.title;
-                document.getElementById('itemDiscountValue').value = item.discount_value || 0;
-                document.getElementById('itemDiscountType').value = item.discount_type || 'percent';
-                new bootstrap.Modal(document.getElementById('itemDiscountModal')).show();
-            }
+            currentItemIndex = cart.findIndex(item => item.product_id === btn.dataset.productId);
+            if (currentItemIndex === -1) return;
+
+            const item = cart[currentItemIndex];
+
+            document.getElementById('itemName').textContent = item.title;
+            document.getElementById('itemDiscountValue').value = item.discount_value || 0;
+            document.getElementById('itemDiscountType').value = item.discount_type || 'percent';
+
+            new bootstrap.Modal(document.getElementById('itemDiscountModal')).show();
         }
 
-        // Load held order
         if (e.target.classList.contains('load-order-btn') || e.target.closest('.load-order-btn')) {
             const btn = e.target.classList.contains('load-order-btn') ? e.target : e.target.closest('.load-order-btn');
             const orderId = btn.dataset.orderId;
@@ -469,7 +495,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         title: 'Replace Current Cart?',
                         text: 'Loading this order will replace your current cart.',
                         icon: 'warning',
-                        showCancelButton: true
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, replace'
                     }).then(res => res.isConfirmed && loadOrderFromHeld(order));
                 } else {
                     loadOrderFromHeld(order);
@@ -477,27 +504,26 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
 
-        // Delete held order
         if (e.target.classList.contains('remove-order-btn') || e.target.closest('.remove-order-btn')) {
             const btn = e.target.classList.contains('remove-order-btn') ? e.target : e.target.closest('.remove-order-btn');
             const orderId = btn.dataset.orderId;
             Swal.fire({
-                title: 'Remove Held Order?',
+                title: 'Remove Order?',
                 icon: 'warning',
-                showCancelButton: true
+                showCancelButton: true,
+                confirmButtonText: 'Yes, remove'
             }).then(res => {
                 if (res.isConfirmed) {
                     let orders = JSON.parse(localStorage.getItem('heldOrders') || '[]');
                     orders = orders.filter(o => o.id != orderId);
                     localStorage.setItem('heldOrders', JSON.stringify(orders));
-                    loadHeldOrders();
+                    document.getElementById('loadHeldBtn').click();
                     Swal.fire('Removed!', '', 'success');
                 }
             });
         }
     });
 
-    // Buttons
     removeFromCartBtn.addEventListener('click', removeCurrentProductFromCart);
     confirmAddBtn.addEventListener('click', addOrUpdateProductInCart);
     document.getElementById('clearCart').onclick = clearCart;
@@ -505,18 +531,37 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('loadHeldBtn').onclick = loadHeldOrders;
     document.getElementById('completeOrder').onclick = completeOrder;
 
-    // Order discount
+    // Discount functionality
     document.getElementById('discountType').addEventListener('change', function() {
         discountType = this.value;
+        updateCart();
+    });
+
+    document.getElementById('discountValue').addEventListener('input', function() {
+        const val = parseFloat(this.value) || 0;
+        if (discountType === 'percent' && val > 100) {
+            this.value = 100;
+        }
     });
 
     document.getElementById('applyDiscountBtn').addEventListener('click', function() {
-        discountValue = parseFloat(document.getElementById('discountValue').value) || 0;
+        const input = document.getElementById('discountValue');
+        discountValue = parseFloat(input.value) || 0;
+
         if (discountType === 'percent' && discountValue > 100) {
+            Swal.fire('Invalid', 'Percentage discount cannot exceed 100%', 'warning');
             discountValue = 100;
-            document.getElementById('discountValue').value = 100;
+            input.value = 100;
         }
+
         updateCart();
+        Swal.fire({
+            icon: 'success',
+            title: 'Discount Applied!',
+            text: `${discountValue}${discountType === 'percent' ? '%' : '₦'} off`,
+            timer: 1500,
+            showConfirmButton: false
+        });
     });
 
     // Per-item discount apply
@@ -536,15 +581,25 @@ document.addEventListener('DOMContentLoaded', function () {
 
         updateCart();
         bootstrap.Modal.getInstance(document.getElementById('itemDiscountModal')).hide();
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Item Discount Applied!',
+            text: `Discount: ${value}${type === 'percent' ? '%' : '₦'}`,
+            timer: 1500,
+            showConfirmButton: false
+        });
     });
 
-    // Functions
+    // ============================================
+    // FUNCTIONS
+    // ============================================
     function showEmptySearchState() {
         searchLoading.classList.add('d-none');
         if (selectedProducts.length > 0) {
             renderAllProducts();
             emptySearchRow.style.display = 'none';
-        } else {
+        } else if (!resultsBody.querySelector('tr[data-product-id]')) {
             emptySearchRow.style.display = '';
         }
     }
@@ -559,12 +614,14 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function renderAllProducts() {
-        resultsBody.innerHTML = '';
+        resultsBody.innerHTML = selectedProducts.length || lastSearchResults.length ? '' : emptySearchRow.outerHTML;
+
         selectedProducts.forEach(p => renderProductRow(p, true));
         lastSearchResults.forEach(p => {
             if (!selectedProducts.some(sp => sp.id === p.id)) renderProductRow(p, false);
         });
-        if (!resultsBody.querySelector('tr')) {
+
+        if (!resultsBody.querySelector('tr[data-product-id]')) {
             resultsBody.innerHTML = emptySearchRow.outerHTML;
         }
     }
@@ -578,13 +635,17 @@ document.addEventListener('DOMContentLoaded', function () {
         const displayQty = addedQty > 0 ? addedQty : (cachedQty > 1 ? `(${cachedQty})` : '');
 
         const isOutOfStock = product.stock <= 0;
-        const btnClass = addedQty > 0 ? 'btn-success' : (isOutOfStock ? 'btn-secondary' : 'btn-outline-primary');
-        const btnText = addedQty > 0 ? `Added ${addedQty}` : (isOutOfStock ? 'Out of Stock' : `Set Qty ${displayQty}`);
+        const btnClass = addedQty > 0
+            ? 'btn-success'
+            : (isOutOfStock ? 'btn-secondary' : 'btn-outline-primary');
+        const btnText = addedQty > 0
+            ? `Added ${addedQty}`
+            : (isOutOfStock ? 'Out of Stock' : `Set Qty ${displayQty}`);
         const btnDisabled = isOutOfStock ? 'disabled' : '';
 
         const row = document.createElement('tr');
         row.dataset.productId = product.id;
-        row.className = isSelected ? 'table-success' : '';
+        row.className = isSelected ? 'selected-product-row table-success' : '';
         row.innerHTML = `
             <td>
                 <div class="d-flex align-items-center">
@@ -605,7 +666,9 @@ document.addEventListener('DOMContentLoaded', function () {
                         ${btnDisabled}>
                     ${btnText}
                 </button>
-                ${isSelected ? `<button class="btn btn-sm btn-danger ms-2 remove-from-table-btn" data-product-id="${product.id}"><i class="bi bi-trash"></i></button>` : ''}
+                ${isSelected ? `<button class="btn btn-sm btn-danger ms-2 remove-from-table-btn" data-product-id="${product.id}">
+                    <i class="bi bi-trash"></i> Remove
+                </button>` : ''}
             </td>
             <td class="text-end fw-bold">₦${parseFloat(price).toFixed(2)}</td>
             <td class="text-center"><span class="badge bg-info">${unit}</span></td>
@@ -615,6 +678,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function searchProducts(query) {
+        if (!query) return;
         showSearchLoading();
         axios.get('{{ route("pos.search") }}', { params: { q: query } })
             .then(res => {
@@ -622,32 +686,40 @@ document.addEventListener('DOMContentLoaded', function () {
                 lastSearchResults = res.data;
                 renderAllProducts();
             })
-            .catch(() => {
+            .catch(err => {
                 hideSearchLoading();
                 Swal.fire('Error', 'Failed to search products', 'error');
             });
     }
 
     function openQuantityModal(button) {
-        const p = JSON.parse(button.dataset.product);
-        currentProduct = p;
+        try {
+            const p = JSON.parse(button.dataset.product);
+            const productId = button.dataset.productId;
+            currentProduct = p;
 
-        const cartItem = cart.find(i => i.product_id === p.id);
-        const previousQty = cartItem ? cartItem.qty : (productQuantityCache[p.id] || 1);
+            const cartItem = cart.find(i => i.product_id === productId);
+            const cachedQty = productQuantityCache[productId] || 1;
+            const previousQty = cartItem ? cartItem.qty : cachedQty;
 
-        modalProductLabel.textContent = p.title;
-        modalProductPrice.textContent = `₦${(p.sale_price || p.price).toFixed(2)}`;
-        modalProductStock.textContent = `Stock: ${p.stock}`;
-        modalProductUnit.textContent = p.primary_unit || 'Unit';
+            modalProductLabel.textContent = p.title;
+            const price = p.sale_price || p.price;
+            modalProductPrice.textContent = `₦${parseFloat(price).toFixed(2)}`;
+            modalProductStock.textContent = `Stock: ${p.stock}`;
+            modalProductUnit.textContent = p.primary_unit || 'Unit';
 
-        modalQty.value = previousQty;
-        previousQtyText.textContent = cartItem ? `In cart: ${previousQty}` : `Previous: ${previousQty}`;
-        previousQtyText.className = cartItem ? 'text-success fw-semibold' : 'text-muted';
+            modalQty.value = previousQty;
+            previousQtyText.textContent = cartItem ? `In cart: ${previousQty}` : `Previous: ${previousQty}`;
+            previousQtyText.className = cartItem ? 'text-success fw-semibold' : 'text-muted';
 
-        updateTotalPrice();
-        removeFromCartBtn.style.display = cartItem ? 'inline-block' : 'none';
+            updateTotalPrice();
+            removeFromCartBtn.style.display = cartItem ? 'inline-block' : 'none';
 
-        new bootstrap.Modal(quantityModal).show();
+            quantityModalInstance = new bootstrap.Modal(quantityModal);
+            quantityModalInstance.show();
+        } catch (e) {
+            console.error(e);
+        }
     }
 
     function updateTotalPrice() {
@@ -657,20 +729,35 @@ document.addEventListener('DOMContentLoaded', function () {
         totalPriceDisplay.textContent = `Total: ₦${(qty * price).toFixed(2)}`;
     }
 
+    function addToSelectedProducts(product) {
+        if (!selectedProducts.some(p => p.id === product.id)) selectedProducts.push({...product});
+    }
+
+    function removeFromSelectedProducts(id) {
+        selectedProducts = selectedProducts.filter(p => p.id != id);
+    }
+
     function addOrUpdateProductInCart() {
         if (!currentProduct) return;
 
         if (currentProduct.stock <= 0) {
-            Swal.fire('Out of Stock', 'This product is unavailable', 'error');
+            Swal.fire({
+                title: 'Out of Stock',
+                text: `${currentProduct.title} is currently unavailable.`,
+                icon: 'error'
+            });
+            quantityModalInstance?.hide();
             return;
         }
 
         const qty = parseInt(modalQty.value) || 1;
-        if (qty < 1) return;
+        if (qty < 1) return Swal.fire('Invalid', 'Quantity must be at least 1', 'warning');
 
         const p = currentProduct;
         const price = p.sale_price || p.price;
-        const unitId = p.primary_unit_id || 1;
+        let unitId = p.primary_unit_id || 1;
+
+        addToSelectedProducts(p);
 
         const existing = cart.find(i => i.product_id === p.id);
         if (existing) {
@@ -692,7 +779,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         productQuantityCache[p.id] = qty;
-        new bootstrap.Modal(quantityModal).hide();
+        quantityModalInstance?.hide();
 
         updateCart();
         input.value = '';
@@ -700,7 +787,16 @@ document.addEventListener('DOMContentLoaded', function () {
         renderAllProducts();
         currentProduct = null;
 
-        Swal.fire({ title: existing ? 'Updated' : 'Added', icon: 'success', timer: 800, showConfirmButton: false });
+        Swal.fire({ title: existing ? 'Updated!' : 'Added!', icon: 'success', timer: 1000, showConfirmButton: false });
+    }
+
+    function removeProductFromSelection(id) {
+        cart = cart.filter(i => i.product_id != id);
+        removeFromSelectedProducts(id);
+        delete productQuantityCache[id];
+        updateCart();
+        renderAllProducts();
+        Swal.fire({ title: 'Removed!', icon: 'success', timer: 1000, showConfirmButton: false });
     }
 
     function removeCurrentProductFromCart() {
@@ -711,22 +807,16 @@ document.addEventListener('DOMContentLoaded', function () {
             showCancelButton: true
         }).then(res => {
             if (res.isConfirmed) {
-                cart = cart.filter(i => i.product_id != currentProduct.id);
-                delete productQuantityCache[currentProduct.id];
-                removeFromSelectedProducts(currentProduct.id);
-                new bootstrap.Modal(quantityModal).hide();
+                const id = currentProduct.id;
+                cart = cart.filter(i => i.product_id != id);
+                removeFromSelectedProducts(id);
+                delete productQuantityCache[id];
+                quantityModalInstance?.hide();
                 updateCart();
                 renderAllProducts();
+                Swal.fire('Removed!', '', 'success');
             }
         });
-    }
-
-    function removeProductFromSelection(id) {
-        cart = cart.filter(i => i.product_id != id);
-        selectedProducts = selectedProducts.filter(p => p.id != id);
-        delete productQuantityCache[id];
-        updateCart();
-        renderAllProducts();
     }
 
     function updateCart() {
@@ -736,6 +826,8 @@ document.addEventListener('DOMContentLoaded', function () {
             subtotalEl.textContent = '₦0.00';
             discountEl.textContent = '-₦0.00';
             grandTotalEl.textContent = '₦0.00';
+            selectedProducts = [];
+            renderAllProducts();
             return;
         }
 
@@ -764,8 +856,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         ${item.thumbnail ? `<img src="${item.thumbnail}" width="40" class="rounded me-2">` : '<div class="bg-light rounded me-2 d-flex align-items-center justify-content-center" style="width:40px;height:40px;"><i class="bi bi-image"></i></div>'}
                         <div>
                             <strong>${item.title}</strong><br>
-                            <small class="text-muted">${item.sku || ''}</small>
-                            ${item.discount_value > 0 ? `<small class="text-warning"> -${item.discount_value}${item.discount_type === 'percent' ? '%' : '₦'}</small>` : ''}
+                            <small class="text-muted">${item.sku ? 'SKU: ' + item.sku : ''}</small>
+                            ${item.discount_value > 0 ? `<small class="text-warning">-${item.discount_value}${item.discount_type === 'percent' ? '%' : '₦'}</small>` : ''}
                         </div>
                     </div>
                 </td>
@@ -807,15 +899,19 @@ document.addEventListener('DOMContentLoaded', function () {
         subtotalEl.textContent = `₦${subtotal.toFixed(2)}`;
         discountEl.textContent = `-₦${orderDiscountAmount.toFixed(2)}`;
         grandTotalEl.textContent = `₦${grandTotal.toFixed(2)}`;
+
+        window.currentDiscount = {
+            type: discountType,
+            value: discountValue,
+            amount: orderDiscountAmount
+        };
     }
 
-    window.removeCartItem = function(index) {
-        const id = cart[index].product_id;
-        cart.splice(index, 1);
+    window.removeCartItem = (i) => {
+        const id = cart[i].product_id;
         delete productQuantityCache[id];
-        if (!cart.some(item => item.product_id === id)) {
-            selectedProducts = selectedProducts.filter(p => p.id != id);
-        }
+        cart.splice(i, 1);
+        if (!cart.some(item => item.product_id === id)) removeFromSelectedProducts(id);
         updateCart();
         renderAllProducts();
     };
@@ -831,7 +927,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 cart = [];
                 selectedProducts = [];
                 productQuantityCache = {};
-                discountValue = 0;
                 updateCart();
                 renderAllProducts();
                 Swal.fire('Cleared!', '', 'success');
@@ -844,43 +939,42 @@ document.addEventListener('DOMContentLoaded', function () {
         const heldOrders = JSON.parse(localStorage.getItem('heldOrders') || '[]');
         heldOrders.push({
             id: Date.now(),
-            cart: JSON.parse(JSON.stringify(cart)),
+            cart: cart,
             customer: customerSelect.value,
-            selectedProducts: JSON.parse(JSON.stringify(selectedProducts)),
-            productQuantityCache: {...productQuantityCache},
-            discountType,
-            discountValue,
+            selectedProducts: selectedProducts,
+            productQuantityCache: productQuantityCache,
             time: new Date().toLocaleString(),
             timestamp: Date.now()
         });
         localStorage.setItem('heldOrders', JSON.stringify(heldOrders));
-        Swal.fire('Held!', 'Order saved', 'success');
-        clearCart();
+        Swal.fire('Order Held!', '', 'success');
+        cart = []; selectedProducts = []; productQuantityCache = {};
+        updateCart(); renderAllProducts();
     }
 
     function loadHeldOrders() {
         const heldOrders = JSON.parse(localStorage.getItem('heldOrders') || '[]');
         const list = document.getElementById('heldOrdersList');
         const no = document.getElementById('noHeldOrders');
-
         if (heldOrders.length === 0) {
-            no.style.display = 'block';
             list.innerHTML = '';
+            no.style.display = 'block';
         } else {
             no.style.display = 'none';
             let html = '<div class="list-group">';
             heldOrders.sort((a,b) => b.timestamp - a.timestamp).forEach(o => {
                 const items = o.cart.length;
+                const cust = o.customer ? ` - ${o.customer}` : '';
                 html += `
-                    <div class="list-group-item">
+                    <div class="list-group-item list-group-item-action">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <strong>${o.time}</strong>
-                                <p class="mb-0 text-muted">${items} item${items > 1 ? 's' : ''}</p>
+                                <h6 class="mb-1">${o.time}${cust}</h6>
+                                <p class="mb-1 text-muted">${items} item${items>1?'s':''}</p>
                             </div>
-                            <div>
-                                <button class="btn btn-sm btn-primary load-order-btn" data-order-id="${o.id}">Load</button>
-                                <button class="btn btn-sm btn-danger remove-order-btn" data-order-id="${o.id}"><i class="bi bi-trash"></i></button>
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-outline-primary load-order-btn" data-order-id="${o.id}">Load</button>
+                                <button class="btn btn-sm btn-outline-danger remove-order-btn" data-order-id="${o.id}"><i class="bi bi-trash"></i></button>
                             </div>
                         </div>
                     </div>`;
@@ -888,37 +982,35 @@ document.addEventListener('DOMContentLoaded', function () {
             html += '</div>';
             list.innerHTML = html;
         }
-        new bootstrap.Modal(document.getElementById('loadOrderModal')).show();
+        loadOrderModalInstance.show();
     }
 
     function loadOrderFromHeld(order) {
-        cart = order.cart;
-        selectedProducts = order.selectedProducts || [];
-        productQuantityCache = order.productQuantityCache || {};
-        discountType = order.discountType || 'percent';
-        discountValue = order.discountValue || 0;
+        cart = JSON.parse(JSON.stringify(order.cart));
+        selectedProducts = order.selectedProducts ? JSON.parse(JSON.stringify(order.selectedProducts)) : [];
+        productQuantityCache = order.productQuantityCache ? JSON.parse(JSON.stringify(order.productQuantityCache)) : {};
         if (order.customer) customerSelect.value = order.customer;
         updateCart();
         renderAllProducts();
-        new bootstrap.Modal(document.getElementById('loadOrderModal')).hide();
+        loadOrderModalInstance.hide();
         Swal.fire('Loaded!', '', 'success');
     }
 
     function completeOrder() {
-        if (cart.length === 0) return Swal.fire('Empty Cart', 'Add items first', 'warning');
-
+        if (cart.length === 0) return Swal.fire('Empty', 'Add items first', 'warning');
         const payment = document.querySelector('input[name="payment"]:checked').value;
         const customerId = customerSelect.value || null;
-        const redeemPointsValue = parseInt(redeemPoints.value) || 0;
 
         const items = cart.map(item => ({
             product_id: item.product_id,
-            qty: item.qty,
-            unit_id: item.unit_id,
-            sale_price: item.price,
-            discount_type: item.discount_type,
-            discount_value: item.discount_value
+            qty: parseInt(item.qty),
+            unit_id: parseInt(item.unit_id || 1),
+            sale_price: parseFloat(item.price),
+            discount_type: item.discount_type || null,
+            discount_value: item.discount_value || 0
         }));
+
+        const discount = window.currentDiscount || { type: 'percent', value: 0, amount: 0 };
 
         Swal.fire({ title: 'Processing...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
@@ -926,9 +1018,9 @@ document.addEventListener('DOMContentLoaded', function () {
             items,
             payment_method: payment,
             customer_id: customerId,
-            discount_type: discountType,
-            discount_value: discountValue,
-            redeem_points: redeemPointsValue,
+            discount_type: discount.type,
+            discount_value: discount.value,
+            discount_amount: discount.amount,
             _token: '{{ csrf_token() }}'
         })
         .then(res => {
@@ -936,33 +1028,38 @@ document.addEventListener('DOMContentLoaded', function () {
             if (res.data.success) {
                 Swal.fire({
                     title: 'Success!',
-                    html: `<h4>Order #${res.data.order_id}</h4><p>Total: ₦${res.data.total.toFixed(2)}</p>`,
+                    html: `<div class="text-center"><i class="bi bi-check-circle text-success display-1 mb-3"></i><h4>Order #${res.data.order_id} Completed!</h4><p class="fs-3">Total: ₦${parseFloat(res.data.total).toFixed(2)}</p></div>`,
                     icon: 'success',
                     showCancelButton: true,
                     confirmButtonText: 'Print Receipt',
-                    cancelButtonText: 'New Sale'
+                    cancelButtonText: 'New Order'
                 }).then(r => {
                     if (r.isConfirmed) window.open(`/pos/receipt/${res.data.order_id}`, '_blank');
                     cart = []; selectedProducts = []; productQuantityCache = {};
-                    discountValue = 0; redeemPoints.value = '';
-                    loyaltySection.style.display = 'none';
                     updateCart(); renderAllProducts();
-                    input.focus();
+                    input.focus(); input.select();
                 });
+            } else {
+                Swal.fire('Error', res.data.message || 'Failed', 'error');
             }
         })
         .catch(err => {
             Swal.close();
-            const msg = err.response?.data?.message || 'Failed to complete order';
+            let msg = 'Failed to complete order.';
+            if (err.response && err.response.data.errors) {
+                msg = Object.values(err.response.data.errors).flat().join('<br>');
+            } else if (err.response && err.response.data.message) {
+                msg = err.response.data.message;
+            }
             Swal.fire('Error', msg, 'error');
         });
     }
 
     function debounce(func, delay) {
-        let timeout;
+        let t;
         return (...args) => {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => func.apply(this, args), delay);
+            clearTimeout(t);
+            t = setTimeout(() => func.apply(this, args), delay);
         };
     }
 
@@ -971,19 +1068,33 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 <style>
-.qty-btn:disabled, .qty-btn-cart:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
-}
-.selected-product-row {
-    background-color: rgba(25,135,84,0.1) !important;
-    border-left: 4px solid #198754;
-}
-.item-discount-btn {
-    width: 32px;
-    height: 32px;
-    padding: 0;
-}
+.modal.fade .modal-content { transform: scale(0.95); transition: transform 0.3s ease-out; }
+.modal.show .modal-content { transform: scale(1); }
+.product-icon { transition: all 0.3s ease; }
+.modal.show .product-icon { animation: pulse 0.6s ease; }
+@keyframes pulse { 0%{transform:scale(1)} 50%{transform:scale(1.1)} 100%{transform:scale(1)} }
+#modalQty:focus { box-shadow: 0 0 0 0.25rem rgba(13,110,253,0.25); border-color:#86b7fe; transform:scale(1.02); }
+.btn-outline-secondary:hover { background:#6c757d; color:white; transform:translateY(-2px); }
+.selected-product-row { background-color:rgba(25,135,84,0.1)!important; border-left:4px solid #198754; }
+.qty-btn, .qty-btn-cart { min-width:120px; }
+.qty-btn-cart { min-width:60px; font-weight:bold; }
+.qty-btn-cart:hover { transform:translateY(-1px); box-shadow:0 2px 5px rgba(0,0,0,0.1); }
+.qty-btn:disabled { cursor: not-allowed; opacity: 0.65; pointer-events: none; }
+#searchLoading { backdrop-filter:blur(2px); }
+.list-group-item:hover { background:#f8f9fa; }
+@media (max-width:576px) { .modal-dialog{margin:0.5rem;} #modalQty{font-size:1.5rem!important;height:50px!important;} }
+.btn-danger.rounded-circle { width:30px;height:30px;display:flex;align-items:center;justify-content:center;padding:0; }
+.customer-select-dropdown { background:#f8f9fa; border:1px solid #ced4da; border-radius:0.375rem; transition:all 0.2s ease; }
+.customer-select-dropdown:focus { background:#fff; border-color:#86b7fe; box-shadow:0 0 0 0.25rem rgba(13,110,253,0.25); }
+#totalPriceDisplay { font-size:1.1rem; font-weight:bold; }
+.btn-outline-secondary { width:30px;height:30px;display:flex;align-items:center;justify-content:center;padding:0; }
+.badge { font-size:0.75em; padding:0.35em 0.65em; }
+.table-primary th { background:#0d6efd; color:white; }
+.table-dark th { background:#212529; color:white; }
+.btn-check:checked + .btn-outline-success { background:#198754; color:white; border-color:#198754; }
+.btn-check:checked + .btn-outline-primary { background:#0d6efd; color:white; border-color:#0d6efd; }
+.btn-check:checked + .btn-outline-info { background:#0dcaf0; color:white; border-color:#0dcaf0; }
+#cartBody tr:hover { background:rgba(0,0,0,0.02); }
+.item-discount-btn { font-size: 0.8rem; }
 </style>
 @endsection
-
