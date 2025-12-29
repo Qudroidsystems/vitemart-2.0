@@ -490,6 +490,8 @@ document.addEventListener('DOMContentLoaded', function () {
     let orderDiscountValue = 0;
     let printWindow = null;
     let printCheckInterval = null;
+    let lastSearchTime = 0;
+    let customerSearchInput = null;
 
     input.focus();
 
@@ -499,7 +501,10 @@ document.addEventListener('DOMContentLoaded', function () {
     input.addEventListener('input', debounce(() => {
         const q = input.value.trim();
         currentSearchQuery = q;
+
+        // Remove unselected items when new search starts
         if (q.length >= 2) {
+            removeUnselectedItems();
             searchProducts(q);
         } else if (q.length === 0) {
             // Show all previously searched products when input is cleared
@@ -512,7 +517,16 @@ document.addEventListener('DOMContentLoaded', function () {
     input.addEventListener('keydown', e => {
         if (e.key === 'Enter') {
             const q = input.value.trim();
-            if (q) searchProducts(q);
+            if (q) {
+                removeUnselectedItems();
+                searchProducts(q);
+            }
+        }
+
+        // Ctrl+F to focus customer search
+        if (e.ctrlKey && e.key === 'f') {
+            e.preventDefault();
+            focusCustomerSearch();
         }
     });
 
@@ -579,6 +593,14 @@ document.addEventListener('DOMContentLoaded', function () {
     discountType.addEventListener('click', function() {
         discountValue.focus();
         discountValue.select();
+    });
+
+    // Customer field focus - click anywhere on customer section to focus search
+    document.querySelector('.customer-search-container').addEventListener('click', function(e) {
+        if (customerSearchInput && !e.target.matches('#customerSearchInput')) {
+            customerSearchInput.focus();
+            customerSearchInput.select();
+        }
     });
 
     // Button click handlers
@@ -713,7 +735,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const isModalElement = e.target.closest('.modal');
         const isBackdrop = e.target.classList.contains('modal-backdrop');
         const isSearch = e.target === input || input.contains(e.target);
-        const isCustomer = e.target === customerSelect || customerSelect.contains(e.target);
+        const isCustomer = e.target.closest('.customer-search-container');
         const isDiscount = e.target === discountValue || discountValue.contains(e.target) ||
                           e.target === discountType || discountType.contains(e.target);
 
@@ -732,19 +754,20 @@ document.addEventListener('DOMContentLoaded', function () {
         const customerSelectElement = document.getElementById('customerSelect');
         const originalOptions = Array.from(customerSelectElement.options);
 
-        // Add search functionality to customer dropdown
+        // Create customer search container
         const customerSearchContainer = document.createElement('div');
-        customerSearchContainer.className = 'mb-2';
+        customerSearchContainer.className = 'customer-search-container mb-2';
         customerSearchContainer.innerHTML = `
             <input type="text"
                    id="customerSearchInput"
                    class="form-control form-control-sm"
-                   placeholder="Search customers...">
+                   placeholder="Search customers... (Ctrl+F)">
         `;
 
+        // Insert before the customer dropdown
         customerSelectElement.parentNode.insertBefore(customerSearchContainer, customerSelectElement);
 
-        const customerSearchInput = document.getElementById('customerSearchInput');
+        customerSearchInput = document.getElementById('customerSearchInput');
 
         customerSearchInput.addEventListener('input', function() {
             const searchTerm = this.value.toLowerCase().trim();
@@ -755,6 +778,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 originalOptions.forEach(option => {
                     customerSelectElement.appendChild(option.cloneNode(true));
                 });
+                updateCustomerCount(originalOptions.length - 1);
                 return;
             }
 
@@ -772,17 +796,28 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Show count
             const visibleCount = filteredOptions.length - 1; // Exclude "Walk-in Customer"
-            document.getElementById('customerCount').textContent = visibleCount;
+            updateCustomerCount(visibleCount);
         });
 
-        // Add keyboard shortcut to focus customer search
+        // Keyboard shortcut to focus customer search
         document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey && e.key === 'k') {
+            if (e.ctrlKey && e.key === 'f') {
                 e.preventDefault();
-                customerSearchInput.focus();
-                customerSearchInput.select();
+                focusCustomerSearch();
             }
         });
+    }
+
+    function focusCustomerSearch() {
+        if (customerSearchInput) {
+            customerSearchInput.focus();
+            customerSearchInput.select();
+            showToast('Customer search focused', 'info', 1000);
+        }
+    }
+
+    function updateCustomerCount(count) {
+        document.getElementById('customerCount').textContent = count;
     }
 
     // Initialize customer search on page load
@@ -791,6 +826,41 @@ document.addEventListener('DOMContentLoaded', function () {
     // ============================================
     // FUNCTIONS
     // ============================================
+    function removeUnselectedItems() {
+        // Get current time
+        const now = Date.now();
+
+        // Only remove items if it's been more than 1 second since last search
+        if (now - lastSearchTime < 1000) {
+            return;
+        }
+
+        // Find items that are in search table but NOT in cart
+        const unselectedProducts = allSearchedProducts.filter(product => {
+            const isInCart = cart.some(item => item.product_id === product.id);
+            return !isInCart;
+        });
+
+        // Remove unselected items from search table
+        if (unselectedProducts.length > 0) {
+            // Keep only items that are in cart
+            allSearchedProducts = allSearchedProducts.filter(product =>
+                cart.some(item => item.product_id === product.id)
+            );
+
+            // Update display
+            if (allSearchedProducts.length === 0) {
+                resultsBody.innerHTML = emptySearchRow.outerHTML;
+            } else {
+                renderAllSearchedProducts();
+            }
+
+            showToast('Unselected items cleared', 'info', 1500);
+        }
+
+        lastSearchTime = now;
+    }
+
     function showEmptySearchState() {
         searchLoading.classList.add('d-none');
         if (allSearchedProducts.length > 0) {
@@ -1464,6 +1534,89 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 <style>
+
+    /* Customer Search Container */
+.customer-search-container {
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.customer-search-container:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+    border-radius: 0.375rem;
+}
+
+#customerSearchInput {
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    width: 100%;
+}
+
+#customerSearchInput:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    outline: none;
+    background-color: #fff;
+}
+
+/* Shortcut hint */
+#customerSearchInput::placeholder {
+    color: #6c757d;
+    font-size: 0.8rem;
+}
+
+/* Focus state for customer section */
+.customer-search-container:focus-within {
+    background-color: rgba(0, 123, 255, 0.1);
+}
+
+/* Discount field focus styling */
+#discountValue:focus, #discountType:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    outline: none;
+}
+
+/* Search product table */
+.selected-product-row {
+    background-color: rgba(25, 135, 84, 0.1) !important;
+    border-left: 4px solid #198754;
+    transition: all 0.3s ease;
+}
+
+/* Remove button styling */
+.remove-from-search-btn {
+    transition: all 0.2s ease;
+}
+
+.remove-from-search-btn:hover {
+    transform: scale(1.05);
+    background-color: #dc3545 !important;
+    color: white !important;
+}
+
+/* Keyboard shortcut hint */
+.keyboard-shortcut {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-left: 0.5rem;
+    font-style: italic;
+}
+
+/* Blinking cursor effect for focus */
+.focused-field {
+    animation: blink 1s infinite;
+    border-color: #0d6efd !important;
+}
+
+@keyframes blink {
+    0%, 100% { box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25); }
+    50% { box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.5); }
+}
     /* Customer Search Styling */
 #customerSearchInput {
     border: 1px solid #ced4da;
