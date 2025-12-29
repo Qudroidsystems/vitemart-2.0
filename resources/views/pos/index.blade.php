@@ -390,7 +390,7 @@ document.addEventListener('DOMContentLoaded', function () {
         setTimeout(() => { input.focus(); input.select(); }, 100);
     });
 
-    // Refocus search input on page click (except modals)
+    // Refocus search input on page click
     document.addEventListener('click', e => {
         const isModalOpen = document.querySelector('.modal.show');
         const isModalElement = e.target.closest('.modal');
@@ -403,27 +403,23 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Click handlers for buttons in search results and cart
+    // Click handlers
     document.addEventListener('click', function(e) {
-        // Qty button in search results
         if (e.target.classList.contains('qty-btn') || e.target.closest('.qty-btn')) {
             const btn = e.target.classList.contains('qty-btn') ? e.target : e.target.closest('.qty-btn');
-            openQuantityModal(btn);
+            if (!btn.disabled) openQuantityModal(btn);
         }
 
-        // Remove from selection in search results
         if (e.target.classList.contains('remove-from-table-btn') || e.target.closest('.remove-from-table-btn')) {
             const btn = e.target.classList.contains('remove-from-table-btn') ? e.target : e.target.closest('.remove-from-table-btn');
             removeProductFromSelection(btn.dataset.productId);
         }
 
-        // Qty button in cart (new class)
         if (e.target.classList.contains('qty-btn-cart') || e.target.closest('.qty-btn-cart')) {
             const btn = e.target.classList.contains('qty-btn-cart') ? e.target : e.target.closest('.qty-btn-cart');
             openQuantityModal(btn);
         }
 
-        // Load held order
         if (e.target.classList.contains('load-order-btn') || e.target.closest('.load-order-btn')) {
             const btn = e.target.classList.contains('load-order-btn') ? e.target : e.target.closest('.load-order-btn');
             const orderId = btn.dataset.orderId;
@@ -444,7 +440,6 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
 
-        // Delete held order
         if (e.target.classList.contains('remove-order-btn') || e.target.closest('.remove-order-btn')) {
             const btn = e.target.classList.contains('remove-order-btn') ? e.target : e.target.closest('.remove-order-btn');
             const orderId = btn.dataset.orderId;
@@ -515,6 +510,16 @@ document.addEventListener('DOMContentLoaded', function () {
         const cachedQty = productQuantityCache[product.id] || 1;
         const displayQty = addedQty > 0 ? addedQty : (cachedQty > 1 ? `(${cachedQty})` : '');
 
+        // Out of stock handling
+        const isOutOfStock = product.stock <= 0;
+        const btnClass = addedQty > 0
+            ? 'btn-success'
+            : (isOutOfStock ? 'btn-secondary' : 'btn-outline-primary');
+        const btnText = addedQty > 0
+            ? `Added ${addedQty}`
+            : (isOutOfStock ? 'Out of Stock' : `Set Qty ${displayQty}`);
+        const btnDisabled = isOutOfStock ? 'disabled' : '';
+
         const row = document.createElement('tr');
         row.dataset.productId = product.id;
         row.className = isSelected ? 'selected-product-row table-success' : '';
@@ -532,10 +537,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 <span class="badge bg-${product.stock > 10 ? 'success' : product.stock > 0 ? 'warning' : 'danger'}">${product.stock}</span>
             </td>
             <td class="text-center">
-                <button class="btn btn-sm ${addedQty > 0 ? 'btn-success' : 'btn-outline-primary'} qty-btn"
+                <button class="btn btn-sm ${btnClass} qty-btn"
                         data-product='${JSON.stringify(product).replace(/'/g, "&apos;")}'
-                        data-product-id="${product.id}">
-                    ${addedQty > 0 ? `Added ${addedQty}` : `Set Qty ${displayQty}`}
+                        data-product-id="${product.id}"
+                        ${btnDisabled}>
+                    ${btnText}
                 </button>
                 ${isSelected ? `<button class="btn btn-sm btn-danger ms-2 remove-from-table-btn" data-product-id="${product.id}">
                     <i class="bi bi-trash"></i> Remove
@@ -610,6 +616,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function addOrUpdateProductInCart() {
         if (!currentProduct) return;
+
+        // Prevent adding out-of-stock items
+        if (currentProduct.stock <= 0) {
+            Swal.fire({
+                title: 'Out of Stock',
+                text: `${currentProduct.title} is currently unavailable.`,
+                icon: 'error'
+            });
+            quantityModalInstance?.hide();
+            return;
+        }
+
         const qty = parseInt(modalQty.value) || 1;
         if (qty < 1) return Swal.fire('Invalid', 'Quantity must be at least 1', 'warning');
 
@@ -880,7 +898,6 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 <style>
-/* All your existing styles remain unchanged - omitted here for brevity, but keep them exactly as in your original code */
 .modal.fade .modal-content { transform: scale(0.95); transition: transform 0.3s ease-out; }
 .modal.show .modal-content { transform: scale(1); }
 .product-icon { transition: all 0.3s ease; }
@@ -892,6 +909,7 @@ document.addEventListener('DOMContentLoaded', function () {
 .qty-btn, .qty-btn-cart { min-width:120px; }
 .qty-btn-cart { min-width:60px; font-weight:bold; }
 .qty-btn-cart:hover { transform:translateY(-1px); box-shadow:0 2px 5px rgba(0,0,0,0.1); }
+.qty-btn:disabled { cursor: not-allowed; opacity: 0.65; pointer-events: none; }
 #searchLoading { backdrop-filter:blur(2px); }
 .list-group-item:hover { background:#f8f9fa; }
 @media (max-width:576px) { .modal-dialog{margin:0.5rem;} #modalQty{font-size:1.5rem!important;height:50px!important;} }
