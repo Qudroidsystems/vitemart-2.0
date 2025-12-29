@@ -34,13 +34,10 @@
                             </div>
 
                             <div class="table-responsive flex-grow-1 position-relative">
-                                <!-- Loading Overlay -->
                                 <div id="searchLoading" class="position-absolute top-0 start-0 w-100 h-100 bg-white bg-opacity-75 d-none" style="z-index: 10;">
                                     <div class="d-flex justify-content-center align-items-center h-100">
                                         <div class="text-center">
-                                            <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
-                                                <span class="visually-hidden">Loading...</span>
-                                            </div>
+                                            <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
                                             <h5 class="text-primary">Searching products...</h5>
                                         </div>
                                     </div>
@@ -85,34 +82,28 @@
                         <div class="card-body d-flex flex-column">
                             <!-- Customer Selection -->
                             <div class="mb-4">
-                                <label class="form-label fw-semibold d-flex justify-content-between align-items-center">
-                                    <span>Customer</span>
-                                    <a href="javascript:void(0)" class="text-decoration-none fs-6"
-                                       data-bs-toggle="tooltip" data-bs-title="Quick customer management">
-                                        <i class="bi bi-person-plus"></i>
-                                    </a>
-                                </label>
-                                <div class="position-relative">
-                                    <select class="form-select form-select-lg customer-select-dropdown"
-                                            id="customerSelect"
-                                            style="padding-right: 40px; z-index: 1000;">
-                                        <option value="">Walk-in Customer</option>
-                                        @foreach($customers as $customer)
-                                            <option value="{{ $customer->id }}">
-                                                {{ $customer->first_name }} {{ $customer->last_name }}
-                                                @if($customer->phone_number)
-                                                    - {{ $customer->phone_number }}
-                                                @endif
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    <div class="position-absolute top-50 end-0 translate-middle-y me-3">
-                                        <i class="bi bi-chevron-down text-muted"></i>
-                                    </div>
+                                <label class="form-label fw-semibold">Customer</label>
+                                <select class="form-select form-select-lg" id="customerSelect">
+                                    <option value="">Walk-in Customer</option>
+                                    @foreach($customers as $customer)
+                                        <option value="{{ $customer->id }}">
+                                            {{ $customer->first_name }} {{ $customer->last_name }} @if($customer->phone_number) - {{ $customer->phone_number }} @endif
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <!-- Loyalty Points Section -->
+                            <div class="mb-4" id="loyaltySection" style="display:none;">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="fw-semibold">Loyalty Points</span>
+                                    <span id="customerPoints" class="text-primary fw-bold">0 points</span>
                                 </div>
-                                <small class="text-muted mt-1 d-block">
-                                    <span id="customerCount">{{ count($customers) }}</span> customers available
-                                </small>
+                                <div class="input-group input-group-sm">
+                                    <input type="number" id="redeemPoints" class="form-control" min="0" placeholder="Redeem points">
+                                    <button class="btn btn-success" id="applyRedeemBtn">Apply</button>
+                                </div>
+                                <small class="text-muted mt-1" id="redeemInfo"></small>
                             </div>
 
                             <div class="flex-grow-1 mb-4">
@@ -142,7 +133,7 @@
                                 </div>
                             </div>
 
-                            <!-- Order-Level Discount -->
+                            <!-- Order Discount -->
                             <div class="border-top pt-3 mb-3">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                     <span class="fw-semibold">Order Discount</span>
@@ -152,7 +143,7 @@
                                             <option value="fixed">₦</option>
                                             <option value="percent" selected>%</option>
                                         </select>
-                                        <button class="btn btn-outline-primary" type="button" id="applyDiscountBtn">
+                                        <button class="btn btn-outline-primary" id="applyDiscountBtn">
                                             <i class="bi bi-check-lg"></i>
                                         </button>
                                     </div>
@@ -303,7 +294,7 @@
     </div>
 </div>
 
-<!-- Load Order Modal -->
+<!-- Load Held Order Modal -->
 <div class="modal fade" id="loadOrderModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -325,11 +316,8 @@
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-// MAIN POS SCRIPT
 document.addEventListener('DOMContentLoaded', function () {
-    // ============================================
-    // INITIALIZATION
-    // ============================================
+    // Elements
     const input = document.getElementById('barcodeInput');
     const resultsBody = document.getElementById('resultsBody');
     const emptySearchRow = document.getElementById('emptySearchRow');
@@ -350,29 +338,117 @@ document.addEventListener('DOMContentLoaded', function () {
     const modalProductUnit = document.getElementById('modalProductUnit');
     const previousQtyText = document.getElementById('previousQtyText');
     const totalPriceDisplay = document.getElementById('totalPriceDisplay');
+    const loyaltySection = document.getElementById('loyaltySection');
+    const customerPointsEl = document.getElementById('customerPoints');
+    const redeemPointsInput = document.getElementById('redeemPoints');
+    const applyRedeemBtn = document.getElementById('applyRedeemBtn');
+    const redeemInfo = document.getElementById('redeemInfo');
 
-    // Initialize Bootstrap tooltips
-    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-    [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
-
-    // State management
+    // State
     let cart = [];
     let selectedProducts = [];
     let currentSearchQuery = '';
-    let loadOrderModalInstance = new bootstrap.Modal(document.getElementById('loadOrderModal'));
     let currentProduct = null;
-    let quantityModalInstance = null;
+    let currentItemIndex = null;
     let productQuantityCache = {};
     let lastSearchResults = [];
     let discountType = 'percent';
     let discountValue = 0;
-    let currentItemIndex = null;
+    let customerPoints = 0;
+    let redeemRate = {{ config('loyalty.redeem_rate', 100) }};
 
     input.focus();
 
-    // ============================================
-    // EVENT LISTENERS
-    // ============================================
+    // Loyalty points load
+    customerSelect.addEventListener('change', function () {
+        const customerId = this.value;
+        if (customerId) {
+            axios.get(`/pos/customer-points/${customerId}`)
+                .then(res => {
+                    if (res.data.success) {
+                        customerPoints = res.data.points;
+                        customerPointsEl.textContent = `${customerPoints} points (₦${(customerPoints / redeemRate).toFixed(2)})`;
+                        redeemInfo.textContent = `Redeem in multiples of ${redeemRate} points = ₦${redeemRate} discount`;
+                        loyaltySection.style.display = 'block';
+                    }
+                })
+                .catch(() => {
+                    loyaltySection.style.display = 'none';
+                });
+        } else {
+            loyaltySection.style.display = 'none';
+            customerPoints = 0;
+            redeemPointsInput.value = '';
+        }
+    });
+
+    // Redeem points
+    applyRedeemBtn.addEventListener('click', function () {
+        const points = parseInt(redeemPointsInput.value) || 0;
+        if (points > customerPoints) {
+            Swal.fire('Insufficient Points', `You only have ${customerPoints} points`, 'warning');
+            return;
+        }
+        if (points % redeemRate !== 0) {
+            Swal.fire('Invalid Amount', `Points must be multiple of ${redeemRate}`, 'warning');
+            return;
+        }
+        discountValue = points / redeemRate;
+        discountType = 'fixed';
+        updateCart();
+        Swal.fire('Points Redeemed!', `₦${discountValue} discount applied`, 'success');
+    });
+
+    // Order discount
+    document.getElementById('discountType').addEventListener('change', function () {
+        discountType = this.value;
+    });
+
+    document.getElementById('applyDiscountBtn').addEventListener('click', function () {
+        discountValue = parseFloat(document.getElementById('discountValue').value) || 0;
+        if (discountType === 'percent' && discountValue > 100) {
+            Swal.fire('Invalid', 'Percentage cannot exceed 100%', 'warning');
+            discountValue = 100;
+            document.getElementById('discountValue').value = 100;
+        }
+        updateCart();
+    });
+
+    // Per-item discount
+    document.addEventListener('click', function (e) {
+        if (e.target.classList.contains('item-discount-btn') || e.target.closest('.item-discount-btn')) {
+            const btn = e.target.closest('.item-discount-btn');
+            currentItemIndex = cart.findIndex(item => item.product_id == btn.dataset.productId);
+            if (currentItemIndex === -1) return;
+
+            const item = cart[currentItemIndex];
+            document.getElementById('itemName').textContent = item.title;
+            document.getElementById('itemDiscountValue').value = item.discount_value || 0;
+            document.getElementById('itemDiscountType').value = item.discount_type || 'percent';
+
+            new bootstrap.Modal(document.getElementById('itemDiscountModal')).show();
+        }
+    });
+
+    document.getElementById('applyItemDiscountBtn').addEventListener('click', function () {
+        if (currentItemIndex === null) return;
+
+        const value = parseFloat(document.getElementById('itemDiscountValue').value) || 0;
+        const type = document.getElementById('itemDiscountType').value;
+
+        if (type === 'percent' && value > 100) {
+            Swal.fire('Invalid', 'Percentage cannot exceed 100%', 'warning');
+            return;
+        }
+
+        cart[currentItemIndex].discount_type = type;
+        cart[currentItemIndex].discount_value = value;
+
+        updateCart();
+        bootstrap.Modal.getInstance(document.getElementById('itemDiscountModal')).hide();
+    });
+
+    // Search
     input.addEventListener('input', debounce(() => {
         const q = input.value.trim();
         currentSearchQuery = q;
@@ -390,210 +466,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    customerSelect.addEventListener('touchstart', function() {
-        if (window.innerWidth < 768) this.style.fontSize = '16px';
-    });
-
-    // Quantity Modal Events
-    quantityModal.addEventListener('show.bs.modal', updateTotalPrice);
-    quantityModal.addEventListener('shown.bs.modal', () => {
-        setTimeout(() => { modalQty.focus(); modalQty.select(); }, 100);
-    });
-    quantityModal.addEventListener('hidden.bs.modal', () => {
-        setTimeout(() => { input.focus(); input.select(); }, 100);
-    });
-
-    modalQty.addEventListener('input', updateTotalPrice);
-    modalQty.addEventListener('change', updateTotalPrice);
-
-    document.getElementById('increaseQty').addEventListener('click', () => {
-        modalQty.value = (parseInt(modalQty.value) || 1) + 1;
-        updateTotalPrice();
-        modalQty.focus(); modalQty.select();
-    });
-
-    document.getElementById('decreaseQty').addEventListener('click', () => {
-        const val = parseInt(modalQty.value) || 1;
-        if (val > 1) {
-            modalQty.value = val - 1;
-            updateTotalPrice();
-            modalQty.focus(); modalQty.select();
-        }
-    });
-
-    document.querySelectorAll('[data-qty]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            modalQty.value = btn.dataset.qty;
-            updateTotalPrice();
-            modalQty.focus(); modalQty.select();
-        });
-    });
-
-    modalQty.addEventListener('keydown', e => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            confirmAddBtn.click();
-        }
-    });
-
-    document.getElementById('loadOrderModal').addEventListener('hidden.bs.modal', () => {
-        setTimeout(() => { input.focus(); input.select(); }, 100);
-    });
-
-    // Refocus search input
-    document.addEventListener('click', e => {
-        const isModalOpen = document.querySelector('.modal.show');
-        const isModalElement = e.target.closest('.modal');
-        const isBackdrop = e.target.classList.contains('modal-backdrop');
-        const isSearch = e.target === input || input.contains(e.target);
-        const isCustomer = e.target === customerSelect || customerSelect.contains(e.target);
-
-        if (!isModalOpen && !isModalElement && !isBackdrop && !isSearch && !isCustomer) {
-            setTimeout(() => input.focus(), 50);
-        }
-    });
-
-    // Click handlers
-    document.addEventListener('click', function(e) {
-        if (e.target.classList.contains('qty-btn') || e.target.closest('.qty-btn')) {
-            const btn = e.target.classList.contains('qty-btn') ? e.target : e.target.closest('.qty-btn');
-            if (!btn.disabled) openQuantityModal(btn);
-        }
-
-        if (e.target.classList.contains('remove-from-table-btn') || e.target.closest('.remove-from-table-btn')) {
-            const btn = e.target.classList.contains('remove-from-table-btn') ? e.target : e.target.closest('.remove-from-table-btn');
-            removeProductFromSelection(btn.dataset.productId);
-        }
-
-        if (e.target.classList.contains('qty-btn-cart') || e.target.closest('.qty-btn-cart')) {
-            const btn = e.target.classList.contains('qty-btn-cart') ? e.target : e.target.closest('.qty-btn-cart');
-            openQuantityModal(btn);
-        }
-
-        if (e.target.classList.contains('item-discount-btn') || e.target.closest('.item-discount-btn')) {
-            const btn = e.target.classList.contains('item-discount-btn') ? e.target : e.target.closest('.item-discount-btn');
-            currentItemIndex = cart.findIndex(item => item.product_id === btn.dataset.productId);
-            if (currentItemIndex === -1) return;
-
-            const item = cart[currentItemIndex];
-
-            document.getElementById('itemName').textContent = item.title;
-            document.getElementById('itemDiscountValue').value = item.discount_value || 0;
-            document.getElementById('itemDiscountType').value = item.discount_type || 'percent';
-
-            new bootstrap.Modal(document.getElementById('itemDiscountModal')).show();
-        }
-
-        if (e.target.classList.contains('load-order-btn') || e.target.closest('.load-order-btn')) {
-            const btn = e.target.classList.contains('load-order-btn') ? e.target : e.target.closest('.load-order-btn');
-            const orderId = btn.dataset.orderId;
-            const heldOrders = JSON.parse(localStorage.getItem('heldOrders') || '[]');
-            const order = heldOrders.find(o => o.id == orderId);
-            if (order) {
-                if (cart.length > 0) {
-                    Swal.fire({
-                        title: 'Replace Current Cart?',
-                        text: 'Loading this order will replace your current cart.',
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonText: 'Yes, replace'
-                    }).then(res => res.isConfirmed && loadOrderFromHeld(order));
-                } else {
-                    loadOrderFromHeld(order);
-                }
-            }
-        }
-
-        if (e.target.classList.contains('remove-order-btn') || e.target.closest('.remove-order-btn')) {
-            const btn = e.target.classList.contains('remove-order-btn') ? e.target : e.target.closest('.remove-order-btn');
-            const orderId = btn.dataset.orderId;
-            Swal.fire({
-                title: 'Remove Order?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Yes, remove'
-            }).then(res => {
-                if (res.isConfirmed) {
-                    let orders = JSON.parse(localStorage.getItem('heldOrders') || '[]');
-                    orders = orders.filter(o => o.id != orderId);
-                    localStorage.setItem('heldOrders', JSON.stringify(orders));
-                    document.getElementById('loadHeldBtn').click();
-                    Swal.fire('Removed!', '', 'success');
-                }
-            });
-        }
-    });
-
-    removeFromCartBtn.addEventListener('click', removeCurrentProductFromCart);
-    confirmAddBtn.addEventListener('click', addOrUpdateProductInCart);
-    document.getElementById('clearCart').onclick = clearCart;
-    document.getElementById('holdOrderBtn').onclick = holdOrder;
-    document.getElementById('loadHeldBtn').onclick = loadHeldOrders;
-    document.getElementById('completeOrder').onclick = completeOrder;
-
-    // Discount functionality
-    document.getElementById('discountType').addEventListener('change', function() {
-        discountType = this.value;
-        updateCart();
-    });
-
-    document.getElementById('discountValue').addEventListener('input', function() {
-        const val = parseFloat(this.value) || 0;
-        if (discountType === 'percent' && val > 100) {
-            this.value = 100;
-        }
-    });
-
-    document.getElementById('applyDiscountBtn').addEventListener('click', function() {
-        const input = document.getElementById('discountValue');
-        discountValue = parseFloat(input.value) || 0;
-
-        if (discountType === 'percent' && discountValue > 100) {
-            Swal.fire('Invalid', 'Percentage discount cannot exceed 100%', 'warning');
-            discountValue = 100;
-            input.value = 100;
-        }
-
-        updateCart();
-        Swal.fire({
-            icon: 'success',
-            title: 'Discount Applied!',
-            text: `${discountValue}${discountType === 'percent' ? '%' : '₦'} off`,
-            timer: 1500,
-            showConfirmButton: false
-        });
-    });
-
-    // Per-item discount apply
-    document.getElementById('applyItemDiscountBtn').addEventListener('click', function() {
-        if (currentItemIndex === null) return;
-
-        const value = parseFloat(document.getElementById('itemDiscountValue').value) || 0;
-        const type = document.getElementById('itemDiscountType').value;
-
-        if (type === 'percent' && value > 100) {
-            Swal.fire('Invalid', 'Percentage cannot exceed 100%', 'warning');
-            return;
-        }
-
-        cart[currentItemIndex].discount_type = type;
-        cart[currentItemIndex].discount_value = value;
-
-        updateCart();
-        bootstrap.Modal.getInstance(document.getElementById('itemDiscountModal')).hide();
-
-        Swal.fire({
-            icon: 'success',
-            title: 'Item Discount Applied!',
-            text: `Discount: ${value}${type === 'percent' ? '%' : '₦'}`,
-            timer: 1500,
-            showConfirmButton: false
-        });
-    });
-
-    // ============================================
-    // FUNCTIONS
-    // ============================================
     function showEmptySearchState() {
         searchLoading.classList.add('d-none');
         if (selectedProducts.length > 0) {
@@ -692,9 +564,28 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
+    // Quantity Modal
+    document.addEventListener('click', function (e) {
+        if (e.target.classList.contains('qty-btn') || e.target.closest('.qty-btn')) {
+            const btn = e.target.classList.contains('qty-btn') ? e.target : e.target.closest('.qty-btn');
+            if (btn.disabled) return;
+            openQuantityModal(btn);
+        }
+
+        if (e.target.classList.contains('remove-from-table-btn') || e.target.closest('.remove-from-table-btn')) {
+            const btn = e.target.classList.contains('remove-from-table-btn') ? e.target : e.target.closest('.remove-from-table-btn');
+            removeProductFromSelection(btn.dataset.productId);
+        }
+
+        if (e.target.classList.contains('qty-btn-cart') || e.target.closest('.qty-btn-cart')) {
+            const btn = e.target.classList.contains('qty-btn-cart') ? e.target : e.target.closest('.qty-btn-cart');
+            openQuantityModal(btn);
+        }
+    });
+
     function openQuantityModal(button) {
         try {
-            const p = JSON.parse(button.dataset.product);
+            const p = JSON.parse(button.dataset.product.replace(/&apos;/g, "'"));
             const productId = button.dataset.productId;
             currentProduct = p;
 
@@ -729,6 +620,7 @@ document.addEventListener('DOMContentLoaded', function () {
         totalPriceDisplay.textContent = `Total: ₦${(qty * price).toFixed(2)}`;
     }
 
+    // Cart functions
     function addToSelectedProducts(product) {
         if (!selectedProducts.some(p => p.id === product.id)) selectedProducts.push({...product});
     }
@@ -927,6 +819,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 cart = [];
                 selectedProducts = [];
                 productQuantityCache = {};
+                discountValue = 0;
+                redeemPointsInput.value = '';
                 updateCart();
                 renderAllProducts();
                 Swal.fire('Cleared!', '', 'success');
@@ -949,7 +843,10 @@ document.addEventListener('DOMContentLoaded', function () {
         localStorage.setItem('heldOrders', JSON.stringify(heldOrders));
         Swal.fire('Order Held!', '', 'success');
         cart = []; selectedProducts = []; productQuantityCache = {};
-        updateCart(); renderAllProducts();
+        discountValue = 0;
+        redeemPointsInput.value = '';
+        updateCart();
+        renderAllProducts();
     }
 
     function loadHeldOrders() {
@@ -982,24 +879,69 @@ document.addEventListener('DOMContentLoaded', function () {
             html += '</div>';
             list.innerHTML = html;
         }
-        loadOrderModalInstance.show();
+        new bootstrap.Modal(document.getElementById('loadOrderModal')).show();
     }
+
+    document.addEventListener('click', function (e) {
+        if (e.target.classList.contains('load-order-btn') || e.target.closest('.load-order-btn')) {
+            const btn = e.target.closest('.load-order-btn');
+            const orderId = btn.dataset.orderId;
+            const heldOrders = JSON.parse(localStorage.getItem('heldOrders') || '[]');
+            const order = heldOrders.find(o => o.id == orderId);
+            if (order) {
+                if (cart.length > 0) {
+                    Swal.fire({
+                        title: 'Replace Current Cart?',
+                        text: 'Loading this order will replace your current cart.',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, replace'
+                    }).then(res => {
+                        if (res.isConfirmed) loadOrderFromHeld(order);
+                    });
+                } else {
+                    loadOrderFromHeld(order);
+                }
+            }
+        }
+
+        if (e.target.classList.contains('remove-order-btn') || e.target.closest('.remove-order-btn')) {
+            const btn = e.target.closest('.remove-order-btn');
+            const orderId = btn.dataset.orderId;
+            Swal.fire({
+                title: 'Remove Held Order?',
+                icon: 'warning',
+                showCancelButton: true
+            }).then(res => {
+                if (res.isConfirmed) {
+                    let orders = JSON.parse(localStorage.getItem('heldOrders') || '[]');
+                    orders = orders.filter(o => o.id != orderId);
+                    localStorage.setItem('heldOrders', JSON.stringify(orders));
+                    loadHeldOrders();
+                }
+            });
+        }
+    });
 
     function loadOrderFromHeld(order) {
         cart = JSON.parse(JSON.stringify(order.cart));
         selectedProducts = order.selectedProducts ? JSON.parse(JSON.stringify(order.selectedProducts)) : [];
         productQuantityCache = order.productQuantityCache ? JSON.parse(JSON.stringify(order.productQuantityCache)) : {};
         if (order.customer) customerSelect.value = order.customer;
+        discountValue = 0;
+        redeemPointsInput.value = '';
         updateCart();
         renderAllProducts();
-        loadOrderModalInstance.hide();
+        new bootstrap.Modal(document.getElementById('loadOrderModal')).hide();
         Swal.fire('Loaded!', '', 'success');
     }
 
     function completeOrder() {
         if (cart.length === 0) return Swal.fire('Empty', 'Add items first', 'warning');
+
         const payment = document.querySelector('input[name="payment"]:checked').value;
         const customerId = customerSelect.value || null;
+        const redeemPoints = parseInt(redeemPointsInput.value) || 0;
 
         const items = cart.map(item => ({
             product_id: item.product_id,
@@ -1021,6 +963,7 @@ document.addEventListener('DOMContentLoaded', function () {
             discount_type: discount.type,
             discount_value: discount.value,
             discount_amount: discount.amount,
+            redeem_points: redeemPoints,
             _token: '{{ csrf_token() }}'
         })
         .then(res => {
@@ -1036,8 +979,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 }).then(r => {
                     if (r.isConfirmed) window.open(`/pos/receipt/${res.data.order_id}`, '_blank');
                     cart = []; selectedProducts = []; productQuantityCache = {};
-                    updateCart(); renderAllProducts();
-                    input.focus(); input.select();
+                    discountValue = 0;
+                    redeemPointsInput.value = '';
+                    customerSelect.value = '';
+                    loyaltySection.style.display = 'none';
+                    updateCart();
+                    renderAllProducts();
+                    input.focus();
                 });
             } else {
                 Swal.fire('Error', res.data.message || 'Failed', 'error');
@@ -1063,38 +1011,16 @@ document.addEventListener('DOMContentLoaded', function () {
         };
     }
 
+    // Initial render
     updateCart();
 });
 </script>
 
 <style>
-.modal.fade .modal-content { transform: scale(0.95); transition: transform 0.3s ease-out; }
-.modal.show .modal-content { transform: scale(1); }
-.product-icon { transition: all 0.3s ease; }
-.modal.show .product-icon { animation: pulse 0.6s ease; }
-@keyframes pulse { 0%{transform:scale(1)} 50%{transform:scale(1.1)} 100%{transform:scale(1)} }
-#modalQty:focus { box-shadow: 0 0 0 0.25rem rgba(13,110,253,0.25); border-color:#86b7fe; transform:scale(1.02); }
-.btn-outline-secondary:hover { background:#6c757d; color:white; transform:translateY(-2px); }
-.selected-product-row { background-color:rgba(25,135,84,0.1)!important; border-left:4px solid #198754; }
-.qty-btn, .qty-btn-cart { min-width:120px; }
-.qty-btn-cart { min-width:60px; font-weight:bold; }
-.qty-btn-cart:hover { transform:translateY(-1px); box-shadow:0 2px 5px rgba(0,0,0,0.1); }
+.qty-btn, .qty-btn-cart { min-width: 120px; }
+.qty-btn-cart { min-width: 60px; font-weight: bold; }
 .qty-btn:disabled { cursor: not-allowed; opacity: 0.65; pointer-events: none; }
-#searchLoading { backdrop-filter:blur(2px); }
-.list-group-item:hover { background:#f8f9fa; }
-@media (max-width:576px) { .modal-dialog{margin:0.5rem;} #modalQty{font-size:1.5rem!important;height:50px!important;} }
-.btn-danger.rounded-circle { width:30px;height:30px;display:flex;align-items:center;justify-content:center;padding:0; }
-.customer-select-dropdown { background:#f8f9fa; border:1px solid #ced4da; border-radius:0.375rem; transition:all 0.2s ease; }
-.customer-select-dropdown:focus { background:#fff; border-color:#86b7fe; box-shadow:0 0 0 0.25rem rgba(13,110,253,0.25); }
-#totalPriceDisplay { font-size:1.1rem; font-weight:bold; }
-.btn-outline-secondary { width:30px;height:30px;display:flex;align-items:center;justify-content:center;padding:0; }
-.badge { font-size:0.75em; padding:0.35em 0.65em; }
-.table-primary th { background:#0d6efd; color:white; }
-.table-dark th { background:#212529; color:white; }
-.btn-check:checked + .btn-outline-success { background:#198754; color:white; border-color:#198754; }
-.btn-check:checked + .btn-outline-primary { background:#0d6efd; color:white; border-color:#0d6efd; }
-.btn-check:checked + .btn-outline-info { background:#0dcaf0; color:white; border-color:#0dcaf0; }
-#cartBody tr:hover { background:rgba(0,0,0,0.02); }
+.selected-product-row { background-color: rgba(25,135,84,0.1)!important; border-left: 4px solid #198754; }
 .item-discount-btn { font-size: 0.8rem; }
 </style>
 @endsection
