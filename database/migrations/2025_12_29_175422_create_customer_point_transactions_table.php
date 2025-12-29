@@ -9,7 +9,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Temporarily disable foreign key checks to bypass strict validation
+        // Bypass strict foreign key validation during creation
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
 
         Schema::create('customer_point_transactions', function (Blueprint $table) {
@@ -43,7 +43,7 @@ return new class extends Migration
             $table->index('created_at');
         });
 
-        // Re-enable foreign key checks
+        // Re-enable checks
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
     }
 
