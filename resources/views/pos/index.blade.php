@@ -115,19 +115,6 @@
                                 </small>
                             </div>
 
-                            <!-- Loyalty Points Section -->
-                            <div class="mb-4" id="loyaltySection" style="display:none;">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="fw-semibold">Loyalty Points</span>
-                                    <span id="customerPoints" class="text-primary fw-bold">0 points</span>
-                                </div>
-                                <div class="input-group input-group-sm">
-                                    <input type="number" id="redeemPoints" class="form-control" min="0" placeholder="Redeem points">
-                                    <button class="btn btn-success" id="applyRedeemBtn">Apply</button>
-                                </div>
-                                <small class="text-muted mt-1" id="redeemInfo"></small>
-                            </div>
-
                             <div class="flex-grow-1 mb-4">
                                 <h6 class="fw-bold mb-3">Cart Items</h6>
                                 <div class="table-responsive" style="max-height: 350px;">
@@ -316,7 +303,7 @@
     </div>
 </div>
 
-<!-- Load Held Order Modal -->
+<!-- Load Order Modal -->
 <div class="modal fade" id="loadOrderModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -363,11 +350,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const modalProductUnit = document.getElementById('modalProductUnit');
     const previousQtyText = document.getElementById('previousQtyText');
     const totalPriceDisplay = document.getElementById('totalPriceDisplay');
-    const loyaltySection = document.getElementById('loyaltySection');
-    const customerPointsEl = document.getElementById('customerPoints');
-    const redeemPointsInput = document.getElementById('redeemPoints');
-    const applyRedeemBtn = document.getElementById('applyRedeemBtn');
-    const redeemInfo = document.getElementById('redeemInfo');
 
     // Initialize Bootstrap tooltips
     const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
@@ -385,113 +367,11 @@ document.addEventListener('DOMContentLoaded', function () {
     let discountType = 'percent';
     let discountValue = 0;
     let currentItemIndex = null;
-    let customerPoints = 0;
-    let redeemRate = {{ config('loyalty.redeem_rate', 100) }};
 
     input.focus();
 
     // ============================================
-    // LOYALTY POINTS
-    // ============================================
-    customerSelect.addEventListener('change', function () {
-        const customerId = this.value;
-        if (customerId) {
-            axios.get(`/pos/customer-points/${customerId}`)
-                .then(res => {
-                    if (res.data.success) {
-                        customerPoints = res.data.points;
-                        customerPointsEl.textContent = `${customerPoints} points (₦${(customerPoints / redeemRate).toFixed(2)})`;
-                        redeemInfo.textContent = `Redeem in multiples of ${redeemRate} points = ₦${redeemRate} discount`;
-                        loyaltySection.style.display = 'block';
-                    }
-                })
-                .catch(err => {
-                    console.error('Failed to load points', err);
-                    loyaltySection.style.display = 'none';
-                });
-        } else {
-            loyaltySection.style.display = 'none';
-            customerPoints = 0;
-            redeemPointsInput.value = '';
-        }
-    });
-
-    applyRedeemBtn.addEventListener('click', function () {
-        const points = parseInt(redeemPointsInput.value) || 0;
-        if (points > customerPoints) {
-            Swal.fire('Insufficient Points', `You only have ${customerPoints} points`, 'warning');
-            return;
-        }
-        if (points % redeemRate !== 0) {
-            Swal.fire('Invalid Amount', `Points must be multiple of ${redeemRate}`, 'warning');
-            return;
-        }
-        discountValue = points / redeemRate;
-        discountType = 'fixed';
-        updateCart();
-        Swal.fire('Points Redeemed!', `₦${discountValue} discount applied`, 'success');
-    });
-
-    // ============================================
-    // DISCOUNT FUNCTIONALITY
-    // ============================================
-    document.getElementById('discountType').addEventListener('change', function () {
-        discountType = this.value;
-    });
-
-    document.getElementById('discountValue').addEventListener('input', function () {
-        const val = parseFloat(this.value) || 0;
-        if (discountType === 'percent' && val > 100) {
-            this.value = 100;
-        }
-    });
-
-    document.getElementById('applyDiscountBtn').addEventListener('click', function () {
-        discountValue = parseFloat(document.getElementById('discountValue').value) || 0;
-        if (discountType === 'percent' && discountValue > 100) {
-            Swal.fire('Invalid', 'Percentage discount cannot exceed 100%', 'warning');
-            discountValue = 100;
-            document.getElementById('discountValue').value = 100;
-        }
-        updateCart();
-    });
-
-    // Per-item discount
-    document.addEventListener('click', function (e) {
-        if (e.target.classList.contains('item-discount-btn') || e.target.closest('.item-discount-btn')) {
-            const btn = e.target.closest('.item-discount-btn');
-            currentItemIndex = cart.findIndex(item => item.product_id === parseInt(btn.dataset.productId));
-            if (currentItemIndex === -1) return;
-
-            const item = cart[currentItemIndex];
-            document.getElementById('itemName').textContent = item.title;
-            document.getElementById('itemDiscountValue').value = item.discount_value || 0;
-            document.getElementById('itemDiscountType').value = item.discount_type || 'percent';
-
-            new bootstrap.Modal(document.getElementById('itemDiscountModal')).show();
-        }
-    });
-
-    document.getElementById('applyItemDiscountBtn').addEventListener('click', function () {
-        if (currentItemIndex === null) return;
-
-        const value = parseFloat(document.getElementById('itemDiscountValue').value) || 0;
-        const type = document.getElementById('itemDiscountType').value;
-
-        if (type === 'percent' && value > 100) {
-            Swal.fire('Invalid', 'Percentage cannot exceed 100%', 'warning');
-            return;
-        }
-
-        cart[currentItemIndex].discount_type = type;
-        cart[currentItemIndex].discount_value = value;
-
-        updateCart();
-        bootstrap.Modal.getInstance(document.getElementById('itemDiscountModal')).hide();
-    });
-
-    // ============================================
-    // SEARCH & CART LOGIC
+    // EVENT LISTENERS
     // ============================================
     input.addEventListener('input', debounce(() => {
         const q = input.value.trim();
@@ -510,6 +390,210 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    customerSelect.addEventListener('touchstart', function() {
+        if (window.innerWidth < 768) this.style.fontSize = '16px';
+    });
+
+    // Quantity Modal Events
+    quantityModal.addEventListener('show.bs.modal', updateTotalPrice);
+    quantityModal.addEventListener('shown.bs.modal', () => {
+        setTimeout(() => { modalQty.focus(); modalQty.select(); }, 100);
+    });
+    quantityModal.addEventListener('hidden.bs.modal', () => {
+        setTimeout(() => { input.focus(); input.select(); }, 100);
+    });
+
+    modalQty.addEventListener('input', updateTotalPrice);
+    modalQty.addEventListener('change', updateTotalPrice);
+
+    document.getElementById('increaseQty').addEventListener('click', () => {
+        modalQty.value = (parseInt(modalQty.value) || 1) + 1;
+        updateTotalPrice();
+        modalQty.focus(); modalQty.select();
+    });
+
+    document.getElementById('decreaseQty').addEventListener('click', () => {
+        const val = parseInt(modalQty.value) || 1;
+        if (val > 1) {
+            modalQty.value = val - 1;
+            updateTotalPrice();
+            modalQty.focus(); modalQty.select();
+        }
+    });
+
+    document.querySelectorAll('[data-qty]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            modalQty.value = btn.dataset.qty;
+            updateTotalPrice();
+            modalQty.focus(); modalQty.select();
+        });
+    });
+
+    modalQty.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            confirmAddBtn.click();
+        }
+    });
+
+    document.getElementById('loadOrderModal').addEventListener('hidden.bs.modal', () => {
+        setTimeout(() => { input.focus(); input.select(); }, 100);
+    });
+
+    // Refocus search input
+    document.addEventListener('click', e => {
+        const isModalOpen = document.querySelector('.modal.show');
+        const isModalElement = e.target.closest('.modal');
+        const isBackdrop = e.target.classList.contains('modal-backdrop');
+        const isSearch = e.target === input || input.contains(e.target);
+        const isCustomer = e.target === customerSelect || customerSelect.contains(e.target);
+
+        if (!isModalOpen && !isModalElement && !isBackdrop && !isSearch && !isCustomer) {
+            setTimeout(() => input.focus(), 50);
+        }
+    });
+
+    // Click handlers
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('qty-btn') || e.target.closest('.qty-btn')) {
+            const btn = e.target.classList.contains('qty-btn') ? e.target : e.target.closest('.qty-btn');
+            if (!btn.disabled) openQuantityModal(btn);
+        }
+
+        if (e.target.classList.contains('remove-from-table-btn') || e.target.closest('.remove-from-table-btn')) {
+            const btn = e.target.classList.contains('remove-from-table-btn') ? e.target : e.target.closest('.remove-from-table-btn');
+            removeProductFromSelection(btn.dataset.productId);
+        }
+
+        if (e.target.classList.contains('qty-btn-cart') || e.target.closest('.qty-btn-cart')) {
+            const btn = e.target.classList.contains('qty-btn-cart') ? e.target : e.target.closest('.qty-btn-cart');
+            openQuantityModal(btn);
+        }
+
+        if (e.target.classList.contains('item-discount-btn') || e.target.closest('.item-discount-btn')) {
+            const btn = e.target.classList.contains('item-discount-btn') ? e.target : e.target.closest('.item-discount-btn');
+            currentItemIndex = cart.findIndex(item => item.product_id === btn.dataset.productId);
+            if (currentItemIndex === -1) return;
+
+            const item = cart[currentItemIndex];
+
+            document.getElementById('itemName').textContent = item.title;
+            document.getElementById('itemDiscountValue').value = item.discount_value || 0;
+            document.getElementById('itemDiscountType').value = item.discount_type || 'percent';
+
+            new bootstrap.Modal(document.getElementById('itemDiscountModal')).show();
+        }
+
+        if (e.target.classList.contains('load-order-btn') || e.target.closest('.load-order-btn')) {
+            const btn = e.target.classList.contains('load-order-btn') ? e.target : e.target.closest('.load-order-btn');
+            const orderId = btn.dataset.orderId;
+            const heldOrders = JSON.parse(localStorage.getItem('heldOrders') || '[]');
+            const order = heldOrders.find(o => o.id == orderId);
+            if (order) {
+                if (cart.length > 0) {
+                    Swal.fire({
+                        title: 'Replace Current Cart?',
+                        text: 'Loading this order will replace your current cart.',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, replace'
+                    }).then(res => res.isConfirmed && loadOrderFromHeld(order));
+                } else {
+                    loadOrderFromHeld(order);
+                }
+            }
+        }
+
+        if (e.target.classList.contains('remove-order-btn') || e.target.closest('.remove-order-btn')) {
+            const btn = e.target.classList.contains('remove-order-btn') ? e.target : e.target.closest('.remove-order-btn');
+            const orderId = btn.dataset.orderId;
+            Swal.fire({
+                title: 'Remove Order?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, remove'
+            }).then(res => {
+                if (res.isConfirmed) {
+                    let orders = JSON.parse(localStorage.getItem('heldOrders') || '[]');
+                    orders = orders.filter(o => o.id != orderId);
+                    localStorage.setItem('heldOrders', JSON.stringify(orders));
+                    document.getElementById('loadHeldBtn').click();
+                    Swal.fire('Removed!', '', 'success');
+                }
+            });
+        }
+    });
+
+    removeFromCartBtn.addEventListener('click', removeCurrentProductFromCart);
+    confirmAddBtn.addEventListener('click', addOrUpdateProductInCart);
+    document.getElementById('clearCart').onclick = clearCart;
+    document.getElementById('holdOrderBtn').onclick = holdOrder;
+    document.getElementById('loadHeldBtn').onclick = loadHeldOrders;
+    document.getElementById('completeOrder').onclick = completeOrder;
+
+    // Discount functionality
+    document.getElementById('discountType').addEventListener('change', function() {
+        discountType = this.value;
+        updateCart();
+    });
+
+    document.getElementById('discountValue').addEventListener('input', function() {
+        const val = parseFloat(this.value) || 0;
+        if (discountType === 'percent' && val > 100) {
+            this.value = 100;
+        }
+    });
+
+    document.getElementById('applyDiscountBtn').addEventListener('click', function() {
+        const input = document.getElementById('discountValue');
+        discountValue = parseFloat(input.value) || 0;
+
+        if (discountType === 'percent' && discountValue > 100) {
+            Swal.fire('Invalid', 'Percentage discount cannot exceed 100%', 'warning');
+            discountValue = 100;
+            input.value = 100;
+        }
+
+        updateCart();
+        Swal.fire({
+            icon: 'success',
+            title: 'Discount Applied!',
+            text: `${discountValue}${discountType === 'percent' ? '%' : '₦'} off`,
+            timer: 1500,
+            showConfirmButton: false
+        });
+    });
+
+    // Per-item discount apply
+    document.getElementById('applyItemDiscountBtn').addEventListener('click', function() {
+        if (currentItemIndex === null) return;
+
+        const value = parseFloat(document.getElementById('itemDiscountValue').value) || 0;
+        const type = document.getElementById('itemDiscountType').value;
+
+        if (type === 'percent' && value > 100) {
+            Swal.fire('Invalid', 'Percentage cannot exceed 100%', 'warning');
+            return;
+        }
+
+        cart[currentItemIndex].discount_type = type;
+        cart[currentItemIndex].discount_value = value;
+
+        updateCart();
+        bootstrap.Modal.getInstance(document.getElementById('itemDiscountModal')).hide();
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Item Discount Applied!',
+            text: `Discount: ${value}${type === 'percent' ? '%' : '₦'}`,
+            timer: 1500,
+            showConfirmButton: false
+        });
+    });
+
+    // ============================================
+    // FUNCTIONS
+    // ============================================
     function showEmptySearchState() {
         searchLoading.classList.add('d-none');
         if (selectedProducts.length > 0) {
@@ -608,56 +692,35 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
-    // Quantity Modal Events
-    document.addEventListener('click', function (e) {
-        if (e.target.classList.contains('qty-btn') || e.target.closest('.qty-btn')) {
-            const btn = e.target.classList.contains('qty-btn') ? e.target : e.target.closest('.qty-btn');
-            if (!btn.disabled) openQuantityModal(btn);
+    function openQuantityModal(button) {
+        try {
+            const p = JSON.parse(button.dataset.product);
+            const productId = button.dataset.productId;
+            currentProduct = p;
+
+            const cartItem = cart.find(i => i.product_id === productId);
+            const cachedQty = productQuantityCache[productId] || 1;
+            const previousQty = cartItem ? cartItem.qty : cachedQty;
+
+            modalProductLabel.textContent = p.title;
+            const price = p.sale_price || p.price;
+            modalProductPrice.textContent = `₦${parseFloat(price).toFixed(2)}`;
+            modalProductStock.textContent = `Stock: ${p.stock}`;
+            modalProductUnit.textContent = p.primary_unit || 'Unit';
+
+            modalQty.value = previousQty;
+            previousQtyText.textContent = cartItem ? `In cart: ${previousQty}` : `Previous: ${previousQty}`;
+            previousQtyText.className = cartItem ? 'text-success fw-semibold' : 'text-muted';
+
+            updateTotalPrice();
+            removeFromCartBtn.style.display = cartItem ? 'inline-block' : 'none';
+
+            quantityModalInstance = new bootstrap.Modal(quantityModal);
+            quantityModalInstance.show();
+        } catch (e) {
+            console.error(e);
         }
-
-        if (e.target.classList.contains('remove-from-table-btn') || e.target.closest('.remove-from-table-btn')) {
-            const btn = e.target.classList.contains('remove-from-table-btn') ? e.target : e.target.closest('.remove-from-table-btn');
-            removeProductFromSelection(btn.dataset.productId);
-        }
-
-        if (e.target.classList.contains('qty-btn-cart') || e.target.closest('.qty-btn-cart')) {
-            const btn = e.target.classList.contains('qty-btn-cart') ? e.target : e.target.closest('.qty-btn-cart');
-            openQuantityModal(btn);
-        }
-    });
-
-function openQuantityModal(button) {
-    try {
-        // FIXED: Correctly handle escaped single quotes
-        let productStr = button.dataset.product.replace(/&apos;/g, "'");
-        const p = JSON.parse(productStr);
-        const productId = button.dataset.productId;
-        currentProduct = p;
-
-        const cartItem = cart.find(i => i.product_id === productId);
-        const cachedQty = productQuantityCache[productId] || 1;
-        const previousQty = cartItem ? cartItem.qty : cachedQty;
-
-        modalProductLabel.textContent = p.title;
-        const price = p.sale_price || p.price;
-        modalProductPrice.textContent = `₦${parseFloat(price).toFixed(2)}`;
-        modalProductStock.textContent = `Stock: ${p.stock}`;
-        modalProductUnit.textContent = p.primary_unit || 'Unit';
-
-        modalQty.value = previousQty;
-        previousQtyText.textContent = cartItem ? `In cart: ${previousQty}` : `Previous: ${previousQty}`;
-        previousQtyText.className = cartItem ? 'text-success fw-semibold' : 'text-muted';
-
-        updateTotalPrice();
-        removeFromCartBtn.style.display = cartItem ? 'inline-block' : 'none';
-
-        quantityModalInstance = new bootstrap.Modal(quantityModal);
-        quantityModalInstance.show();
-    } catch (e) {
-        console.error('Failed to open quantity modal', e);
-        Swal.fire('Error', 'Failed to load product. Please try again.', 'error');
     }
-}
 
     function updateTotalPrice() {
         if (!currentProduct) return;
@@ -864,8 +927,6 @@ function openQuantityModal(button) {
                 cart = [];
                 selectedProducts = [];
                 productQuantityCache = {};
-                discountValue = 0;
-                redeemPointsInput.value = '';
                 updateCart();
                 renderAllProducts();
                 Swal.fire('Cleared!', '', 'success');
@@ -888,10 +949,7 @@ function openQuantityModal(button) {
         localStorage.setItem('heldOrders', JSON.stringify(heldOrders));
         Swal.fire('Order Held!', '', 'success');
         cart = []; selectedProducts = []; productQuantityCache = {};
-        discountValue = 0;
-        redeemPointsInput.value = '';
-        updateCart();
-        renderAllProducts();
+        updateCart(); renderAllProducts();
     }
 
     function loadHeldOrders() {
@@ -927,54 +985,11 @@ function openQuantityModal(button) {
         loadOrderModalInstance.show();
     }
 
-    document.addEventListener('click', function (e) {
-        if (e.target.classList.contains('load-order-btn') || e.target.closest('.load-order-btn')) {
-            const btn = e.target.closest('.load-order-btn');
-            const orderId = btn.dataset.orderId;
-            const heldOrders = JSON.parse(localStorage.getItem('heldOrders') || '[]');
-            const order = heldOrders.find(o => o.id == orderId);
-            if (order) {
-                if (cart.length > 0) {
-                    Swal.fire({
-                        title: 'Replace Current Cart?',
-                        text: 'Loading this order will replace your current cart.',
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonText: 'Yes, replace'
-                    }).then(res => {
-                        if (res.isConfirmed) loadOrderFromHeld(order);
-                    });
-                } else {
-                    loadOrderFromHeld(order);
-                }
-            }
-        }
-
-        if (e.target.classList.contains('remove-order-btn') || e.target.closest('.remove-order-btn')) {
-            const btn = e.target.closest('.remove-order-btn');
-            const orderId = btn.dataset.orderId;
-            Swal.fire({
-                title: 'Remove Held Order?',
-                icon: 'warning',
-                showCancelButton: true
-            }).then(res => {
-                if (res.isConfirmed) {
-                    let orders = JSON.parse(localStorage.getItem('heldOrders') || '[]');
-                    orders = orders.filter(o => o.id != orderId);
-                    localStorage.setItem('heldOrders', JSON.stringify(orders));
-                    loadHeldOrders();
-                }
-            });
-        }
-    });
-
     function loadOrderFromHeld(order) {
         cart = JSON.parse(JSON.stringify(order.cart));
         selectedProducts = order.selectedProducts ? JSON.parse(JSON.stringify(order.selectedProducts)) : [];
         productQuantityCache = order.productQuantityCache ? JSON.parse(JSON.stringify(order.productQuantityCache)) : {};
         if (order.customer) customerSelect.value = order.customer;
-        discountValue = 0;
-        redeemPointsInput.value = '';
         updateCart();
         renderAllProducts();
         loadOrderModalInstance.hide();
@@ -983,10 +998,8 @@ function openQuantityModal(button) {
 
     function completeOrder() {
         if (cart.length === 0) return Swal.fire('Empty', 'Add items first', 'warning');
-
         const payment = document.querySelector('input[name="payment"]:checked').value;
         const customerId = customerSelect.value || null;
-        const redeemPoints = parseInt(redeemPointsInput.value) || 0;
 
         const items = cart.map(item => ({
             product_id: item.product_id,
@@ -1008,7 +1021,6 @@ function openQuantityModal(button) {
             discount_type: discount.type,
             discount_value: discount.value,
             discount_amount: discount.amount,
-            redeem_points: redeemPoints,
             _token: '{{ csrf_token() }}'
         })
         .then(res => {
@@ -1024,13 +1036,8 @@ function openQuantityModal(button) {
                 }).then(r => {
                     if (r.isConfirmed) window.open(`/pos/receipt/${res.data.order_id}`, '_blank');
                     cart = []; selectedProducts = []; productQuantityCache = {};
-                    discountValue = 0;
-                    redeemPointsInput.value = '';
-                    customerSelect.value = '';
-                    loyaltySection.style.display = 'none';
-                    updateCart();
-                    renderAllProducts();
-                    input.focus();
+                    updateCart(); renderAllProducts();
+                    input.focus(); input.select();
                 });
             } else {
                 Swal.fire('Error', res.data.message || 'Failed', 'error');
@@ -1056,7 +1063,6 @@ function openQuantityModal(button) {
         };
     }
 
-    // Initial render
     updateCart();
 });
 </script>
