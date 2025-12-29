@@ -68,7 +68,7 @@ class PosController extends Controller
     }
 
     /**
-     * Save POS order with per-item and order-level discounts + history tracking
+     * Save POS order with per-item & order-level discounts + discount history tracking
      */
     public function savePosOrder(Request $request)
     {
@@ -99,7 +99,7 @@ class PosController extends Controller
                 $orderItems = [];
                 $orderId = 'POS-' . now()->format('Ymd-His') . '-' . Str::random(4);
 
-                // FIXED: Safe default location creation
+                // SAFE: No duplicate entry error
                 $defaultLocation = StockLocation::updateOrCreate(
                     ['code' => 'MAIN'],
                     [
@@ -152,7 +152,7 @@ class PosController extends Controller
                         'unit_name'        => $selectedUnit->name ?? null,
                     ];
 
-                    // Deduct stock
+                    // Stock deduction
                     $previous = $product->stock;
                     $new = max(0, $previous - $piecesToDeduct);
 
@@ -207,7 +207,7 @@ class PosController extends Controller
 
                 $order->items()->createMany($orderItems);
 
-                // === DISCOUNT HISTORY TRACKING ===
+                // DISCOUNT HISTORY TRACKING
                 if ($orderDiscountAmount > 0) {
                     OrderDiscount::create([
                         'order_id'       => $order->id,
@@ -362,6 +362,7 @@ class PosController extends Controller
             DB::transaction(function () use ($orderId) {
                 $order = Order::with('items.product.units')->where('id', $orderId)->firstOrFail();
 
+                // SAFE: No duplicate entry
                 $defaultLocation = StockLocation::updateOrCreate(
                     ['code' => 'MAIN'],
                     [
