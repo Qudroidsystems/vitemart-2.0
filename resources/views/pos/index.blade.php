@@ -452,7 +452,7 @@
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-// MAIN POS SCRIPT
+// MAIN POS SCRIPT - CORRECTED VERSION
 document.addEventListener('DOMContentLoaded', function () {
     // ============================================
     // INITIALIZATION
@@ -466,7 +466,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const discountEl = document.getElementById('discountAmount');
     const grandTotalEl = document.getElementById('grandTotal');
     const searchLoading = document.getElementById('searchLoading');
-    const quantityModal = new bootstrap.Modal(document.getElementById('quantityModal'));
     const modalQty = document.getElementById('modalQty');
     const confirmAddBtn = document.getElementById('confirmAddBtn');
     const removeFromCartBtn = document.getElementById('removeFromCartBtn');
@@ -481,7 +480,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // State management
     let cart = [];
-    let allSearchedProducts = []; // Store ALL searched products in order of selection
+    let allSearchedProducts = [];
     let currentSearchQuery = '';
     let productQuantityCache = {};
     let currentProduct = null;
@@ -490,24 +489,21 @@ document.addEventListener('DOMContentLoaded', function () {
     let orderDiscountValue = 0;
     let printWindow = null;
     let printCheckInterval = null;
-    let lastSearchTime = 0;
-    let customerSearchInput = null;
+    let quantityModal = null;
 
     input.focus();
 
     // ============================================
-    // EVENT LISTENERS
+    // EVENT LISTENERS - SIMPLIFIED
     // ============================================
     input.addEventListener('input', debounce(() => {
         const q = input.value.trim();
         currentSearchQuery = q;
 
-        // Remove unselected items when new search starts
         if (q.length >= 2) {
-            removeUnselectedItems();
             searchProducts(q);
         } else if (q.length === 0) {
-            // Show all previously searched products when input is cleared
+            clearAllUnselectedItems();
             renderAllSearchedProducts();
         } else {
             showEmptySearchState();
@@ -517,91 +513,71 @@ document.addEventListener('DOMContentLoaded', function () {
     input.addEventListener('keydown', e => {
         if (e.key === 'Enter') {
             const q = input.value.trim();
-            if (q) {
-                removeUnselectedItems();
-                searchProducts(q);
-            }
-        }
-
-        // Ctrl+F to focus customer search
-        if (e.ctrlKey && e.key === 'f') {
-            e.preventDefault();
-            focusCustomerSearch();
+            if (q) searchProducts(q);
         }
     });
 
-    // Quantity Modal Events
-    document.getElementById('quantityModal').addEventListener('show.bs.modal', updateModalTotal);
+    // Initialize modals
+    function initModals() {
+        quantityModal = new bootstrap.Modal(document.getElementById('quantityModal'));
 
-    document.getElementById('quantityModal').addEventListener('shown.bs.modal', () => {
-        setTimeout(() => {
-            modalQty.focus();
-            modalQty.select();
-        }, 100);
-    });
+        // Quantity Modal Events
+        document.getElementById('quantityModal').addEventListener('show.bs.modal', updateModalTotal);
 
-    document.getElementById('quantityModal').addEventListener('hidden.bs.modal', () => {
-        setTimeout(() => {
-            input.focus();
-            input.select();
-        }, 100);
-    });
+        document.getElementById('quantityModal').addEventListener('shown.bs.modal', () => {
+            setTimeout(() => {
+                modalQty.focus();
+                modalQty.select();
+            }, 100);
+        });
 
-    modalQty.addEventListener('input', updateModalTotal);
-    modalQty.addEventListener('change', updateModalTotal);
+        document.getElementById('quantityModal').addEventListener('hidden.bs.modal', () => {
+            setTimeout(() => {
+                input.focus();
+                input.select();
+            }, 100);
+        });
 
-    document.getElementById('increaseQty').addEventListener('click', () => {
-        modalQty.value = (parseInt(modalQty.value) || 1) + 1;
-        updateModalTotal();
-        modalQty.focus();
-        modalQty.select();
-    });
+        modalQty.addEventListener('input', updateModalTotal);
+        modalQty.addEventListener('change', updateModalTotal);
 
-    document.getElementById('decreaseQty').addEventListener('click', () => {
-        const val = parseInt(modalQty.value) || 1;
-        if (val > 1) {
-            modalQty.value = val - 1;
-            updateModalTotal();
-            modalQty.focus();
-            modalQty.select();
-        }
-    });
-
-    // Quick quantity buttons
-    document.querySelectorAll('[data-qty]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            modalQty.value = btn.dataset.qty;
+        document.getElementById('increaseQty').addEventListener('click', () => {
+            modalQty.value = (parseInt(modalQty.value) || 1) + 1;
             updateModalTotal();
             modalQty.focus();
             modalQty.select();
         });
-    });
 
-    modalQty.addEventListener('keydown', e => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            confirmAddBtn.click();
-        }
-    });
+        document.getElementById('decreaseQty').addEventListener('click', () => {
+            const val = parseInt(modalQty.value) || 1;
+            if (val > 1) {
+                modalQty.value = val - 1;
+                updateModalTotal();
+                modalQty.focus();
+                modalQty.select();
+            }
+        });
 
-    // Discount field focus
-    discountValue.addEventListener('click', function() {
-        this.focus();
-        this.select();
-    });
+        // Quick quantity buttons
+        document.querySelectorAll('[data-qty]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                modalQty.value = btn.dataset.qty;
+                updateModalTotal();
+                modalQty.focus();
+                modalQty.select();
+            });
+        });
 
-    discountType.addEventListener('click', function() {
-        discountValue.focus();
-        discountValue.select();
-    });
+        modalQty.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                confirmAddBtn.click();
+            }
+        });
+    }
 
-    // Customer field focus - click anywhere on customer section to focus search
-    document.querySelector('.customer-search-container').addEventListener('click', function(e) {
-        if (customerSearchInput && !e.target.matches('#customerSearchInput')) {
-            customerSearchInput.focus();
-            customerSearchInput.select();
-        }
-    });
+    // Initialize modals
+    initModals();
 
     // Button click handlers
     confirmAddBtn.addEventListener('click', addOrUpdateProductInCart);
@@ -630,6 +606,17 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    // Discount field focus
+    discountValue.addEventListener('click', function() {
+        this.focus();
+        this.select();
+    });
+
+    discountType.addEventListener('click', function() {
+        discountValue.focus();
+        discountValue.select();
+    });
+
     // Item discount apply
     document.getElementById('applyItemDiscountBtn').addEventListener('click', function() {
         if (currentItemIndex === null) return;
@@ -646,173 +633,80 @@ document.addEventListener('DOMContentLoaded', function () {
         cart[currentItemIndex].discount_value = value;
 
         updateCart();
-        renderAllSearchedProducts(); // Update search table
+        renderAllSearchedProducts();
         bootstrap.Modal.getInstance(document.getElementById('itemDiscountModal')).hide();
 
         showToast('Item discount applied!', 'success');
     });
 
-    // Global click handlers
-    document.addEventListener('click', function(e) {
-        // Product quantity buttons in search results
-        if (e.target.classList.contains('qty-btn') || e.target.closest('.qty-btn')) {
-            const btn = e.target.classList.contains('qty-btn') ? e.target : e.target.closest('.qty-btn');
-            if (!btn.disabled) openQuantityModal(btn);
-        }
-
-        // Cancel/Remove buttons in search table
-        if (e.target.classList.contains('remove-from-search-btn') || e.target.closest('.remove-from-search-btn')) {
-            const btn = e.target.classList.contains('remove-from-search-btn') ? e.target : e.target.closest('.remove-from-search-btn');
-            const productId = btn.dataset.productId;
-            removeProductFromSearchAndCart(productId);
-        }
-
-        // Cart quantity buttons
-        if (e.target.classList.contains('qty-btn-cart') || e.target.closest('.qty-btn-cart')) {
-            const btn = e.target.classList.contains('qty-btn-cart') ? e.target : e.target.closest('.qty-btn-cart');
-            openQuantityModal(btn);
-        }
-
-        // Item discount buttons
-        if (e.target.classList.contains('item-discount-btn') || e.target.closest('.item-discount-btn')) {
-            const btn = e.target.classList.contains('item-discount-btn') ? e.target : e.target.closest('.item-discount-btn');
-            currentItemIndex = cart.findIndex(item => item.product_id === btn.dataset.productId);
-            if (currentItemIndex === -1) return;
-
-            const item = cart[currentItemIndex];
-            document.getElementById('itemName').textContent = item.title;
-            document.getElementById('itemDiscountValue').value = item.discount_value || 0;
-            document.getElementById('itemDiscountType').value = item.discount_type || 'percent';
-
-            new bootstrap.Modal(document.getElementById('itemDiscountModal')).show();
-        }
-
-        // Load held order buttons
-        if (e.target.classList.contains('load-order-btn') || e.target.closest('.load-order-btn')) {
-            const btn = e.target.classList.contains('load-order-btn') ? e.target : e.target.closest('.load-order-btn');
-            const orderId = btn.dataset.orderId;
-            const heldOrders = JSON.parse(localStorage.getItem('heldOrders') || '[]');
-            const order = heldOrders.find(o => o.id == orderId);
-            if (order) {
-                if (cart.length > 0) {
-                    Swal.fire({
-                        title: 'Replace Current Cart?',
-                        text: 'Loading this order will replace your current cart.',
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonText: 'Yes, replace'
-                    }).then(res => res.isConfirmed && loadOrderFromHeld(order));
-                } else {
-                    loadOrderFromHeld(order);
-                }
-            }
-        }
-
-        // Remove held order buttons
-        if (e.target.classList.contains('remove-order-btn') || e.target.closest('.remove-order-btn')) {
-            const btn = e.target.classList.contains('remove-order-btn') ? e.target : e.target.closest('.remove-order-btn');
-            const orderId = btn.dataset.orderId;
-            Swal.fire({
-                title: 'Remove Order?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Yes, remove'
-            }).then(res => {
-                if (res.isConfirmed) {
-                    let orders = JSON.parse(localStorage.getItem('heldOrders') || '[]');
-                    orders = orders.filter(o => o.id != orderId);
-                    localStorage.setItem('heldOrders', JSON.stringify(orders));
-                    loadHeldOrders();
-                    showToast('Order removed', 'success');
-                }
-            });
-        }
-    });
-
-    // Refocus search input when clicking outside
-    document.addEventListener('click', e => {
-        const isModalOpen = document.querySelector('.modal.show');
-        const isModalElement = e.target.closest('.modal');
-        const isBackdrop = e.target.classList.contains('modal-backdrop');
-        const isSearch = e.target === input || input.contains(e.target);
-        const isCustomer = e.target.closest('.customer-search-container');
-        const isDiscount = e.target === discountValue || discountValue.contains(e.target) ||
-                          e.target === discountType || discountType.contains(e.target);
-
-        if (!isModalOpen && !isModalElement && !isBackdrop && !isSearch && !isCustomer && !isDiscount) {
-            setTimeout(() => {
-                input.focus();
-                input.select();
-            }, 50);
-        }
-    });
-
     // ============================================
-    // CUSTOMER SEARCH FUNCTIONALITY
+    // CUSTOMER SEARCH FUNCTIONALITY - FIXED
     // ============================================
     function initializeCustomerSearch() {
         const customerSelectElement = document.getElementById('customerSelect');
         const originalOptions = Array.from(customerSelectElement.options);
 
-        // Create customer search container
-        const customerSearchContainer = document.createElement('div');
-        customerSearchContainer.className = 'customer-search-container mb-2';
-        customerSearchContainer.innerHTML = `
-            <input type="text"
-                   id="customerSearchInput"
-                   class="form-control form-control-sm"
-                   placeholder="Search customers... (Ctrl+F)">
-        `;
+        // Create customer search container - ADD IT TO THE RIGHT PLACE
+        const customerContainer = customerSelectElement.closest('.mb-4');
+        if (customerContainer) {
+            const customerSearchContainer = document.createElement('div');
+            customerSearchContainer.className = 'mb-2';
+            customerSearchContainer.innerHTML = `
+                <input type="text"
+                       id="customerSearchInput"
+                       class="form-control form-control-sm"
+                       placeholder="Search customers... (Ctrl+F)">
+            `;
 
-        // Insert before the customer dropdown
-        customerSelectElement.parentNode.insertBefore(customerSearchContainer, customerSelectElement);
+            // Insert after the label but before the dropdown
+            const label = customerContainer.querySelector('label');
+            if (label) {
+                customerContainer.insertBefore(customerSearchContainer, label.nextElementSibling);
+            }
 
-        customerSearchInput = document.getElementById('customerSearchInput');
+            const customerSearchInput = document.getElementById('customerSearchInput');
 
-        customerSearchInput.addEventListener('input', function() {
-            const searchTerm = this.value.toLowerCase().trim();
+            customerSearchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase().trim();
 
-            if (searchTerm.length === 0) {
-                // Restore all options
+                if (searchTerm.length === 0) {
+                    // Restore all options
+                    customerSelectElement.innerHTML = '';
+                    originalOptions.forEach(option => {
+                        customerSelectElement.appendChild(option.cloneNode(true));
+                    });
+                    updateCustomerCount(originalOptions.length - 1);
+                    return;
+                }
+
+                // Filter options
+                const filteredOptions = originalOptions.filter(option => {
+                    if (option.value === '') return true; // Always show "Walk-in Customer"
+                    return option.text.toLowerCase().includes(searchTerm);
+                });
+
+                // Update dropdown
                 customerSelectElement.innerHTML = '';
-                originalOptions.forEach(option => {
+                filteredOptions.forEach(option => {
                     customerSelectElement.appendChild(option.cloneNode(true));
                 });
-                updateCustomerCount(originalOptions.length - 1);
-                return;
-            }
 
-            // Filter options
-            const filteredOptions = originalOptions.filter(option => {
-                if (option.value === '') return true; // Always show "Walk-in Customer"
-                return option.text.toLowerCase().includes(searchTerm);
+                // Show count
+                const visibleCount = filteredOptions.length - 1; // Exclude "Walk-in Customer"
+                updateCustomerCount(visibleCount);
             });
 
-            // Update dropdown
-            customerSelectElement.innerHTML = '';
-            filteredOptions.forEach(option => {
-                customerSelectElement.appendChild(option.cloneNode(true));
+            // Keyboard shortcut to focus customer search
+            document.addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.key === 'f') {
+                    e.preventDefault();
+                    if (customerSearchInput) {
+                        customerSearchInput.focus();
+                        customerSearchInput.select();
+                        showToast('Customer search focused', 'info', 1000);
+                    }
+                }
             });
-
-            // Show count
-            const visibleCount = filteredOptions.length - 1; // Exclude "Walk-in Customer"
-            updateCustomerCount(visibleCount);
-        });
-
-        // Keyboard shortcut to focus customer search
-        document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey && e.key === 'f') {
-                e.preventDefault();
-                focusCustomerSearch();
-            }
-        });
-    }
-
-    function focusCustomerSearch() {
-        if (customerSearchInput) {
-            customerSearchInput.focus();
-            customerSearchInput.select();
-            showToast('Customer search focused', 'info', 1000);
         }
     }
 
@@ -826,41 +720,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // ============================================
     // FUNCTIONS
     // ============================================
-    function removeUnselectedItems() {
-        // Get current time
-        const now = Date.now();
-
-        // Only remove items if it's been more than 1 second since last search
-        if (now - lastSearchTime < 1000) {
-            return;
-        }
-
-        // Find items that are in search table but NOT in cart
-        const unselectedProducts = allSearchedProducts.filter(product => {
-            const isInCart = cart.some(item => item.product_id === product.id);
-            return !isInCart;
-        });
-
-        // Remove unselected items from search table
-        if (unselectedProducts.length > 0) {
-            // Keep only items that are in cart
-            allSearchedProducts = allSearchedProducts.filter(product =>
-                cart.some(item => item.product_id === product.id)
-            );
-
-            // Update display
-            if (allSearchedProducts.length === 0) {
-                resultsBody.innerHTML = emptySearchRow.outerHTML;
-            } else {
-                renderAllSearchedProducts();
-            }
-
-            showToast('Unselected items cleared', 'info', 1500);
-        }
-
-        lastSearchTime = now;
-    }
-
     function showEmptySearchState() {
         searchLoading.classList.add('d-none');
         if (allSearchedProducts.length > 0) {
@@ -947,6 +806,19 @@ document.addEventListener('DOMContentLoaded', function () {
             <td class="text-center"><span class="badge bg-info">${unit}</span></td>
         `;
         resultsBody.appendChild(row);
+
+        // Add event listeners for the buttons in this row
+        const qtyBtn = row.querySelector('.qty-btn');
+        const cancelBtn = row.querySelector('.remove-from-search-btn');
+
+        qtyBtn.addEventListener('click', function() {
+            if (!this.disabled) openQuantityModal(this);
+        });
+
+        cancelBtn.addEventListener('click', function() {
+            const productId = this.dataset.productId;
+            removeProductFromSearchAndCart(productId);
+        });
     }
 
     function searchProducts(query) {
@@ -981,6 +853,32 @@ document.addEventListener('DOMContentLoaded', function () {
             console.error('Search error:', err);
             showToast('Failed to search products', 'error');
         });
+    }
+
+    function clearAllUnselectedItems() {
+        // Check if there are any unselected items
+        const unselectedProducts = allSearchedProducts.filter(product => {
+            const isInCart = cart.some(item => item.product_id === product.id);
+            return !isInCart;
+        });
+
+        if (unselectedProducts.length === 0) {
+            return; // No unselected items to clear
+        }
+
+        // Remove all items that are NOT in cart
+        allSearchedProducts = allSearchedProducts.filter(product =>
+            cart.some(item => item.product_id === product.id)
+        );
+
+        // Update display
+        if (allSearchedProducts.length === 0) {
+            resultsBody.innerHTML = emptySearchRow.outerHTML;
+            showToast('All unselected items cleared', 'info', 1500);
+        } else {
+            renderAllSearchedProducts();
+            showToast(`Cleared ${unselectedProducts.length} unselected items`, 'info', 1500);
+        }
     }
 
     function removeProductFromSearchAndCart(productId) {
@@ -1195,13 +1093,41 @@ document.addEventListener('DOMContentLoaded', function () {
                     </button>
                 </td>
                 <td class="text-center">
-                    <button class="btn btn-sm btn-danger rounded-circle"
-                            onclick="window.removeCartItem(${i})">
+                    <button class="btn btn-sm btn-danger rounded-circle remove-cart-item-btn"
+                            data-index="${i}">
                         <i class="bi bi-x"></i>
                     </button>
                 </td>
             `;
             cartBody.appendChild(row);
+
+            // Add event listener for cart remove button
+            const removeBtn = row.querySelector('.remove-cart-item-btn');
+            removeBtn.addEventListener('click', function() {
+                const index = parseInt(this.dataset.index);
+                removeCartItem(index);
+            });
+
+            // Add event listener for item discount button
+            const discountBtn = row.querySelector('.item-discount-btn');
+            discountBtn.addEventListener('click', function() {
+                const productId = this.dataset.productId;
+                currentItemIndex = cart.findIndex(item => item.product_id === productId);
+                if (currentItemIndex === -1) return;
+
+                const item = cart[currentItemIndex];
+                document.getElementById('itemName').textContent = item.title;
+                document.getElementById('itemDiscountValue').value = item.discount_value || 0;
+                document.getElementById('itemDiscountType').value = item.discount_type || 'percent';
+
+                new bootstrap.Modal(document.getElementById('itemDiscountModal')).show();
+            });
+
+            // Add event listener for cart quantity button
+            const qtyBtn = row.querySelector('.qty-btn-cart');
+            qtyBtn.addEventListener('click', function() {
+                openQuantityModal(this);
+            });
         });
 
         let orderDiscountAmount = 0;
@@ -1228,17 +1154,16 @@ document.addEventListener('DOMContentLoaded', function () {
         };
     }
 
-    // Make removeCartItem globally accessible
-    window.removeCartItem = function(index) {
+    function removeCartItem(index) {
         const item = cart[index];
         cart.splice(index, 1);
 
         delete productQuantityCache[item.product_id];
 
         updateCart();
-        renderAllSearchedProducts(); // Update search table to remove "added" status
+        renderAllSearchedProducts();
         showToast('Item removed from cart', 'success');
-    };
+    }
 
     function applyOrderDiscount() {
         orderDiscountValue = parseFloat(discountValue.value) || 0;
@@ -1271,7 +1196,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 cart = [];
                 productQuantityCache = {};
                 updateCart();
-                renderAllSearchedProducts(); // Update search table
+                renderAllSearchedProducts();
                 showToast('Cart cleared', 'success');
             }
         });
@@ -1306,7 +1231,6 @@ document.addEventListener('DOMContentLoaded', function () {
         discountValue.value = '0';
 
         updateCart();
-        // Don't clear searched products when holding order
         renderAllSearchedProducts();
 
         showToast('Order held successfully!', 'success');
@@ -1356,6 +1280,48 @@ document.addEventListener('DOMContentLoaded', function () {
 
             html += '</div>';
             list.innerHTML = html;
+
+            // Add event listeners for the loaded orders
+            document.querySelectorAll('.load-order-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const orderId = this.dataset.orderId;
+                    const heldOrders = JSON.parse(localStorage.getItem('heldOrders') || '[]');
+                    const order = heldOrders.find(o => o.id == orderId);
+                    if (order) {
+                        if (cart.length > 0) {
+                            Swal.fire({
+                                title: 'Replace Current Cart?',
+                                text: 'Loading this order will replace your current cart.',
+                                icon: 'warning',
+                                showCancelButton: true,
+                                confirmButtonText: 'Yes, replace'
+                            }).then(res => res.isConfirmed && loadOrderFromHeld(order));
+                        } else {
+                            loadOrderFromHeld(order);
+                        }
+                    }
+                });
+            });
+
+            document.querySelectorAll('.remove-order-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const orderId = this.dataset.orderId;
+                    Swal.fire({
+                        title: 'Remove Order?',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, remove'
+                    }).then(res => {
+                        if (res.isConfirmed) {
+                            let orders = JSON.parse(localStorage.getItem('heldOrders') || '[]');
+                            orders = orders.filter(o => o.id != orderId);
+                            localStorage.setItem('heldOrders', JSON.stringify(orders));
+                            loadHeldOrders();
+                            showToast('Order removed', 'success');
+                        }
+                    });
+                });
+            });
         }
 
         new bootstrap.Modal(document.getElementById('loadOrderModal')).show();
@@ -1480,7 +1446,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 printCheckInterval = null;
                 resetAfterOrder();
             }
-        }, 500); // Check every 500ms
+        }, 500);
     }
 
     function resetAfterOrder() {
