@@ -8,7 +8,8 @@ use App\Models\Product;
 use App\Models\Unit;
 use App\Models\Stock;
 use App\Models\StockLocation;
-use App\Models\OrderDiscount;
+use App\Models\CustomerPoint;
+use App\Models\CustomerPointTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -16,9 +17,6 @@ use Illuminate\Support\Str;
 
 class PosController extends Controller
 {
-    /**
-     * Display POS page
-     */
     public function index()
     {
         $pagetitle = "Point of Sale";
@@ -28,9 +26,6 @@ class PosController extends Controller
         return view('pos.index', compact('customers', 'pagetitle'));
     }
 
-    /**
-     * Search products for POS
-     */
     public function search(Request $request)
     {
         $query = $request->q;
@@ -67,9 +62,16 @@ class PosController extends Controller
         return response()->json($products);
     }
 
-    /**
-     * Save POS order with per-item & order-level discounts + discount history tracking
-     */
+    public function getCustomerPoints($customerId)
+    {
+        $points = CustomerPoint::where('customer_id', $customerId)->first();
+
+        return response()->json([
+            'success' => true,
+            'points' => $points ? $points->points : 0
+        ]);
+    }
+
     public function savePosOrder(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -84,6 +86,7 @@ class PosController extends Controller
             'customer_id' => 'nullable|exists:customers,id',
             'discount_type' => 'nullable|in:percent,fixed',
             'discount_value' => 'nullable|numeric|min:0',
+            'redeem_points' => 'nullable|integer|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -99,7 +102,7 @@ class PosController extends Controller
                 $orderItems = [];
                 $orderId = 'POS-' . now()->format('Ymd-His') . '-' . Str::random(4);
 
-                // CORRECT APPROACH: Only fetch the default location - do NOT create/update it here
+                // Fetch default location - no create/update
                 $defaultLocation = StockLocation::where('is_default', true)
                     ->orWhere('code', 'MAIN')
                     ->firstOrFail();
@@ -115,7 +118,7 @@ class PosController extends Controller
                     }
 
                     if ($product->current_stock < $piecesToDeduct) {
-                        throw new \Exception("Insufficient stock for {$product->title}. Available: {$product->current_stock}");
+                        throw new \Exception("Insufficient stock for {$product->title}");
                     }
 
                     $salePrice = $item['sale_price'];
@@ -147,7 +150,7 @@ class PosController extends Controller
                         'unit_name'        => $selectedUnit->name ?? null,
                     ];
 
-                    // Stock deduction - insert into stocks table only
+                    // Stock movement
                     $previous = $product->stock;
                     $new = max(0, $previous - $piecesToDeduct);
 
@@ -161,7 +164,7 @@ class PosController extends Controller
                         'new_quantity'      => $new,
                         'reference_type'    => Stock::REFERENCE_SALE,
                         'reference_number'  => $orderId,
-                        'notes'             => "POS Sale: {$item['qty']} {$selectedUnit->name} of {$product->title}",
+                        'notes'             => "POS Sale",
                         'transaction_date'  => now(),
                     ]);
 
@@ -184,11 +187,23 @@ class PosController extends Controller
                     $orderDiscountAmount = min($orderDiscountAmount, $subtotal);
                 }
 
-                $grandTotal = $subtotal - $orderDiscountAmount;
+                // Points redemption discount
+                $pointsRedeemedDiscount = 0;
+                $pointsRedeemed = 0;
+                if ($request->filled('redeem_points') && $request->customer_id) {
+                    $redeemRate = config('loyalty.redeem_rate', 100);
+                    $pointsRedeemed = $request->redeem_points;
+                    if ($pointsRedeemed % $redeemRate === 0) {
+                        $pointsRedeemedDiscount = $pointsRedeemed / $redeemRate;
+                        $orderDiscountAmount += $pointsRedeemedDiscount;
+                    }
+                }
 
-                $order = Order::create([
+                $grandTotal = max(0, $subtotal - $orderDiscountAmount);
+
+                $orderData = [
                     'id'              => $orderId,
-                    'customer_id'     => $request->customer_id,
+                    'customer_id'     => $request->customer_id ?: null,
                     'user_id'         => auth()->id(),
                     'subtotal'        => $subtotal,
                     'discount_amount' => $orderDiscountAmount,
@@ -197,38 +212,49 @@ class PosController extends Controller
                     'order_date'      => now(),
                     'notes'           => 'POS Sale',
                     'status'          => 'completed',
-                    'payment_status'  => 'paid',
-                ]);
+                ];
 
-                $order->items()->createMany($orderItems);
-
-                // DISCOUNT HISTORY TRACKING
-                if ($orderDiscountAmount > 0) {
-                    OrderDiscount::create([
-                        'order_id'       => $order->id,
-                        'order_item_id'  => null,
-                        'type'           => 'order',
-                        'discount_type'  => $orderDiscountType,
-                        'discount_value' => $orderDiscountValue,
-                        'amount'         => $orderDiscountAmount,
-                        'applied_by'     => auth()->id(),
-                        'applied_at'     => now(),
-                    ]);
+                if (\Schema::hasColumn('orders', 'payment_status')) {
+                    $orderData['payment_status'] = 'paid';
                 }
 
-                foreach ($order->items as $orderItem) {
-                    if ($orderItem->discount_value > 0) {
-                        $itemDiscountAmount = ($orderItem->unit_price - $orderItem->discounted_price) * $orderItem->quantity;
+                $order = Order::create($orderData);
+                $order->items()->createMany($orderItems);
 
-                        OrderDiscount::create([
-                            'order_id'       => $order->id,
-                            'order_item_id'  => $orderItem->id,
-                            'type'           => 'item',
-                            'discount_type'  => $orderItem->discount_type,
-                            'discount_value' => $orderItem->discount_value,
-                            'amount'         => $itemDiscountAmount,
-                            'applied_by'     => auth()->id(),
-                            'applied_at'     => now(),
+                // Loyalty Points Earned
+                if ($order->customer_id) {
+                    $earnRate = config('loyalty.earn_rate', 1);
+                    $pointsEarned = floor($order->total_amount * $earnRate);
+
+                    if ($pointsEarned > 0) {
+                        $customerPoints = CustomerPoint::firstOrCreate(
+                            ['customer_id' => $order->customer_id],
+                            ['points' => 0]
+                        );
+
+                        $customerPoints->increment('points', $pointsEarned);
+
+                        CustomerPointTransaction::create([
+                            'customer_id' => $order->customer_id,
+                            'order_id' => $order->id,
+                            'points_earned' => $pointsEarned,
+                            'amount_spent' => $order->total_amount,
+                            'description' => "Earned from order #{$order->id}",
+                            'created_by' => auth()->id(),
+                        ]);
+                    }
+
+                    // Points Redeemed
+                    if ($pointsRedeemed > 0) {
+                        $customerPoints->decrement('points', $pointsRedeemed);
+
+                        CustomerPointTransaction::create([
+                            'customer_id' => $order->customer_id,
+                            'order_id' => $order->id,
+                            'points_redeemed' => $pointsRedeemed,
+                            'discount_applied' => $pointsRedeemedDiscount,
+                            'description' => "Redeemed {$pointsRedeemed} points for ₦{$pointsRedeemedDiscount} discount",
+                            'created_by' => auth()->id(),
                         ]);
                     }
                 }
@@ -248,9 +274,6 @@ class PosController extends Controller
         }
     }
 
-    /**
-     * Get product details by barcode
-     */
     public function getProductByBarcode($barcode)
     {
         $product = Product::with('units')
@@ -284,9 +307,6 @@ class PosController extends Controller
         ]);
     }
 
-    /**
-     * Generate receipt for POS
-     */
     public function generateReceipt($orderId)
     {
         $order = Order::where('id', $orderId)
@@ -300,9 +320,6 @@ class PosController extends Controller
         return view('pos.receipt', compact('order'));
     }
 
-    /**
-     * Get today's sales summary
-     */
     public function getTodaySales()
     {
         $today = now()->format('Y-m-d');
@@ -334,9 +351,6 @@ class PosController extends Controller
         ]);
     }
 
-    /**
-     * Get product stock
-     */
     public function getProductStock($productId)
     {
         $product = Product::findOrFail($productId);
@@ -348,16 +362,12 @@ class PosController extends Controller
         ]);
     }
 
-    /**
-     * Void order (restore stock)
-     */
     public function voidOrder($orderId)
     {
         try {
             DB::transaction(function () use ($orderId) {
                 $order = Order::with('items.product.units')->where('id', $orderId)->firstOrFail();
 
-                // CORRECT APPROACH: Only fetch the default location
                 $defaultLocation = StockLocation::where('is_default', true)
                     ->orWhere('code', 'MAIN')
                     ->firstOrFail();

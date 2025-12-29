@@ -117,6 +117,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/pos/product-stock/{productId}', [PosController::class, 'getProductStock'])->name('pos.product-stock');
     Route::post('/pos/apply-discount', [PosController::class, 'applyDiscount'])->name('pos.apply-discount');
 
+    Route::get('/reports/loyalty-points', [LoyaltyReportController::class, 'index'])->name('reports.loyalty-points');
+    Route::get('/reports/loyalty-points/{customer}', [LoyaltyReportController::class, 'customerHistory'])->name('reports.loyalty-points.history');
+    Route::get('/reports/loyalty-points/export', [LoyaltyReportController::class, 'export'])->name('reports.loyalty-points.export');
+
 
 
 
