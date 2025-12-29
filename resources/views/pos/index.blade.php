@@ -452,8 +452,7 @@
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-
-// MAIN POS SCRIPT - SIMPLIFIED AND WORKING VERSION
+// MAIN POS SCRIPT
 document.addEventListener('DOMContentLoaded', function () {
     // ============================================
     // INITIALIZATION
@@ -482,9 +481,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // State management
     let cart = [];
-    let selectedProducts = [];
+    let allSearchedProducts = []; // Store ALL searched products
     let currentSearchQuery = '';
-    let lastSearchResults = [];
     let productQuantityCache = {};
     let currentProduct = null;
     let currentItemIndex = null;
@@ -501,6 +499,9 @@ document.addEventListener('DOMContentLoaded', function () {
         currentSearchQuery = q;
         if (q.length >= 2) {
             searchProducts(q);
+        } else if (q.length === 0) {
+            // Show all previously searched products when input is cleared
+            renderAllSearchedProducts();
         } else {
             showEmptySearchState();
         }
@@ -610,6 +611,7 @@ document.addEventListener('DOMContentLoaded', function () {
         cart[currentItemIndex].discount_value = value;
 
         updateCart();
+        renderAllSearchedProducts(); // Update search table
         bootstrap.Modal.getInstance(document.getElementById('itemDiscountModal')).hide();
 
         showToast('Item discount applied!', 'success');
@@ -623,10 +625,11 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!btn.disabled) openQuantityModal(btn);
         }
 
-        // Remove from table buttons
-        if (e.target.classList.contains('remove-from-table-btn') || e.target.closest('.remove-from-table-btn')) {
-            const btn = e.target.classList.contains('remove-from-table-btn') ? e.target : e.target.closest('.remove-from-table-btn');
-            removeProductFromSelection(btn.dataset.productId);
+        // Cancel/Remove buttons in search table
+        if (e.target.classList.contains('remove-from-search-btn') || e.target.closest('.remove-from-search-btn')) {
+            const btn = e.target.classList.contains('remove-from-search-btn') ? e.target : e.target.closest('.remove-from-search-btn');
+            const productId = btn.dataset.productId;
+            removeProductFromSearchAndCart(productId);
         }
 
         // Cart quantity buttons
@@ -712,11 +715,11 @@ document.addEventListener('DOMContentLoaded', function () {
     // ============================================
     function showEmptySearchState() {
         searchLoading.classList.add('d-none');
-        if (selectedProducts.length > 0) {
-            renderAllProducts();
-            emptySearchRow.style.display = 'none';
-        } else if (!resultsBody.querySelector('tr[data-product-id]')) {
+        if (allSearchedProducts.length > 0) {
+            renderAllSearchedProducts();
+        } else {
             emptySearchRow.style.display = '';
+            resultsBody.innerHTML = emptySearchRow.outerHTML;
         }
     }
 
@@ -729,20 +732,21 @@ document.addEventListener('DOMContentLoaded', function () {
         searchLoading.classList.add('d-none');
     }
 
-    function renderAllProducts() {
-        resultsBody.innerHTML = selectedProducts.length || lastSearchResults.length ? '' : emptySearchRow.outerHTML;
-
-        selectedProducts.forEach(p => renderProductRow(p, true));
-        lastSearchResults.forEach(p => {
-            if (!selectedProducts.some(sp => sp.id === p.id)) renderProductRow(p, false);
-        });
-
-        if (!resultsBody.querySelector('tr[data-product-id]')) {
+    function renderAllSearchedProducts() {
+        if (allSearchedProducts.length === 0) {
             resultsBody.innerHTML = emptySearchRow.outerHTML;
+            return;
         }
+
+        resultsBody.innerHTML = '';
+        emptySearchRow.style.display = 'none';
+
+        allSearchedProducts.forEach(product => {
+            renderProductRow(product);
+        });
     }
 
-    function renderProductRow(product, isSelected) {
+    function renderProductRow(product) {
         const price = product.sale_price || product.price;
         const unit = product.primary_unit || 'Unit';
         const cartItem = cart.find(i => i.product_id === product.id);
@@ -761,7 +765,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const row = document.createElement('tr');
         row.dataset.productId = product.id;
-        row.className = isSelected ? 'selected-product-row table-success' : '';
+        row.className = addedQty > 0 ? 'selected-product-row table-success' : '';
         row.innerHTML = `
             <td>
                 <div class="d-flex align-items-center">
@@ -782,15 +786,16 @@ document.addEventListener('DOMContentLoaded', function () {
                         ${btnDisabled}>
                     ${btnText}
                 </button>
-                ${isSelected ? `<button class="btn btn-sm btn-danger ms-2 remove-from-table-btn" data-product-id="${product.id}">
-                    <i class="bi bi-trash"></i> Remove
-                </button>` : ''}
+                <button class="btn btn-sm btn-danger ms-2 remove-from-search-btn"
+                        data-product-id="${product.id}"
+                        title="Remove from list">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </button>
             </td>
             <td class="text-end fw-bold">₦${parseFloat(price).toFixed(2)}</td>
             <td class="text-center"><span class="badge bg-info">${unit}</span></td>
         `;
         resultsBody.appendChild(row);
-        emptySearchRow.style.display = 'none';
     }
 
     function searchProducts(query) {
@@ -802,14 +807,44 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .then(res => {
             hideSearchLoading();
-            lastSearchResults = res.data;
-            renderAllProducts();
+
+            // Merge new results with existing ones (avoid duplicates)
+            const newProducts = res.data || [];
+            newProducts.forEach(newProduct => {
+                if (!allSearchedProducts.some(p => p.id === newProduct.id)) {
+                    allSearchedProducts.push(newProduct);
+                }
+            });
+
+            renderAllSearchedProducts();
         })
         .catch(err => {
             hideSearchLoading();
             console.error('Search error:', err);
             showToast('Failed to search products', 'error');
         });
+    }
+
+    function removeProductFromSearchAndCart(productId) {
+        // Remove from search table
+        allSearchedProducts = allSearchedProducts.filter(p => p.id != productId);
+
+        // Remove from cart if present
+        const wasInCart = cart.some(item => item.product_id == productId);
+        if (wasInCart) {
+            cart = cart.filter(i => i.product_id != productId);
+            delete productQuantityCache[productId];
+            updateCart();
+        }
+
+        // Update display
+        if (allSearchedProducts.length === 0) {
+            resultsBody.innerHTML = emptySearchRow.outerHTML;
+        } else {
+            renderAllSearchedProducts();
+        }
+
+        showToast('Product removed from list', 'success');
     }
 
     function openQuantityModal(button) {
@@ -869,13 +904,20 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
+        if (qty > currentProduct.stock) {
+            showToast(`Only ${currentProduct.stock} units available`, 'warning');
+            modalQty.value = currentProduct.stock;
+            updateModalTotal();
+            return;
+        }
+
         const p = currentProduct;
         const price = p.sale_price || p.price;
         let unitId = p.primary_unit_id || 1;
 
-        // Add to selected products if not already
-        if (!selectedProducts.some(sp => sp.id === p.id)) {
-            selectedProducts.push({...p});
+        // Make sure product is in searched list
+        if (!allSearchedProducts.some(sp => sp.id === p.id)) {
+            allSearchedProducts.push({...p});
         }
 
         // Update or add to cart
@@ -902,20 +944,10 @@ document.addEventListener('DOMContentLoaded', function () {
         quantityModal.hide();
 
         updateCart();
-        input.value = '';
-        renderAllProducts();
+        renderAllSearchedProducts(); // Update search table to show added status
         currentProduct = null;
 
         showToast('Product added to cart', 'success');
-    }
-
-    function removeProductFromSelection(id) {
-        cart = cart.filter(i => i.product_id != id);
-        selectedProducts = selectedProducts.filter(p => p.id != id);
-        delete productQuantityCache[id];
-        updateCart();
-        renderAllProducts();
-        showToast('Product removed from cart', 'success');
     }
 
     function removeCurrentProductFromCart() {
@@ -931,11 +963,10 @@ document.addEventListener('DOMContentLoaded', function () {
             if (res.isConfirmed) {
                 const id = currentProduct.id;
                 cart = cart.filter(i => i.product_id != id);
-                selectedProducts = selectedProducts.filter(p => p.id != id);
                 delete productQuantityCache[id];
                 quantityModal.hide();
                 updateCart();
-                renderAllProducts();
+                renderAllSearchedProducts(); // Update search table
                 showToast('Product removed from cart', 'success');
             }
         });
@@ -948,8 +979,7 @@ document.addEventListener('DOMContentLoaded', function () {
             subtotalEl.textContent = '₦0.00';
             discountEl.textContent = '-₦0.00';
             grandTotalEl.textContent = '₦0.00';
-            selectedProducts = [];
-            renderAllProducts();
+            renderAllSearchedProducts(); // Update search table to remove "added" status
             return;
         }
 
@@ -1038,15 +1068,10 @@ document.addEventListener('DOMContentLoaded', function () {
         const item = cart[index];
         cart.splice(index, 1);
 
-        // Check if product is still in cart
-        const stillInCart = cart.some(cartItem => cartItem.product_id === item.product_id);
-        if (!stillInCart) {
-            selectedProducts = selectedProducts.filter(p => p.id !== item.product_id);
-            delete productQuantityCache[item.product_id];
-        }
+        delete productQuantityCache[item.product_id];
 
         updateCart();
-        renderAllProducts();
+        renderAllSearchedProducts(); // Update search table to remove "added" status
         showToast('Item removed from cart', 'success');
     };
 
@@ -1079,10 +1104,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }).then(res => {
             if (res.isConfirmed) {
                 cart = [];
-                selectedProducts = [];
                 productQuantityCache = {};
                 updateCart();
-                renderAllProducts();
+                renderAllSearchedProducts(); // Update search table
                 showToast('Cart cleared', 'success');
             }
         });
@@ -1099,7 +1123,7 @@ document.addEventListener('DOMContentLoaded', function () {
             id: Date.now(),
             cart: JSON.parse(JSON.stringify(cart)),
             customer: customerSelect.value,
-            selectedProducts: JSON.parse(JSON.stringify(selectedProducts)),
+            allSearchedProducts: JSON.parse(JSON.stringify(allSearchedProducts)),
             productQuantityCache: JSON.parse(JSON.stringify(productQuantityCache)),
             discount: {
                 type: orderDiscountType,
@@ -1112,13 +1136,13 @@ document.addEventListener('DOMContentLoaded', function () {
         localStorage.setItem('heldOrders', JSON.stringify(heldOrders));
 
         cart = [];
-        selectedProducts = [];
         productQuantityCache = {};
         orderDiscountValue = 0;
         discountValue.value = '0';
 
         updateCart();
-        renderAllProducts();
+        // Don't clear searched products when holding order
+        renderAllSearchedProducts();
 
         showToast('Order held successfully!', 'success');
     }
@@ -1174,7 +1198,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function loadOrderFromHeld(order) {
         cart = JSON.parse(JSON.stringify(order.cart));
-        selectedProducts = order.selectedProducts ? JSON.parse(JSON.stringify(order.selectedProducts)) : [];
+        allSearchedProducts = order.allSearchedProducts ? JSON.parse(JSON.stringify(order.allSearchedProducts)) : allSearchedProducts;
         productQuantityCache = order.productQuantityCache ? JSON.parse(JSON.stringify(order.productQuantityCache)) : {};
 
         if (order.customer) {
@@ -1189,7 +1213,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         updateCart();
-        renderAllProducts();
+        renderAllSearchedProducts();
 
         // Close modal
         bootstrap.Modal.getInstance(document.getElementById('loadOrderModal')).hide();
@@ -1244,28 +1268,34 @@ document.addEventListener('DOMContentLoaded', function () {
                     icon: 'success',
                     showCancelButton: true,
                     confirmButtonText: 'Print Receipt',
-                    cancelButtonText: 'New Order'
+                    cancelButtonText: 'New Order',
+                    buttonsStyling: false,
+                    customClass: {
+                        confirmButton: 'btn btn-success btn-lg me-2',
+                        cancelButton: 'btn btn-outline-secondary btn-lg'
+                    }
                 }).then(r => {
                     if (r.isConfirmed) {
                         // Open print window
                         const printWindow = window.open(`/pos/receipt/${res.data.order_id}`, '_blank');
                         if (printWindow) {
-                            printWindow.focus();
+                            printWindow.onload = function() {
+                                printWindow.focus();
+                                // Wait a bit for PDF to load, then auto-print
+                                setTimeout(() => {
+                                    printWindow.print();
+                                    printWindow.onafterprint = function() {
+                                        // Clear everything after print
+                                        resetAfterOrder();
+                                        printWindow.close();
+                                    };
+                                }, 1000);
+                            };
                         }
+                    } else {
+                        // Clear everything if "New Order" is clicked
+                        resetAfterOrder();
                     }
-
-                    // Reset cart
-                    cart = [];
-                    selectedProducts = [];
-                    productQuantityCache = {};
-                    orderDiscountValue = 0;
-                    discountValue.value = '0';
-
-                    updateCart();
-                    renderAllProducts();
-
-                    input.focus();
-                    input.select();
                 });
             } else {
                 Swal.fire('Error', res.data.message || 'Failed to process order', 'error');
@@ -1281,6 +1311,24 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             Swal.fire('Error', msg, 'error');
         });
+    }
+
+    function resetAfterOrder() {
+        // Clear cart and search table
+        cart = [];
+        allSearchedProducts = [];
+        productQuantityCache = {};
+        orderDiscountValue = 0;
+        discountValue.value = '0';
+
+        updateCart();
+        renderAllSearchedProducts();
+
+        input.value = '';
+        input.focus();
+        input.select();
+
+        showToast('New order started', 'info');
     }
 
     function showToast(message, type = 'success', duration = 2000) {
