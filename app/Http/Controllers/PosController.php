@@ -70,19 +70,22 @@ class PosController extends Controller
     }
 
     /**
-     * Save POS order
+     * Save POS order with per-item and order-level discounts
      */
     public function savePosOrder(Request $request)
     {
-        // Validate request
         $validator = Validator::make($request->all(), [
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.qty' => 'required|integer|min:1',
             'items.*.unit_id' => 'required|exists:units,id',
             'items.*.sale_price' => 'required|numeric|min:0',
+            'items.*.discount_type' => 'nullable|in:percent,fixed',
+            'items.*.discount_value' => 'nullable|numeric|min:0',
             'payment_method' => 'required|in:cash,card,transfer',
             'customer_id' => 'nullable|exists:customers,id',
+            'discount_type' => 'nullable|in:percent,fixed',
+            'discount_value' => 'nullable|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -94,12 +97,12 @@ class PosController extends Controller
 
         try {
             return DB::transaction(function () use ($request) {
-                $total = 0;
+                $subtotal = 0;
                 $orderItems = [];
                 $orderId = 'POS-' . now()->format('Ymd-His') . '-' . Str::random(4);
 
                 // Get or create default stock location
-                $defaultLocation = StockLocation::firstOrCreate(
+                $defaultLocation = StockLocation::updateOrCreate(
                     ['code' => 'MAIN'],
                     [
                         'name' => 'Main Store',
@@ -127,19 +130,38 @@ class PosController extends Controller
                         throw new \Exception("Insufficient stock for {$product->title}. Available: {$currentStock} primary units, Required: {$piecesToDeduct}");
                     }
 
+                    // Original sale price
                     $salePrice = $item['sale_price'];
-                    $subtotal = $salePrice * $item['qty'];
-                    $total += $subtotal;
 
-                    // Prepare order item data (IMPORTANT: includes 'title' to prevent SQL error)
+                    // Per-item discount
+                    $discountedPrice = $salePrice;
+                    $perItemDiscountAmount = 0;
+
+                    if (isset($item['discount_value']) && $item['discount_value'] > 0) {
+                        if ($item['discount_type'] === 'percent') {
+                            $perItemDiscountAmount = ($salePrice * $item['discount_value']) / 100;
+                        } else {
+                            $perItemDiscountAmount = $item['discount_value'];
+                        }
+                        $discountedPrice = max(0, $salePrice - $perItemDiscountAmount);
+                    }
+
+                    // Line total after per-item discount
+                    $lineTotal = $discountedPrice * $item['qty'];
+                    $subtotal += $lineTotal;
+
+                    // Prepare order item data
                     $orderItems[] = [
-                        'product_id'  => $product->id,
-                        'quantity'    => $item['qty'],                    // quantity in selected unit
-                        'unit_id'     => $item['unit_id'],                // selected unit
-                        'unit_price'  => $salePrice,                      // price per selected unit
-                        'total_price' => $subtotal,
-                        'title'       => $product->title,                 // Snapshot of product name (fixes 1364 error)
-                        'unit_name'   => $selectedUnit->name ?? null,
+                        'product_id'       => $product->id,
+                        'quantity'         => $item['qty'],
+                        'unit_id'          => $item['unit_id'],
+                        'unit_price'       => $salePrice, // Original price
+                        'discount_type'    => $item['discount_type'] ?? null,
+                        'discount_value'   => $item['discount_value'] ?? 0,
+                        'discounted_price' => $discountedPrice,
+                        'total_price'      => $lineTotal,
+                        'title'            => $product->title,
+                        'unit_name'        => $selectedUnit->name ?? null,
                     ];
 
                     // Stock movement: deduct from inventory
@@ -160,19 +182,33 @@ class PosController extends Controller
                         'transaction_date'  => now(),
                     ]);
 
-                    // Update product stock
                     $product->decrement('stock', $piecesToDeduct);
                 }
 
+                // Apply order-level discount (after per-item discounts)
+                $orderDiscountAmount = 0;
+                if ($request->filled('discount_value') && $request->filled('discount_type')) {
+                    if ($request->discount_type === 'percent') {
+                        $orderDiscountAmount = ($subtotal * $request->discount_value) / 100;
+                    } else {
+                        $orderDiscountAmount = $request->discount_value;
+                    }
+                    $orderDiscountAmount = min($orderDiscountAmount, $subtotal);
+                }
+
+                $grandTotal = $subtotal - $orderDiscountAmount;
+
                 // Create order
                 $orderData = [
-                    'id'            => $orderId,
-                    'customer_id'   => $request->customer_id,
-                    'user_id'       => auth()->id(),
-                    'total_amount'  => $total,
-                    'payment_method'=> $request->payment_method,
-                    'order_date'    => now(),
-                    'notes'         => 'POS Sale',
+                    'id'              => $orderId,
+                    'customer_id'     => $request->customer_id,
+                    'user_id'         => auth()->id(),
+                    'subtotal'        => $subtotal,
+                    'discount_amount' => $orderDiscountAmount,
+                    'total_amount'    => $grandTotal,
+                    'payment_method'  => $request->payment_method,
+                    'order_date'      => now(),
+                    'notes'           => 'POS Sale' . ($orderDiscountAmount > 0 ? " (Order Discount: ₦{$orderDiscountAmount})" : ''),
                 ];
 
                 if (\Schema::hasColumn('orders', 'status')) {
@@ -184,14 +220,14 @@ class PosController extends Controller
 
                 $order = Order::create($orderData);
 
-                // Save all order items at once
+                // Save all order items
                 $order->items()->createMany($orderItems);
 
                 return response()->json([
                     'success'   => true,
                     'message'   => 'Order completed successfully!',
                     'order_id'  => $orderId,
-                    'total'     => $total,
+                    'total'     => $grandTotal,
                 ]);
             });
         } catch (\Exception $e) {
@@ -313,9 +349,14 @@ class PosController extends Controller
         try {
             DB::transaction(function () use ($orderId) {
                 $order = Order::with('items.product.units')->where('id', $orderId)->firstOrFail();
-                $defaultLocation = StockLocation::firstOrCreate(
+
+                $defaultLocation = StockLocation::updateOrCreate(
                     ['code' => 'MAIN'],
-                    ['name' => 'Main Store', 'is_default' => true, 'is_active' => true]
+                    [
+                        'name' => 'Main Store',
+                        'is_default' => true,
+                        'is_active' => true,
+                    ]
                 );
 
                 foreach ($order->items as $item) {

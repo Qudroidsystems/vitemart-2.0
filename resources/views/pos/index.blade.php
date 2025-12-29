@@ -126,12 +126,13 @@
                                                 <th class="text-center">Qty</th>
                                                 <th class="text-end">Price</th>
                                                 <th class="text-end">Total</th>
+                                                <th>Disc</th>
                                                 <th></th>
                                             </tr>
                                         </thead>
                                         <tbody id="cartBody">
                                             <tr id="emptyCartRow">
-                                                <td colspan="6" class="text-center py-5 text-muted">
+                                                <td colspan="7" class="text-center py-5 text-muted">
                                                     <i class="bi bi-cart fs-1 mb-3"></i>
                                                     No items in cart
                                                 </td>
@@ -141,14 +142,31 @@
                                 </div>
                             </div>
 
+                            <!-- Order-Level Discount -->
+                            <div class="border-top pt-3 mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="fw-semibold">Order Discount</span>
+                                    <div class="input-group input-group-sm" style="width: 180px;">
+                                        <input type="number" id="discountValue" class="form-control text-end" placeholder="0" min="0" step="0.01">
+                                        <select id="discountType" class="form-select">
+                                            <option value="fixed">₦</option>
+                                            <option value="percent" selected>%</option>
+                                        </select>
+                                        <button class="btn btn-outline-primary" type="button" id="applyDiscountBtn">
+                                            <i class="bi bi-check-lg"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between text-danger fw-bold">
+                                    <span>Discount Applied</span>
+                                    <span id="discountAmount">-₦0.00</span>
+                                </div>
+                            </div>
+
                             <div class="border-top pt-3">
                                 <div class="d-flex justify-content-between mb-2">
                                     <span>Subtotal</span>
                                     <span id="subtotal">₦0.00</span>
-                                </div>
-                                <div class="d-flex justify-content-between mb-2 text-danger">
-                                    <span>Discount</span>
-                                    <span id="discountAmount">-₦0.00</span>
                                 </div>
                                 <hr class="my-3">
                                 <div class="d-flex justify-content-between fs-3 fw-bold text-success">
@@ -256,6 +274,35 @@
     </div>
 </div>
 
+<!-- Per-Item Discount Modal -->
+<div class="modal fade" id="itemDiscountModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">
+                    <i class="bi bi-percent me-2"></i> Apply Item Discount
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6 id="itemName" class="text-center mb-3"></h6>
+                <div class="input-group mb-3">
+                    <input type="number" id="itemDiscountValue" class="form-control" placeholder="0" min="0" step="0.01">
+                    <select id="itemDiscountType" class="form-select">
+                        <option value="percent" selected>%</option>
+                        <option value="fixed">₦</option>
+                    </select>
+                </div>
+                <small class="text-muted">Leave 0 to remove discount</small>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" id="applyItemDiscountBtn">Apply</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Load Order Modal -->
 <div class="modal fade" id="loadOrderModal" tabindex="-1">
     <div class="modal-dialog">
@@ -317,6 +364,9 @@ document.addEventListener('DOMContentLoaded', function () {
     let quantityModalInstance = null;
     let productQuantityCache = {};
     let lastSearchResults = [];
+    let discountType = 'percent';
+    let discountValue = 0;
+    let currentItemIndex = null;
 
     input.focus();
 
@@ -390,7 +440,7 @@ document.addEventListener('DOMContentLoaded', function () {
         setTimeout(() => { input.focus(); input.select(); }, 100);
     });
 
-    // Refocus search input on page click
+    // Refocus search input
     document.addEventListener('click', e => {
         const isModalOpen = document.querySelector('.modal.show');
         const isModalElement = e.target.closest('.modal');
@@ -418,6 +468,20 @@ document.addEventListener('DOMContentLoaded', function () {
         if (e.target.classList.contains('qty-btn-cart') || e.target.closest('.qty-btn-cart')) {
             const btn = e.target.classList.contains('qty-btn-cart') ? e.target : e.target.closest('.qty-btn-cart');
             openQuantityModal(btn);
+        }
+
+        if (e.target.classList.contains('item-discount-btn') || e.target.closest('.item-discount-btn')) {
+            const btn = e.target.classList.contains('item-discount-btn') ? e.target : e.target.closest('.item-discount-btn');
+            currentItemIndex = cart.findIndex(item => item.product_id === btn.dataset.productId);
+            if (currentItemIndex === -1) return;
+
+            const item = cart[currentItemIndex];
+
+            document.getElementById('itemName').textContent = item.title;
+            document.getElementById('itemDiscountValue').value = item.discount_value || 0;
+            document.getElementById('itemDiscountType').value = item.discount_type || 'percent';
+
+            new bootstrap.Modal(document.getElementById('itemDiscountModal')).show();
         }
 
         if (e.target.classList.contains('load-order-btn') || e.target.closest('.load-order-btn')) {
@@ -467,6 +531,66 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('loadHeldBtn').onclick = loadHeldOrders;
     document.getElementById('completeOrder').onclick = completeOrder;
 
+    // Discount functionality
+    document.getElementById('discountType').addEventListener('change', function() {
+        discountType = this.value;
+        updateCart();
+    });
+
+    document.getElementById('discountValue').addEventListener('input', function() {
+        const val = parseFloat(this.value) || 0;
+        if (discountType === 'percent' && val > 100) {
+            this.value = 100;
+        }
+    });
+
+    document.getElementById('applyDiscountBtn').addEventListener('click', function() {
+        const input = document.getElementById('discountValue');
+        discountValue = parseFloat(input.value) || 0;
+
+        if (discountType === 'percent' && discountValue > 100) {
+            Swal.fire('Invalid', 'Percentage discount cannot exceed 100%', 'warning');
+            discountValue = 100;
+            input.value = 100;
+        }
+
+        updateCart();
+        Swal.fire({
+            icon: 'success',
+            title: 'Discount Applied!',
+            text: `${discountValue}${discountType === 'percent' ? '%' : '₦'} off`,
+            timer: 1500,
+            showConfirmButton: false
+        });
+    });
+
+    // Per-item discount apply
+    document.getElementById('applyItemDiscountBtn').addEventListener('click', function() {
+        if (currentItemIndex === null) return;
+
+        const value = parseFloat(document.getElementById('itemDiscountValue').value) || 0;
+        const type = document.getElementById('itemDiscountType').value;
+
+        if (type === 'percent' && value > 100) {
+            Swal.fire('Invalid', 'Percentage cannot exceed 100%', 'warning');
+            return;
+        }
+
+        cart[currentItemIndex].discount_type = type;
+        cart[currentItemIndex].discount_value = value;
+
+        updateCart();
+        bootstrap.Modal.getInstance(document.getElementById('itemDiscountModal')).hide();
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Item Discount Applied!',
+            text: `Discount: ${value}${type === 'percent' ? '%' : '₦'}`,
+            timer: 1500,
+            showConfirmButton: false
+        });
+    });
+
     // ============================================
     // FUNCTIONS
     // ============================================
@@ -510,7 +634,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const cachedQty = productQuantityCache[product.id] || 1;
         const displayQty = addedQty > 0 ? addedQty : (cachedQty > 1 ? `(${cachedQty})` : '');
 
-        // Out of stock handling
         const isOutOfStock = product.stock <= 0;
         const btnClass = addedQty > 0
             ? 'btn-success'
@@ -617,7 +740,6 @@ document.addEventListener('DOMContentLoaded', function () {
     function addOrUpdateProductInCart() {
         if (!currentProduct) return;
 
-        // Prevent adding out-of-stock items
         if (currentProduct.stock <= 0) {
             Swal.fire({
                 title: 'Out of Stock',
@@ -649,7 +771,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 unit_name: p.primary_unit || 'Unit',
                 unit_id: parseInt(unitId),
                 sku: p.sku,
-                thumbnail: p.thumbnail
+                thumbnail: p.thumbnail,
+                discount_type: 'percent',
+                discount_value: 0,
+                discounted_price: parseFloat(price)
             });
         }
 
@@ -699,6 +824,7 @@ document.addEventListener('DOMContentLoaded', function () {
             emptyCartRow.style.display = '';
             cartBody.innerHTML = '';
             subtotalEl.textContent = '₦0.00';
+            discountEl.textContent = '-₦0.00';
             grandTotalEl.textContent = '₦0.00';
             selectedProducts = [];
             renderAllProducts();
@@ -710,7 +836,16 @@ document.addEventListener('DOMContentLoaded', function () {
         let subtotal = 0;
 
         cart.forEach((item, i) => {
-            const total = item.qty * item.price;
+            let unitPrice = item.price;
+            if (item.discount_value > 0) {
+                unitPrice = item.discount_type === 'percent'
+                    ? item.price * (1 - item.discount_value / 100)
+                    : item.price - item.discount_value;
+                if (unitPrice < 0) unitPrice = 0;
+            }
+            item.discounted_price = unitPrice;
+
+            const total = item.qty * unitPrice;
             subtotal += total;
 
             const row = document.createElement('tr');
@@ -722,6 +857,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         <div>
                             <strong>${item.title}</strong><br>
                             <small class="text-muted">${item.sku ? 'SKU: ' + item.sku : ''}</small>
+                            ${item.discount_value > 0 ? `<small class="text-warning">-${item.discount_value}${item.discount_type === 'percent' ? '%' : '₦'}</small>` : ''}
                         </div>
                     </div>
                 </td>
@@ -732,8 +868,13 @@ document.addEventListener('DOMContentLoaded', function () {
                         ${item.qty}
                     </button>
                 </td>
-                <td class="text-end">₦${item.price.toFixed(2)}</td>
+                <td class="text-end">₦${unitPrice.toFixed(2)}</td>
                 <td class="text-end fw-bold">₦${total.toFixed(2)}</td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-outline-warning rounded-circle item-discount-btn" data-product-id="${item.product_id}">
+                        <i class="bi bi-percent"></i>
+                    </button>
+                </td>
                 <td class="text-center">
                     <button class="btn btn-sm btn-danger rounded-circle" onclick="removeCartItem(${i})">
                         <i class="bi bi-x"></i>
@@ -743,8 +884,27 @@ document.addEventListener('DOMContentLoaded', function () {
             cartBody.appendChild(row);
         });
 
+        let orderDiscountAmount = 0;
+        if (discountValue > 0) {
+            if (discountType === 'percent') {
+                orderDiscountAmount = (subtotal * discountValue) / 100;
+            } else {
+                orderDiscountAmount = discountValue;
+            }
+            orderDiscountAmount = Math.min(orderDiscountAmount, subtotal);
+        }
+
+        const grandTotal = subtotal - orderDiscountAmount;
+
         subtotalEl.textContent = `₦${subtotal.toFixed(2)}`;
-        grandTotalEl.textContent = `₦${subtotal.toFixed(2)}`;
+        discountEl.textContent = `-₦${orderDiscountAmount.toFixed(2)}`;
+        grandTotalEl.textContent = `₦${grandTotal.toFixed(2)}`;
+
+        window.currentDiscount = {
+            type: discountType,
+            value: discountValue,
+            amount: orderDiscountAmount
+        };
     }
 
     window.removeCartItem = (i) => {
@@ -845,13 +1005,23 @@ document.addEventListener('DOMContentLoaded', function () {
             product_id: item.product_id,
             qty: parseInt(item.qty),
             unit_id: parseInt(item.unit_id || 1),
-            sale_price: parseFloat(item.price)
+            sale_price: parseFloat(item.price),
+            discount_type: item.discount_type || null,
+            discount_value: item.discount_value || 0
         }));
+
+        const discount = window.currentDiscount || { type: 'percent', value: 0, amount: 0 };
 
         Swal.fire({ title: 'Processing...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
         axios.post('{{ route("pos.order.save") }}', {
-            items, payment_method: payment, customer_id: customerId, _token: '{{ csrf_token() }}'
+            items,
+            payment_method: payment,
+            customer_id: customerId,
+            discount_type: discount.type,
+            discount_value: discount.value,
+            discount_amount: discount.amount,
+            _token: '{{ csrf_token() }}'
         })
         .then(res => {
             Swal.close();
@@ -925,5 +1095,6 @@ document.addEventListener('DOMContentLoaded', function () {
 .btn-check:checked + .btn-outline-primary { background:#0d6efd; color:white; border-color:#0d6efd; }
 .btn-check:checked + .btn-outline-info { background:#0dcaf0; color:white; border-color:#0dcaf0; }
 #cartBody tr:hover { background:rgba(0,0,0,0.02); }
+.item-discount-btn { font-size: 0.8rem; }
 </style>
 @endsection
