@@ -452,697 +452,184 @@
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-// ============================================
-// POS APPLICATION MODULES
-// ============================================
-class POSCart {
-    constructor() {
-        this.cart = [];
-        this.cache = {};
-        this.selectedProducts = [];
-        this.discount = { type: 'percent', value: 0, amount: 0 };
-        this.taxRate = {{ config('pos.tax_rate', 0) }};
-        this.init();
-    }
 
-    init() {
-        this.loadState();
-    }
-
-    addItem(product, quantity, discount = { type: 'percent', value: 0 }) {
-        const existing = this.cart.find(item => item.product_id === product.id);
-
-        if (existing) {
-            existing.qty = quantity;
-            existing.discount_type = discount.type;
-            existing.discount_value = discount.value;
-        } else {
-            this.cart.push({
-                product_id: product.id,
-                title: product.title,
-                price: parseFloat(product.sale_price || product.price),
-                qty: quantity,
-                unit_name: product.primary_unit || 'Unit',
-                unit_id: parseInt(product.primary_unit_id || 1),
-                sku: product.sku,
-                thumbnail: product.thumbnail,
-                discount_type: discount.type,
-                discount_value: discount.value,
-                stock: product.stock,
-                maxStock: product.stock
-            });
-        }
-
-        this.cache[product.id] = quantity;
-        this.selectedProducts.push({...product});
-        this.saveState();
-        return existing ? 'updated' : 'added';
-    }
-
-    updateItem(index, updates) {
-        if (this.cart[index]) {
-            this.cart[index] = { ...this.cart[index], ...updates };
-            this.saveState();
-            return true;
-        }
-        return false;
-    }
-
-    removeItem(productId) {
-        const index = this.cart.findIndex(item => item.product_id === productId);
-        if (index !== -1) {
-            this.cart.splice(index, 1);
-            delete this.cache[productId];
-            this.selectedProducts = this.selectedProducts.filter(p => p.id !== productId);
-            this.saveState();
-            return true;
-        }
-        return false;
-    }
-
-    clear() {
-        this.cart = [];
-        this.cache = {};
-        this.selectedProducts = [];
-        this.discount = { type: 'percent', value: 0, amount: 0 };
-        localStorage.removeItem('posCartState');
-        sessionStorage.removeItem('posCartState');
-    }
-
-    getTotals() {
-        let subtotal = 0;
-        let tax = 0;
-
-        this.cart.forEach(item => {
-            let unitPrice = item.price;
-            if (item.discount_value > 0) {
-                unitPrice = item.discount_type === 'percent'
-                    ? item.price * (1 - item.discount_value / 100)
-                    : item.price - item.discount_value;
-                if (unitPrice < 0) unitPrice = 0;
-            }
-            subtotal += item.qty * unitPrice;
-        });
-
-        tax = subtotal * (this.taxRate / 100);
-
-        let orderDiscount = 0;
-        if (this.discount.value > 0) {
-            orderDiscount = this.discount.type === 'percent'
-                ? (subtotal * this.discount.value) / 100
-                : this.discount.value;
-            orderDiscount = Math.min(orderDiscount, subtotal);
-        }
-
-        this.discount.amount = orderDiscount;
-        const grandTotal = subtotal + tax - orderDiscount;
-
-        return {
-            subtotal: subtotal.toFixed(2),
-            tax: tax.toFixed(2),
-            discount: orderDiscount.toFixed(2),
-            grandTotal: grandTotal.toFixed(2),
-            itemCount: this.cart.length
-        };
-    }
-
-    saveState() {
-        const state = {
-            cart: this.cart,
-            cache: this.cache,
-            selectedProducts: this.selectedProducts,
-            discount: this.discount,
-            timestamp: Date.now()
-        };
-        localStorage.setItem('posCartState', JSON.stringify(state));
-        sessionStorage.setItem('posCartState', JSON.stringify(state));
-    }
-
-    loadState() {
-        const state = JSON.parse(localStorage.getItem('posCartState') || sessionStorage.getItem('posCartState') || '{}');
-        const maxAge = 2 * 60 * 60 * 1000; // 2 hours
-
-        if (state.timestamp && (Date.now() - state.timestamp) < maxAge) {
-            this.cart = state.cart || [];
-            this.cache = state.cache || {};
-            this.selectedProducts = state.selectedProducts || [];
-            this.discount = state.discount || { type: 'percent', value: 0, amount: 0 };
-            return true;
-        }
-        return false;
-    }
-
-    validate() {
-        const errors = [];
-
-        if (this.cart.length === 0) {
-            errors.push('Cart is empty');
-            return errors;
-        }
-
-        this.cart.forEach((item, index) => {
-            if (item.qty <= 0) {
-                errors.push(`Item ${index + 1}: Quantity must be positive`);
-            }
-            if (item.qty > item.maxStock) {
-                errors.push(`Item ${index + 1}: Exceeds available stock (${item.maxStock} available)`);
-            }
-            if (!item.product_id) {
-                errors.push(`Item ${index + 1}: Product ID missing`);
-            }
-            if (item.discount_value < 0) {
-                errors.push(`Item ${index + 1}: Discount cannot be negative`);
-            }
-        });
-
-        return errors;
-    }
-
-    getOrderData(customerId, paymentMethod) {
-        const totals = this.getTotals();
-
-        return {
-            items: this.cart.map(item => ({
-                product_id: item.product_id,
-                qty: parseInt(item.qty),
-                unit_id: parseInt(item.unit_id || 1),
-                sale_price: parseFloat(item.price),
-                discount_type: item.discount_type || null,
-                discount_value: item.discount_value || 0
-            })),
-            customer_id: customerId,
-            payment_method: paymentMethod,
-            discount_type: this.discount.type,
-            discount_value: this.discount.value,
-            discount_amount: parseFloat(totals.discount),
-            subtotal: parseFloat(totals.subtotal),
-            tax: parseFloat(totals.tax),
-            grand_total: parseFloat(totals.grandTotal),
-            _token: '{{ csrf_token() }}'
-        };
-    }
-}
-
-class POSSearch {
-    constructor() {
-        this.currentResults = [];
-        this.currentQuery = '';
-        this.isSearching = false;
-        this.lastSearchTime = 0;
-        this.debounceDelay = 300;
-        this.minSearchLength = 2;
-    }
-
-    async search(query) {
-        if (query.length < this.minSearchLength || this.isSearching) {
-            return [];
-        }
-
-        this.currentQuery = query;
-        this.isSearching = true;
-        this.lastSearchTime = Date.now();
-
-        try {
-            const response = await axios.get('{{ route("pos.search") }}', {
-                params: { q: query, t: Date.now() },
-                timeout: 5000
-            });
-
-            this.currentResults = response.data || [];
-            return this.currentResults;
-        } catch (error) {
-            console.error('Search error:', error);
-            this.showToast('Search failed. Please check your connection.', 'error');
-            return [];
-        } finally {
-            this.isSearching = false;
-        }
-    }
-
-    debounceSearch(func, delay) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func.apply(this, args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, delay);
-        };
-    }
-
-    highlightMatches(text, query) {
-        if (!query || query.length < 2) return text;
-
-        const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-        return text.replace(regex, '<mark class="bg-warning">$1</mark>');
-    }
-}
-
-class POSUI {
-    constructor() {
-        this.modals = {};
-        this.toasts = [];
-        this.init();
-    }
-
-    init() {
-        this.initModals();
-        this.initTooltips();
-        this.initEventListeners();
-    }
-
-    initModals() {
-        this.modals.quantity = new bootstrap.Modal(document.getElementById('quantityModal'));
-        this.modals.itemDiscount = new bootstrap.Modal(document.getElementById('itemDiscountModal'));
-        this.modals.loadOrder = new bootstrap.Modal(document.getElementById('loadOrderModal'));
-        this.modals.quickCustomer = new bootstrap.Modal(document.getElementById('quickCustomerModal'));
-        this.modals.offlineOrders = new bootstrap.Modal(document.getElementById('offlineOrdersModal'));
-    }
-
-    initTooltips() {
-        const tooltips = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltips.map(tooltip => new bootstrap.Tooltip(tooltip));
-    }
-
-    initEventListeners() {
-        // Keyboard shortcuts
-        document.addEventListener('keydown', this.handleKeyboardShortcuts.bind(this));
-
-        // Network status
-        window.addEventListener('online', this.updateNetworkStatus.bind(this));
-        window.addEventListener('offline', this.updateNetworkStatus.bind(this));
-
-        // Before unload warning
-        window.addEventListener('beforeunload', this.handleBeforeUnload.bind(this));
-    }
-
-    handleKeyboardShortcuts(e) {
-        // Ignore if user is typing in input/textarea
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
-            return;
-        }
-
-        switch(e.key) {
-            case 'F1':
-                e.preventDefault();
-                document.getElementById('barcodeInput').focus();
-                this.showToast('Search input focused', 'info');
-                break;
-            case 'F2':
-                e.preventDefault();
-                if (confirm('Clear cart?')) {
-                    document.getElementById('clearCart').click();
-                }
-                break;
-            case 'F3':
-                e.preventDefault();
-                document.getElementById('completeOrder').click();
-                break;
-            case 'F4':
-                e.preventDefault();
-                document.getElementById('holdOrderBtn').click();
-                break;
-            case 'Escape':
-                const modal = bootstrap.Modal.getInstance(document.querySelector('.modal.show'));
-                if (modal) modal.hide();
-                break;
-        }
-    }
-
-    updateNetworkStatus() {
-        const statusEl = document.getElementById('connectionStatus');
-        const isOnline = navigator.onLine;
-
-        if (isOnline) {
-            statusEl.className = 'badge bg-success';
-            statusEl.innerHTML = '<i class="bi bi-wifi"></i> Online';
-            this.showToast('Back online', 'success');
-        } else {
-            statusEl.className = 'badge bg-danger';
-            statusEl.innerHTML = '<i class="bi bi-wifi-off"></i> Offline';
-            this.showToast('You are offline. Orders will be saved locally.', 'warning');
-        }
-
-        return isOnline;
-    }
-
-    handleBeforeUnload(e) {
-        const cart = window.posApp?.cart?.cart || [];
-        if (cart.length > 0) {
-            e.preventDefault();
-            e.returnValue = 'You have unsaved items in your cart. Are you sure you want to leave?';
-            return e.returnValue;
-        }
-    }
-
-    showToast(message, type = 'success', duration = 3000) {
-        const toastId = 'toast-' + Date.now();
-        const toastHtml = `
-            <div id="${toastId}" class="toast align-items-center text-bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
-                <div class="d-flex">
-                    <div class="toast-body">
-                        ${message}
-                    </div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                </div>
-            </div>
-        `;
-
-        document.getElementById('toastContainer').insertAdjacentHTML('beforeend', toastHtml);
-        const toastEl = document.getElementById(toastId);
-        const toast = new bootstrap.Toast(toastEl, { delay: duration });
-        toast.show();
-
-        toastEl.addEventListener('hidden.bs.toast', () => {
-            toastEl.remove();
-        });
-    }
-
-    showLoading(show = true, elementId = 'searchLoading') {
-        const element = document.getElementById(elementId);
-        if (element) {
-            element.classList.toggle('d-none', !show);
-        }
-    }
-
-    updateAccessibilityStatus(message, role = 'status') {
-        const statusEl = document.getElementById(role === 'status' ? 'cartStatus' : 'searchStatus');
-        if (statusEl) {
-            statusEl.textContent = message;
-            setTimeout(() => statusEl.textContent = '', 2000);
-        }
-    }
-}
-
-class OfflineManager {
-    constructor() {
-        this.orders = JSON.parse(localStorage.getItem('offlineOrders') || '[]');
-        this.syncing = false;
-        this.init();
-    }
-
-    init() {
-        // Auto-sync when coming online
-        window.addEventListener('online', () => {
-            this.attemptSync();
-        });
-    }
-
-    saveOrder(orderData) {
-        const order = {
-            ...orderData,
-            id: 'offline_' + Date.now(),
-            timestamp: Date.now(),
-            synced: false,
-            attempts: 0
-        };
-
-        this.orders.push(order);
-        localStorage.setItem('offlineOrders', JSON.stringify(this.orders));
-
-        this.showOfflineNotification();
-        return order.id;
-    }
-
-    async attemptSync() {
-        if (this.syncing || !navigator.onLine || this.orders.length === 0) {
-            return;
-        }
-
-        this.syncing = true;
-        const unsynced = this.orders.filter(o => !o.synced);
-
-        for (const order of unsynced) {
-            if (order.attempts >= 3) {
-                console.warn('Max sync attempts reached for order:', order.id);
-                continue;
-            }
-
-            try {
-                const response = await axios.post('{{ route("pos.order.save") }}', order.data);
-
-                if (response.data.success) {
-                    order.synced = true;
-                    order.synced_at = Date.now();
-                    order.remote_id = response.data.order_id;
-                }
-
-                order.attempts++;
-            } catch (error) {
-                console.error('Sync failed for order:', order.id, error);
-                order.attempts++;
-                break; // Stop on first failure
-            }
-
-            // Update localStorage after each attempt
-            localStorage.setItem('offlineOrders', JSON.stringify(this.orders));
-        }
-
-        this.syncing = false;
-        this.cleanupSyncedOrders();
-    }
-
-    cleanupSyncedOrders() {
-        const oldCount = this.orders.length;
-        this.orders = this.orders.filter(o => !o.synced || Date.now() - o.synced_at < 7 * 24 * 60 * 60 * 1000);
-
-        if (this.orders.length !== oldCount) {
-            localStorage.setItem('offlineOrders', JSON.stringify(this.orders));
-        }
-    }
-
-    showOfflineNotification() {
-        if (!navigator.onLine) {
-            const toast = document.createElement('div');
-            toast.className = 'toast align-items-center text-bg-warning';
-            toast.innerHTML = `
-                <div class="d-flex">
-                    <div class="toast-body">
-                        <i class="bi bi-wifi-off me-2"></i>
-                        Order saved offline. It will sync when you're back online.
-                    </div>
-                </div>
-            `;
-
-            document.getElementById('toastContainer').appendChild(toast);
-            const bsToast = new bootstrap.Toast(toast, { delay: 5000 });
-            bsToast.show();
-
-            setTimeout(() => toast.remove(), 5000);
-        }
-    }
-
-    getPendingCount() {
-        return this.orders.filter(o => !o.synced).length;
-    }
-}
-
-// ============================================
-// MAIN APPLICATION
-// ============================================
+// MAIN POS SCRIPT - SIMPLIFIED AND WORKING VERSION
 document.addEventListener('DOMContentLoaded', function () {
-    // Initialize modules
-    window.posApp = {
-        cart: new POSCart(),
-        search: new POSSearch(),
-        ui: new POSUI(),
-        offline: new OfflineManager()
-    };
+    // ============================================
+    // INITIALIZATION
+    // ============================================
+    const input = document.getElementById('barcodeInput');
+    const resultsBody = document.getElementById('resultsBody');
+    const emptySearchRow = document.getElementById('emptySearchRow');
+    const cartBody = document.getElementById('cartBody');
+    const emptyCartRow = document.getElementById('emptyCartRow');
+    const subtotalEl = document.getElementById('subtotal');
+    const discountEl = document.getElementById('discountAmount');
+    const grandTotalEl = document.getElementById('grandTotal');
+    const searchLoading = document.getElementById('searchLoading');
+    const quantityModal = new bootstrap.Modal(document.getElementById('quantityModal'));
+    const modalQty = document.getElementById('modalQty');
+    const confirmAddBtn = document.getElementById('confirmAddBtn');
+    const removeFromCartBtn = document.getElementById('removeFromCartBtn');
+    const customerSelect = document.getElementById('customerSelect');
+    const discountValue = document.getElementById('discountValue');
+    const discountType = document.getElementById('discountType');
+    const applyDiscountBtn = document.getElementById('applyDiscountBtn');
 
-    const { cart, search, ui, offline } = window.posApp;
+    // Initialize Bootstrap tooltips
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
 
-    // DOM Elements
-    const elements = {
-        input: document.getElementById('barcodeInput'),
-        resultsBody: document.getElementById('resultsBody'),
-        emptySearchRow: document.getElementById('emptySearchRow'),
-        cartBody: document.getElementById('cartBody'),
-        emptyCartRow: document.getElementById('emptyCartRow'),
-        subtotalEl: document.getElementById('subtotal'),
-        taxEl: document.getElementById('taxAmount'),
-        discountEl: document.getElementById('discountAmount'),
-        grandTotalEl: document.getElementById('grandTotal'),
-        searchLoading: document.getElementById('searchLoading'),
-        quantityModal: document.getElementById('quantityModal'),
-        modalQty: document.getElementById('modalQty'),
-        confirmAddBtn: document.getElementById('confirmAddBtn'),
-        removeFromCartBtn: document.getElementById('removeFromCartBtn'),
-        customerSelect: document.getElementById('customerSelect'),
-        discountValue: document.getElementById('discountValue'),
-        discountType: document.getElementById('discountType'),
-        applyDiscountBtn: document.getElementById('applyDiscountBtn'),
-        clearCartBtn: document.getElementById('clearCart'),
-        holdOrderBtn: document.getElementById('holdOrderBtn'),
-        loadHeldBtn: document.getElementById('loadHeldBtn'),
-        completeOrderBtn: document.getElementById('completeOrder'),
-        quickCustomerBtn: document.getElementById('quickCustomerBtn'),
-        saveQuickCustomerBtn: document.getElementById('saveQuickCustomerBtn'),
-        offlineModeToggle: document.getElementById('offlineModeToggle'),
-        syncOfflineOrdersBtn: document.getElementById('syncOfflineOrdersBtn')
-    };
-
-    // State
+    // State management
+    let cart = [];
+    let selectedProducts = [];
+    let currentSearchQuery = '';
+    let lastSearchResults = [];
+    let productQuantityCache = {};
     let currentProduct = null;
     let currentItemIndex = null;
-    let lastSearchResults = [];
-    let isOfflineMode = false;
+    let orderDiscountType = 'percent';
+    let orderDiscountValue = 0;
 
-    // Initialize
-    init();
+    input.focus();
 
-    function init() {
-        updateNetworkStatus();
-        renderCart();
-        setupEventListeners();
-        lazyLoadImages();
-        autoSaveCart();
-
-        // Check for offline orders
-        if (offline.getPendingCount() > 0) {
-            ui.showToast(`You have ${offline.getPendingCount()} pending offline orders`, 'info');
+    // ============================================
+    // EVENT LISTENERS
+    // ============================================
+    input.addEventListener('input', debounce(() => {
+        const q = input.value.trim();
+        currentSearchQuery = q;
+        if (q.length >= 2) {
+            searchProducts(q);
+        } else {
+            showEmptySearchState();
         }
-    }
+    }, 300));
 
-    function updateNetworkStatus() {
-        const isOnline = ui.updateNetworkStatus();
-        if (!isOnline) {
-            elements.offlineModeToggle.checked = true;
-            isOfflineMode = true;
+    input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            const q = input.value.trim();
+            if (q) searchProducts(q);
         }
-    }
+    });
 
-    function setupEventListeners() {
-        // Search input
-        elements.input.addEventListener('input', search.debounceSearch(handleSearch, search.debounceDelay));
-        elements.input.addEventListener('keydown', e => {
-            if (e.key === 'Enter') {
-                const query = elements.input.value.trim();
-                if (query) handleSearch(query);
-            }
-        });
+    // Quantity Modal Events
+    document.getElementById('quantityModal').addEventListener('show.bs.modal', updateModalTotal);
 
-        // Customer selection
-        elements.customerSelect.addEventListener('change', () => {
-            cart.saveState();
-        });
+    document.getElementById('quantityModal').addEventListener('shown.bs.modal', () => {
+        setTimeout(() => {
+            modalQty.focus();
+            modalQty.select();
+        }, 100);
+    });
 
-        // Quantity modal
-        quantityModal.addEventListener('shown.bs.modal', () => {
-            setTimeout(() => {
-                elements.modalQty.focus();
-                elements.modalQty.select();
-            }, 100);
-        });
+    document.getElementById('quantityModal').addEventListener('hidden.bs.modal', () => {
+        setTimeout(() => {
+            input.focus();
+            input.select();
+        }, 100);
+    });
 
-        quantityModal.addEventListener('hidden.bs.modal', () => {
-            setTimeout(() => {
-                elements.input.focus();
-                elements.input.select();
-            }, 100);
-        });
+    modalQty.addEventListener('input', updateModalTotal);
+    modalQty.addEventListener('change', updateModalTotal);
 
-        elements.modalQty.addEventListener('input', updateModalTotal);
-        elements.modalQty.addEventListener('change', updateModalTotal);
+    document.getElementById('increaseQty').addEventListener('click', () => {
+        modalQty.value = (parseInt(modalQty.value) || 1) + 1;
+        updateModalTotal();
+        modalQty.focus();
+        modalQty.select();
+    });
 
-        document.getElementById('increaseQty').addEventListener('click', () => {
-            elements.modalQty.value = (parseInt(elements.modalQty.value) || 1) + 1;
+    document.getElementById('decreaseQty').addEventListener('click', () => {
+        const val = parseInt(modalQty.value) || 1;
+        if (val > 1) {
+            modalQty.value = val - 1;
             updateModalTotal();
-            elements.modalQty.focus();
-            elements.modalQty.select();
+            modalQty.focus();
+            modalQty.select();
+        }
+    });
+
+    // Quick quantity buttons
+    document.querySelectorAll('[data-qty]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            modalQty.value = btn.dataset.qty;
+            updateModalTotal();
+            modalQty.focus();
+            modalQty.select();
         });
+    });
 
-        document.getElementById('decreaseQty').addEventListener('click', () => {
-            const val = parseInt(elements.modalQty.value) || 1;
-            if (val > 1) {
-                elements.modalQty.value = val - 1;
-                updateModalTotal();
-                elements.modalQty.focus();
-                elements.modalQty.select();
-            }
-        });
+    modalQty.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            confirmAddBtn.click();
+        }
+    });
 
-        // Quick quantity buttons
-        document.querySelectorAll('[data-qty]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                elements.modalQty.value = btn.dataset.qty;
-                updateModalTotal();
-                elements.modalQty.focus();
-                elements.modalQty.select();
-            });
-        });
+    // Button click handlers
+    confirmAddBtn.addEventListener('click', addOrUpdateProductInCart);
+    removeFromCartBtn.addEventListener('click', removeCurrentProductFromCart);
+    document.getElementById('clearCart').addEventListener('click', clearCart);
+    document.getElementById('holdOrderBtn').addEventListener('click', holdOrder);
+    document.getElementById('loadHeldBtn').addEventListener('click', loadHeldOrders);
+    document.getElementById('completeOrder').addEventListener('click', completeOrder);
+    applyDiscountBtn.addEventListener('click', applyOrderDiscount);
 
-        elements.modalQty.addEventListener('keydown', e => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                elements.confirmAddBtn.click();
-            }
-        });
+    discountType.addEventListener('change', function() {
+        orderDiscountType = this.value;
+        if (orderDiscountType === 'percent' && orderDiscountValue > 100) {
+            discountValue.value = 100;
+            orderDiscountValue = 100;
+        }
+    });
 
-        // Cart operations
-        elements.confirmAddBtn.addEventListener('click', addOrUpdateProductInCart);
-        elements.removeFromCartBtn.addEventListener('click', removeCurrentProductFromCart);
-        elements.clearCartBtn.addEventListener('click', clearCart);
-        elements.holdOrderBtn.addEventListener('click', holdOrder);
-        elements.loadHeldBtn.addEventListener('click', loadHeldOrders);
-        elements.completeOrderBtn.addEventListener('click', completeOrder);
+    discountValue.addEventListener('input', function() {
+        const val = parseFloat(this.value) || 0;
+        if (orderDiscountType === 'percent' && val > 100) {
+            this.value = 100;
+            orderDiscountValue = 100;
+        } else {
+            orderDiscountValue = val;
+        }
+    });
 
-        // Discounts
-        elements.applyDiscountBtn.addEventListener('click', applyOrderDiscount);
-        elements.discountValue.addEventListener('input', validateDiscount);
-        elements.discountType.addEventListener('change', () => {
-            cart.discount.type = elements.discountType.value;
-            validateDiscount();
-        });
+    // Item discount apply
+    document.getElementById('applyItemDiscountBtn').addEventListener('click', function() {
+        if (currentItemIndex === null) return;
 
-        // Item discount
-        document.getElementById('applyItemDiscountBtn').addEventListener('click', applyItemDiscount);
+        const value = parseFloat(document.getElementById('itemDiscountValue').value) || 0;
+        const type = document.getElementById('itemDiscountType').value;
 
-        // Quick customer
-        elements.quickCustomerBtn.addEventListener('click', () => {
-            ui.modals.quickCustomer.show();
-        });
+        if (type === 'percent' && value > 100) {
+            showToast('Percentage cannot exceed 100%', 'warning');
+            return;
+        }
 
-        elements.saveQuickCustomerBtn.addEventListener('click', saveQuickCustomer);
+        cart[currentItemIndex].discount_type = type;
+        cart[currentItemIndex].discount_value = value;
 
-        // Offline mode
-        elements.offlineModeToggle.addEventListener('change', toggleOfflineMode);
-        elements.syncOfflineOrdersBtn.addEventListener('click', syncOfflineOrders);
+        updateCart();
+        bootstrap.Modal.getInstance(document.getElementById('itemDiscountModal')).hide();
 
-        // Global click handlers
-        document.addEventListener('click', handleGlobalClicks);
+        showToast('Item discount applied!', 'success');
+    });
 
-        // Refocus search input when clicking outside
-        document.addEventListener('click', e => {
-            const isModalOpen = document.querySelector('.modal.show');
-            const isModalElement = e.target.closest('.modal');
-            const isBackdrop = e.target.classList.contains('modal-backdrop');
-            const isSearch = e.target === elements.input || elements.input.contains(e.target);
-            const isCustomer = e.target === elements.customerSelect || elements.customerSelect.contains(e.target);
-
-            if (!isModalOpen && !isModalElement && !isBackdrop && !isSearch && !isCustomer) {
-                setTimeout(() => {
-                    elements.input.focus();
-                    elements.input.select();
-                }, 50);
-            }
-        });
-    }
-
-    function handleGlobalClicks(e) {
-        // Quantity buttons in product table
+    // Global click handlers
+    document.addEventListener('click', function(e) {
+        // Product quantity buttons in search results
         if (e.target.classList.contains('qty-btn') || e.target.closest('.qty-btn')) {
             const btn = e.target.classList.contains('qty-btn') ? e.target : e.target.closest('.qty-btn');
             if (!btn.disabled) openQuantityModal(btn);
         }
 
-        // Remove from table button
+        // Remove from table buttons
         if (e.target.classList.contains('remove-from-table-btn') || e.target.closest('.remove-from-table-btn')) {
             const btn = e.target.classList.contains('remove-from-table-btn') ? e.target : e.target.closest('.remove-from-table-btn');
             removeProductFromSelection(btn.dataset.productId);
         }
 
-        // Quantity buttons in cart
+        // Cart quantity buttons
         if (e.target.classList.contains('qty-btn-cart') || e.target.closest('.qty-btn-cart')) {
             const btn = e.target.classList.contains('qty-btn-cart') ? e.target : e.target.closest('.qty-btn-cart');
             openQuantityModal(btn);
@@ -1151,14 +638,15 @@ document.addEventListener('DOMContentLoaded', function () {
         // Item discount buttons
         if (e.target.classList.contains('item-discount-btn') || e.target.closest('.item-discount-btn')) {
             const btn = e.target.classList.contains('item-discount-btn') ? e.target : e.target.closest('.item-discount-btn');
-            currentItemIndex = cart.cart.findIndex(item => item.product_id === btn.dataset.productId);
+            currentItemIndex = cart.findIndex(item => item.product_id === btn.dataset.productId);
             if (currentItemIndex === -1) return;
 
-            const item = cart.cart[currentItemIndex];
+            const item = cart[currentItemIndex];
             document.getElementById('itemName').textContent = item.title;
             document.getElementById('itemDiscountValue').value = item.discount_value || 0;
             document.getElementById('itemDiscountType').value = item.discount_type || 'percent';
-            ui.modals.itemDiscount.show();
+
+            new bootstrap.Modal(document.getElementById('itemDiscountModal')).show();
         }
 
         // Load held order buttons
@@ -1168,7 +656,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const heldOrders = JSON.parse(localStorage.getItem('heldOrders') || '[]');
             const order = heldOrders.find(o => o.id == orderId);
             if (order) {
-                if (cart.cart.length > 0) {
+                if (cart.length > 0) {
                     Swal.fire({
                         title: 'Replace Current Cart?',
                         text: 'Loading this order will replace your current cart.',
@@ -1196,119 +684,132 @@ document.addEventListener('DOMContentLoaded', function () {
                     let orders = JSON.parse(localStorage.getItem('heldOrders') || '[]');
                     orders = orders.filter(o => o.id != orderId);
                     localStorage.setItem('heldOrders', JSON.stringify(orders));
-                    elements.loadHeldBtn.click();
-                    ui.showToast('Order removed', 'success');
+                    loadHeldOrders();
+                    showToast('Order removed', 'success');
                 }
             });
         }
+    });
+
+    // Refocus search input when clicking outside
+    document.addEventListener('click', e => {
+        const isModalOpen = document.querySelector('.modal.show');
+        const isModalElement = e.target.closest('.modal');
+        const isBackdrop = e.target.classList.contains('modal-backdrop');
+        const isSearch = e.target === input || input.contains(e.target);
+        const isCustomer = e.target === customerSelect || customerSelect.contains(e.target);
+
+        if (!isModalOpen && !isModalElement && !isBackdrop && !isSearch && !isCustomer) {
+            setTimeout(() => {
+                input.focus();
+                input.select();
+            }, 50);
+        }
+    });
+
+    // ============================================
+    // FUNCTIONS
+    // ============================================
+    function showEmptySearchState() {
+        searchLoading.classList.add('d-none');
+        if (selectedProducts.length > 0) {
+            renderAllProducts();
+            emptySearchRow.style.display = 'none';
+        } else if (!resultsBody.querySelector('tr[data-product-id]')) {
+            emptySearchRow.style.display = '';
+        }
     }
 
-    async function handleSearch(query) {
-        if (!query || query.length < search.minSearchLength) {
-            showEmptySearchState();
-            return;
-        }
-
-        ui.showLoading(true);
-        ui.updateAccessibilityStatus(`Searching for "${query}"`, 'search');
-
-        try {
-            const results = await search.search(query);
-            lastSearchResults = results;
-
-            if (results.length === 0) {
-                showEmptySearchState();
-                ui.updateAccessibilityStatus(`No results found for "${query}"`, 'search');
-            } else {
-                renderSearchResults(results);
-                ui.updateAccessibilityStatus(`Found ${results.length} results for "${query}"`, 'search');
-            }
-        } finally {
-            ui.showLoading(false);
-        }
+    function showSearchLoading() {
+        searchLoading.classList.remove('d-none');
+        emptySearchRow.style.display = 'none';
     }
 
-    function renderSearchResults(products) {
-        elements.resultsBody.innerHTML = '';
+    function hideSearchLoading() {
+        searchLoading.classList.add('d-none');
+    }
 
-        if (products.length === 0) {
-            elements.emptySearchRow.style.display = '';
-            elements.resultsBody.appendChild(elements.emptySearchRow);
-            return;
-        }
+    function renderAllProducts() {
+        resultsBody.innerHTML = selectedProducts.length || lastSearchResults.length ? '' : emptySearchRow.outerHTML;
 
-        elements.emptySearchRow.style.display = 'none';
-
-        products.forEach(product => {
-            const isSelected = cart.selectedProducts.some(p => p.id === product.id);
-            const cartItem = cart.cart.find(item => item.product_id === product.id);
-            const addedQty = cartItem ? cartItem.qty : 0;
-            const cachedQty = cart.cache[product.id] || 1;
-            const displayQty = addedQty > 0 ? addedQty : (cachedQty > 1 ? `(${cachedQty})` : '');
-            const isOutOfStock = product.stock <= 0;
-
-            const btnClass = addedQty > 0
-                ? 'btn-success'
-                : (isOutOfStock ? 'btn-secondary' : 'btn-outline-primary');
-            const btnText = addedQty > 0
-                ? `Added ${addedQty}`
-                : (isOutOfStock ? 'Out of Stock' : `Set Qty ${displayQty}`);
-            const btnDisabled = isOutOfStock ? 'disabled' : '';
-
-            const highlightedTitle = search.highlightMatches(product.title, search.currentQuery);
-            const highlightedSku = search.highlightMatches(product.sku, search.currentQuery);
-
-            const row = document.createElement('tr');
-            row.dataset.productId = product.id;
-            row.className = isSelected ? 'selected-product-row table-success' : '';
-            row.innerHTML = `
-                <td>
-                    <div class="d-flex align-items-center">
-                        ${product.thumbnail ?
-                            `<img data-src="${product.thumbnail}" width="50" height="50" class="rounded me-3" alt="${product.title}" loading="lazy">` :
-                            '<div class="bg-light rounded me-3 d-flex align-items-center justify-content-center" style="width:50px;height:50px;"><i class="bi bi-image text-muted"></i></div>'
-                        }
-                        <div>
-                            <strong>${highlightedTitle}</strong><br>
-                            <small class="text-muted">SKU: ${highlightedSku}</small>
-                        </div>
-                    </div>
-                </td>
-                <td class="text-center">
-                    <span class="badge bg-${product.stock > 10 ? 'success' : product.stock > 0 ? 'warning' : 'danger'}">
-                        ${product.stock}
-                    </span>
-                </td>
-                <td class="text-center">
-                    <button class="btn btn-sm ${btnClass} qty-btn"
-                            data-product='${JSON.stringify(product).replace(/'/g, "&apos;")}'
-                            data-product-id="${product.id}"
-                            ${btnDisabled}
-                            aria-label="${isOutOfStock ? 'Out of stock' : `Set quantity for ${product.title}`}">
-                        ${btnText}
-                    </button>
-                    ${isSelected ?
-                        `<button class="btn btn-sm btn-danger ms-2 remove-from-table-btn"
-                                data-product-id="${product.id}"
-                                aria-label="Remove ${product.title} from selection">
-                            <i class="bi bi-trash"></i> Remove
-                        </button>` : ''
-                    }
-                </td>
-                <td class="text-end fw-bold">₦${parseFloat(product.sale_price || product.price).toFixed(2)}</td>
-                <td class="text-center"><span class="badge bg-info">${product.primary_unit || 'Unit'}</span></td>
-            `;
-            elements.resultsBody.appendChild(row);
+        selectedProducts.forEach(p => renderProductRow(p, true));
+        lastSearchResults.forEach(p => {
+            if (!selectedProducts.some(sp => sp.id === p.id)) renderProductRow(p, false);
         });
 
-        lazyLoadImages();
+        if (!resultsBody.querySelector('tr[data-product-id]')) {
+            resultsBody.innerHTML = emptySearchRow.outerHTML;
+        }
     }
 
-    function showEmptySearchState() {
-        ui.showLoading(false);
-        elements.resultsBody.innerHTML = '';
-        elements.emptySearchRow.style.display = '';
-        elements.resultsBody.appendChild(elements.emptySearchRow);
+    function renderProductRow(product, isSelected) {
+        const price = product.sale_price || product.price;
+        const unit = product.primary_unit || 'Unit';
+        const cartItem = cart.find(i => i.product_id === product.id);
+        const addedQty = cartItem ? cartItem.qty : 0;
+        const cachedQty = productQuantityCache[product.id] || 1;
+        const displayQty = addedQty > 0 ? addedQty : (cachedQty > 1 ? `(${cachedQty})` : '');
+
+        const isOutOfStock = product.stock <= 0;
+        const btnClass = addedQty > 0
+            ? 'btn-success'
+            : (isOutOfStock ? 'btn-secondary' : 'btn-outline-primary');
+        const btnText = addedQty > 0
+            ? `Added ${addedQty}`
+            : (isOutOfStock ? 'Out of Stock' : `Set Qty ${displayQty}`);
+        const btnDisabled = isOutOfStock ? 'disabled' : '';
+
+        const row = document.createElement('tr');
+        row.dataset.productId = product.id;
+        row.className = isSelected ? 'selected-product-row table-success' : '';
+        row.innerHTML = `
+            <td>
+                <div class="d-flex align-items-center">
+                    ${product.thumbnail ? `<img src="${product.thumbnail}" width="50" class="rounded me-3">` : '<div class="bg-light rounded me-3 d-flex align-items-center justify-content-center" style="width:50px;height:50px;"><i class="bi bi-image"></i></div>'}
+                    <div>
+                        <strong>${product.title}</strong><br>
+                        <small class="text-muted">SKU: ${product.sku}</small>
+                    </div>
+                </div>
+            </td>
+            <td class="text-center">
+                <span class="badge bg-${product.stock > 10 ? 'success' : product.stock > 0 ? 'warning' : 'danger'}">${product.stock}</span>
+            </td>
+            <td class="text-center">
+                <button class="btn btn-sm ${btnClass} qty-btn"
+                        data-product='${JSON.stringify(product).replace(/'/g, "&apos;")}'
+                        data-product-id="${product.id}"
+                        ${btnDisabled}>
+                    ${btnText}
+                </button>
+                ${isSelected ? `<button class="btn btn-sm btn-danger ms-2 remove-from-table-btn" data-product-id="${product.id}">
+                    <i class="bi bi-trash"></i> Remove
+                </button>` : ''}
+            </td>
+            <td class="text-end fw-bold">₦${parseFloat(price).toFixed(2)}</td>
+            <td class="text-center"><span class="badge bg-info">${unit}</span></td>
+        `;
+        resultsBody.appendChild(row);
+        emptySearchRow.style.display = 'none';
+    }
+
+    function searchProducts(query) {
+        if (!query) return;
+        showSearchLoading();
+
+        axios.get('{{ route("pos.search") }}', {
+            params: { q: query }
+        })
+        .then(res => {
+            hideSearchLoading();
+            lastSearchResults = res.data;
+            renderAllProducts();
+        })
+        .catch(err => {
+            hideSearchLoading();
+            console.error('Search error:', err);
+            showToast('Failed to search products', 'error');
+        });
     }
 
     function openQuantityModal(button) {
@@ -1317,8 +818,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const productId = button.dataset.productId;
             currentProduct = product;
 
-            const cartItem = cart.cart.find(item => item.product_id === productId);
-            const cachedQty = cart.cache[productId] || 1;
+            const cartItem = cart.find(i => i.product_id === productId);
+            const cachedQty = productQuantityCache[productId] || 1;
             const previousQty = cartItem ? cartItem.qty : cachedQty;
 
             // Update modal content
@@ -1328,25 +829,25 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('modalProductStock').textContent = `Stock: ${product.stock}`;
             document.getElementById('modalProductUnit').textContent = product.primary_unit || 'Unit';
 
-            elements.modalQty.value = previousQty;
+            modalQty.value = previousQty;
             document.getElementById('previousQtyText').textContent =
                 cartItem ? `In cart: ${previousQty}` : `Previous: ${previousQty}`;
             document.getElementById('previousQtyText').className =
                 cartItem ? 'text-success fw-semibold' : 'text-muted';
 
-            elements.removeFromCartBtn.style.display = cartItem ? 'inline-block' : 'none';
+            removeFromCartBtn.style.display = cartItem ? 'inline-block' : 'none';
 
             updateModalTotal();
-            ui.modals.quantity.show();
-        } catch (error) {
-            console.error('Error opening quantity modal:', error);
-            ui.showToast('Error loading product details', 'error');
+            quantityModal.show();
+        } catch (e) {
+            console.error('Error opening quantity modal:', e);
+            showToast('Error loading product details', 'error');
         }
     }
 
     function updateModalTotal() {
         if (!currentProduct) return;
-        const qty = parseInt(elements.modalQty.value) || 1;
+        const qty = parseInt(modalQty.value) || 1;
         const price = currentProduct.sale_price || currentProduct.price;
         const total = qty * price;
         document.getElementById('totalPriceDisplay').textContent = `Total: ₦${total.toFixed(2)}`;
@@ -1355,46 +856,66 @@ document.addEventListener('DOMContentLoaded', function () {
     function addOrUpdateProductInCart() {
         if (!currentProduct) return;
 
-        // Validate stock
+        // Check stock
         if (currentProduct.stock <= 0) {
-            ui.showToast(`${currentProduct.title} is out of stock`, 'error');
-            ui.modals.quantity.hide();
+            showToast(`${currentProduct.title} is out of stock`, 'error');
+            quantityModal.hide();
             return;
         }
 
-        const qty = parseInt(elements.modalQty.value) || 1;
+        const qty = parseInt(modalQty.value) || 1;
         if (qty < 1) {
-            ui.showToast('Quantity must be at least 1', 'warning');
+            showToast('Quantity must be at least 1', 'warning');
             return;
         }
 
-        if (qty > currentProduct.stock) {
-            ui.showToast(`Only ${currentProduct.stock} units available`, 'warning');
-            elements.modalQty.value = currentProduct.stock;
-            updateModalTotal();
-            return;
+        const p = currentProduct;
+        const price = p.sale_price || p.price;
+        let unitId = p.primary_unit_id || 1;
+
+        // Add to selected products if not already
+        if (!selectedProducts.some(sp => sp.id === p.id)) {
+            selectedProducts.push({...p});
         }
 
-        const action = cart.addItem(currentProduct, qty);
-        ui.modals.quantity.hide();
+        // Update or add to cart
+        const existing = cart.find(i => i.product_id === p.id);
+        if (existing) {
+            existing.qty = qty;
+        } else {
+            cart.push({
+                product_id: p.id,
+                title: p.title,
+                price: parseFloat(price),
+                qty: qty,
+                unit_name: p.primary_unit || 'Unit',
+                unit_id: parseInt(unitId),
+                sku: p.sku,
+                thumbnail: p.thumbnail,
+                discount_type: 'percent',
+                discount_value: 0,
+                discounted_price: parseFloat(price)
+            });
+        }
 
-        renderCart();
-        renderSearchResults(lastSearchResults);
+        productQuantityCache[p.id] = qty;
+        quantityModal.hide();
 
-        elements.input.value = '';
+        updateCart();
+        input.value = '';
+        renderAllProducts();
         currentProduct = null;
 
-        ui.showToast(`Product ${action === 'updated' ? 'updated' : 'added'} to cart`, 'success');
-        ui.updateAccessibilityStatus(`Added ${qty} of ${currentProduct?.title} to cart. Total items: ${cart.cart.length}`);
+        showToast('Product added to cart', 'success');
     }
 
-    function removeProductFromSelection(productId) {
-        const removed = cart.removeItem(productId);
-        if (removed) {
-            renderCart();
-            renderSearchResults(lastSearchResults);
-            ui.showToast('Product removed from cart', 'success');
-        }
+    function removeProductFromSelection(id) {
+        cart = cart.filter(i => i.product_id != id);
+        selectedProducts = selectedProducts.filter(p => p.id != id);
+        delete productQuantityCache[id];
+        updateCart();
+        renderAllProducts();
+        showToast('Product removed from cart', 'success');
     }
 
     function removeCurrentProductFromCart() {
@@ -1406,60 +927,67 @@ document.addEventListener('DOMContentLoaded', function () {
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'Yes, remove'
-        }).then(result => {
-            if (result.isConfirmed) {
-                cart.removeItem(currentProduct.id);
-                ui.modals.quantity.hide();
-                renderCart();
-                renderSearchResults(lastSearchResults);
-                ui.showToast('Product removed from cart', 'success');
+        }).then(res => {
+            if (res.isConfirmed) {
+                const id = currentProduct.id;
+                cart = cart.filter(i => i.product_id != id);
+                selectedProducts = selectedProducts.filter(p => p.id != id);
+                delete productQuantityCache[id];
+                quantityModal.hide();
+                updateCart();
+                renderAllProducts();
+                showToast('Product removed from cart', 'success');
             }
         });
     }
 
-    function renderCart() {
-        if (cart.cart.length === 0) {
-            elements.emptyCartRow.style.display = '';
-            elements.cartBody.innerHTML = '';
-            updateTotals();
+    function updateCart() {
+        if (cart.length === 0) {
+            emptyCartRow.style.display = '';
+            cartBody.innerHTML = '';
+            subtotalEl.textContent = '₦0.00';
+            discountEl.textContent = '-₦0.00';
+            grandTotalEl.textContent = '₦0.00';
+            selectedProducts = [];
+            renderAllProducts();
             return;
         }
 
-        elements.emptyCartRow.style.display = 'none';
-        elements.cartBody.innerHTML = '';
+        emptyCartRow.style.display = 'none';
+        cartBody.innerHTML = '';
 
-        cart.cart.forEach((item, index) => {
-            const unitPrice = item.discount_value > 0 ?
-                (item.discount_type === 'percent' ?
-                    item.price * (1 - item.discount_value / 100) :
-                    item.price - item.discount_value) :
-                item.price;
+        let subtotal = 0;
+
+        cart.forEach((item, i) => {
+            let unitPrice = item.price;
+            if (item.discount_value > 0) {
+                unitPrice = item.discount_type === 'percent'
+                    ? item.price * (1 - item.discount_value / 100)
+                    : item.price - item.discount_value;
+                if (unitPrice < 0) unitPrice = 0;
+            }
+            item.discounted_price = unitPrice;
 
             const total = item.qty * unitPrice;
+            subtotal += total;
+
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td>${index + 1}</td>
+                <td>${i+1}</td>
                 <td>
                     <div class="d-flex align-items-center">
-                        ${item.thumbnail ?
-                            `<img src="${item.thumbnail}" width="40" height="40" class="rounded me-2" alt="${item.title}" loading="lazy">` :
-                            '<div class="bg-light rounded me-2 d-flex align-items-center justify-content-center" style="width:40px;height:40px;"><i class="bi bi-image text-muted"></i></div>'
-                        }
+                        ${item.thumbnail ? `<img src="${item.thumbnail}" width="40" class="rounded me-2">` : '<div class="bg-light rounded me-2 d-flex align-items-center justify-content-center" style="width:40px;height:40px;"><i class="bi bi-image"></i></div>'}
                         <div>
                             <strong>${item.title}</strong><br>
                             <small class="text-muted">${item.sku ? 'SKU: ' + item.sku : ''}</small>
-                            ${item.discount_value > 0 ?
-                                `<small class="text-warning">-${item.discount_value}${item.discount_type === 'percent' ? '%' : '₦'}</small>` :
-                                ''
-                            }
+                            ${item.discount_value > 0 ? `<small class="text-warning">-${item.discount_value}${item.discount_type === 'percent' ? '%' : '₦'}</small>` : ''}
                         </div>
                     </div>
                 </td>
                 <td class="text-center fw-bold">
                     <button class="btn btn-sm btn-primary qty-btn-cart"
                             data-product='${JSON.stringify(item).replace(/'/g, "&apos;")}'
-                            data-product-id="${item.product_id}"
-                            aria-label="Change quantity for ${item.title}, current quantity ${item.qty}">
+                            data-product-id="${item.product_id}">
                         ${item.qty}
                     </button>
                 </td>
@@ -1467,51 +995,78 @@ document.addEventListener('DOMContentLoaded', function () {
                 <td class="text-end fw-bold">₦${total.toFixed(2)}</td>
                 <td class="text-center">
                     <button class="btn btn-sm btn-outline-warning rounded-circle item-discount-btn"
-                            data-product-id="${item.product_id}"
-                            aria-label="Apply discount to ${item.title}">
+                            data-product-id="${item.product_id}">
                         <i class="bi bi-percent"></i>
                     </button>
                 </td>
                 <td class="text-center">
                     <button class="btn btn-sm btn-danger rounded-circle"
-                            onclick="removeCartItem(${index})"
-                            aria-label="Remove ${item.title} from cart">
+                            onclick="window.removeCartItem(${i})">
                         <i class="bi bi-x"></i>
                     </button>
                 </td>
             `;
-            elements.cartBody.appendChild(row);
+            cartBody.appendChild(row);
         });
 
-        updateTotals();
-    }
-
-    function updateTotals() {
-        const totals = cart.getTotals();
-        elements.subtotalEl.textContent = `₦${totals.subtotal}`;
-        elements.taxEl.textContent = `₦${totals.tax}`;
-        elements.discountEl.textContent = `-₦${totals.discount}`;
-        elements.grandTotalEl.textContent = `₦${totals.grandTotal}`;
-
-        // Update accessibility status
-        ui.updateAccessibilityStatus(
-            `Cart updated. ${totals.itemCount} items. Total: ₦${totals.grandTotal}`
-        );
-    }
-
-    window.removeCartItem = function(index) {
-        const product = cart.cart[index];
-        if (product) {
-            cart.removeItem(product.product_id);
-            renderCart();
-            renderSearchResults(lastSearchResults);
-            ui.showToast(`${product.title} removed from cart`, 'success');
+        let orderDiscountAmount = 0;
+        if (orderDiscountValue > 0) {
+            if (orderDiscountType === 'percent') {
+                orderDiscountAmount = (subtotal * orderDiscountValue) / 100;
+            } else {
+                orderDiscountAmount = orderDiscountValue;
+            }
+            orderDiscountAmount = Math.min(orderDiscountAmount, subtotal);
         }
+
+        const grandTotal = subtotal - orderDiscountAmount;
+
+        subtotalEl.textContent = `₦${subtotal.toFixed(2)}`;
+        discountEl.textContent = `-₦${orderDiscountAmount.toFixed(2)}`;
+        grandTotalEl.textContent = `₦${grandTotal.toFixed(2)}`;
+
+        // Store discount for order submission
+        window.currentDiscount = {
+            type: orderDiscountType,
+            value: orderDiscountValue,
+            amount: orderDiscountAmount
+        };
+    }
+
+    // Make removeCartItem globally accessible
+    window.removeCartItem = function(index) {
+        const item = cart[index];
+        cart.splice(index, 1);
+
+        // Check if product is still in cart
+        const stillInCart = cart.some(cartItem => cartItem.product_id === item.product_id);
+        if (!stillInCart) {
+            selectedProducts = selectedProducts.filter(p => p.id !== item.product_id);
+            delete productQuantityCache[item.product_id];
+        }
+
+        updateCart();
+        renderAllProducts();
+        showToast('Item removed from cart', 'success');
     };
 
+    function applyOrderDiscount() {
+        orderDiscountValue = parseFloat(discountValue.value) || 0;
+        orderDiscountType = discountType.value;
+
+        if (orderDiscountType === 'percent' && orderDiscountValue > 100) {
+            showToast('Percentage discount cannot exceed 100%', 'warning');
+            orderDiscountValue = 100;
+            discountValue.value = 100;
+        }
+
+        updateCart();
+        showToast('Order discount applied!', 'success');
+    }
+
     function clearCart() {
-        if (cart.cart.length === 0) {
-            ui.showToast('Cart is already empty', 'info');
+        if (cart.length === 0) {
+            showToast('Cart is already empty', 'info');
             return;
         }
 
@@ -1521,40 +1076,51 @@ document.addEventListener('DOMContentLoaded', function () {
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'Yes, clear cart'
-        }).then(result => {
-            if (result.isConfirmed) {
-                cart.clear();
-                renderCart();
-                renderSearchResults(lastSearchResults);
-                ui.showToast('Cart cleared', 'success');
+        }).then(res => {
+            if (res.isConfirmed) {
+                cart = [];
+                selectedProducts = [];
+                productQuantityCache = {};
+                updateCart();
+                renderAllProducts();
+                showToast('Cart cleared', 'success');
             }
         });
     }
 
     function holdOrder() {
-        if (cart.cart.length === 0) {
-            ui.showToast('Cart is empty', 'info');
+        if (cart.length === 0) {
+            showToast('Cart is empty', 'info');
             return;
         }
 
         const heldOrders = JSON.parse(localStorage.getItem('heldOrders') || '[]');
         heldOrders.push({
             id: Date.now(),
-            cart: [...cart.cart],
-            customer: elements.customerSelect.value,
-            selectedProducts: [...cart.selectedProducts],
-            cache: {...cart.cache},
-            discount: {...cart.discount},
+            cart: JSON.parse(JSON.stringify(cart)),
+            customer: customerSelect.value,
+            selectedProducts: JSON.parse(JSON.stringify(selectedProducts)),
+            productQuantityCache: JSON.parse(JSON.stringify(productQuantityCache)),
+            discount: {
+                type: orderDiscountType,
+                value: orderDiscountValue
+            },
             time: new Date().toLocaleString(),
             timestamp: Date.now()
         });
 
         localStorage.setItem('heldOrders', JSON.stringify(heldOrders));
-        cart.clear();
-        renderCart();
-        renderSearchResults(lastSearchResults);
 
-        ui.showToast('Order held successfully', 'success');
+        cart = [];
+        selectedProducts = [];
+        productQuantityCache = {};
+        orderDiscountValue = 0;
+        discountValue.value = '0';
+
+        updateCart();
+        renderAllProducts();
+
+        showToast('Order held successfully!', 'success');
     }
 
     function loadHeldOrders() {
@@ -1572,11 +1138,12 @@ document.addEventListener('DOMContentLoaded', function () {
             heldOrders.sort((a, b) => b.timestamp - a.timestamp).forEach(order => {
                 const items = order.cart.length;
                 const total = order.cart.reduce((sum, item) => {
-                    const price = item.discount_value > 0 ?
-                        (item.discount_type === 'percent' ?
-                            item.price * (1 - item.discount_value / 100) :
-                            item.price - item.discount_value) :
-                        item.price;
+                    let price = item.price;
+                    if (item.discount_value > 0) {
+                        price = item.discount_type === 'percent'
+                            ? item.price * (1 - item.discount_value / 100)
+                            : item.price - item.discount_value;
+                    }
                     return sum + (item.qty * price);
                 }, 0);
 
@@ -1588,12 +1155,8 @@ document.addEventListener('DOMContentLoaded', function () {
                                 <p class="mb-1 text-muted">${items} item${items > 1 ? 's' : ''} - ₦${total.toFixed(2)}</p>
                             </div>
                             <div class="btn-group">
-                                <button class="btn btn-sm btn-outline-primary load-order-btn"
-                                        data-order-id="${order.id}">
-                                    Load
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger remove-order-btn"
-                                        data-order-id="${order.id}">
+                                <button class="btn btn-sm btn-outline-primary load-order-btn" data-order-id="${order.id}">Load</button>
+                                <button class="btn btn-sm btn-outline-danger remove-order-btn" data-order-id="${order.id}">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </div>
@@ -1606,328 +1169,149 @@ document.addEventListener('DOMContentLoaded', function () {
             list.innerHTML = html;
         }
 
-        ui.modals.loadOrder.show();
+        new bootstrap.Modal(document.getElementById('loadOrderModal')).show();
     }
 
     function loadOrderFromHeld(order) {
-        cart.cart = [...order.cart];
-        cart.selectedProducts = [...order.selectedProducts];
-        cart.cache = {...order.cache};
-        cart.discount = {...order.discount};
+        cart = JSON.parse(JSON.stringify(order.cart));
+        selectedProducts = order.selectedProducts ? JSON.parse(JSON.stringify(order.selectedProducts)) : [];
+        productQuantityCache = order.productQuantityCache ? JSON.parse(JSON.stringify(order.productQuantityCache)) : {};
 
         if (order.customer) {
-            elements.customerSelect.value = order.customer;
+            customerSelect.value = order.customer;
         }
 
-        renderCart();
-        renderSearchResults(lastSearchResults);
-        ui.modals.loadOrder.hide();
-
-        ui.showToast('Order loaded successfully', 'success');
-    }
-
-    function validateDiscount() {
-        const value = parseFloat(elements.discountValue.value) || 0;
-
-        if (elements.discountType.value === 'percent' && value > 100) {
-            elements.discountValue.value = 100;
-            cart.discount.value = 100;
-        } else {
-            cart.discount.value = value;
+        if (order.discount) {
+            orderDiscountType = order.discount.type;
+            orderDiscountValue = order.discount.value;
+            discountType.value = order.discount.type;
+            discountValue.value = order.discount.value;
         }
+
+        updateCart();
+        renderAllProducts();
+
+        // Close modal
+        bootstrap.Modal.getInstance(document.getElementById('loadOrderModal')).hide();
+        showToast('Order loaded successfully!', 'success');
     }
 
-    function applyOrderDiscount() {
-        cart.discount.type = elements.discountType.value;
-        cart.discount.value = parseFloat(elements.discountValue.value) || 0;
-
-        updateTotals();
-        cart.saveState();
-
-        ui.showToast(
-            `Discount applied: ${cart.discount.value}${cart.discount.type === 'percent' ? '%' : '₦'}`,
-            'success'
-        );
-    }
-
-    function applyItemDiscount() {
-        if (currentItemIndex === null || !cart.cart[currentItemIndex]) return;
-
-        const value = parseFloat(document.getElementById('itemDiscountValue').value) || 0;
-        const type = document.getElementById('itemDiscountType').value;
-
-        if (type === 'percent' && value > 100) {
-            ui.showToast('Percentage cannot exceed 100%', 'warning');
+    function completeOrder() {
+        if (cart.length === 0) {
+            showToast('Cart is empty', 'warning');
             return;
         }
 
-        cart.updateItem(currentItemIndex, {
-            discount_type: type,
-            discount_value: value
-        });
+        const payment = document.querySelector('input[name="payment"]:checked').value;
+        const customerId = customerSelect.value || null;
 
-        ui.modals.itemDiscount.hide();
-        renderCart();
+        const items = cart.map(item => ({
+            product_id: item.product_id,
+            qty: parseInt(item.qty),
+            unit_id: parseInt(item.unit_id || 1),
+            sale_price: parseFloat(item.price),
+            discount_type: item.discount_type || null,
+            discount_value: item.discount_value || 0
+        }));
 
-        ui.showToast(
-            `Item discount applied: ${value}${type === 'percent' ? '%' : '₦'}`,
-            'success'
-        );
-    }
+        const discount = window.currentDiscount || { type: 'percent', value: 0, amount: 0 };
 
-    async function completeOrder() {
-        // Validate cart
-        const errors = cart.validate();
-        if (errors.length > 0) {
-            Swal.fire({
-                title: 'Cart Issues',
-                html: errors.join('<br>'),
-                icon: 'error'
-            });
-            return;
-        }
-
-        // Get payment method
-        const paymentMethod = document.querySelector('input[name="payment"]:checked').value;
-        const customerId = elements.customerSelect.value || null;
-
-        // Prepare order data
-        const orderData = cart.getOrderData(customerId, paymentMethod);
-
-        // Check offline mode
-        if (isOfflineMode || !navigator.onLine) {
-            saveOrderOffline(orderData);
-            return;
-        }
-
-        // Process online order
-        await processOnlineOrder(orderData);
-    }
-
-    async function processOnlineOrder(orderData) {
         Swal.fire({
             title: 'Processing Order...',
             allowOutsideClick: false,
             didOpen: () => Swal.showLoading()
         });
 
-        try {
-            const response = await axios.post('{{ route("pos.order.save") }}', orderData);
-
+        axios.post('{{ route("pos.order.save") }}', {
+            items,
+            payment_method: payment,
+            customer_id: customerId,
+            discount_type: discount.type,
+            discount_value: discount.value,
+            discount_amount: discount.amount,
+            _token: '{{ csrf_token() }}'
+        })
+        .then(res => {
             Swal.close();
-
-            if (response.data.success) {
-                await showSuccessModal(response.data);
-                resetAfterOrder();
-            } else {
-                Swal.fire('Error', response.data.message || 'Failed to process order', 'error');
-            }
-        } catch (error) {
-            Swal.close();
-
-            let errorMessage = 'Failed to complete order.';
-            if (error.response?.data?.errors) {
-                errorMessage = Object.values(error.response.data.errors).flat().join('<br>');
-            } else if (error.response?.data?.message) {
-                errorMessage = error.response.data.message;
-            }
-
-            Swal.fire('Error', errorMessage, 'error');
-
-            // Offer offline save
-            if (!navigator.onLine) {
-                saveOrderOffline(orderData);
-            }
-        }
-    }
-
-    function saveOrderOffline(orderData) {
-        Swal.fire({
-            title: 'Save Order Offline?',
-            text: 'You are offline. The order will be saved locally and synced when you are back online.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Save Offline',
-            cancelButtonText: 'Cancel'
-        }).then(result => {
-            if (result.isConfirmed) {
-                const orderId = offline.saveOrder(orderData);
-                resetAfterOrder();
-
+            if (res.data.success) {
                 Swal.fire({
-                    title: 'Saved Offline!',
-                    html: `Order saved locally. It will sync when you're back online.<br><br>
-                           <small>Order ID: ${orderId}</small>`,
-                    icon: 'success'
-                });
-            }
-        });
-    }
-
-    async function showSuccessModal(responseData) {
-        const result = await Swal.fire({
-            title: 'Success!',
-            html: `
-                <div class="text-center">
-                    <i class="bi bi-check-circle text-success display-1 mb-3"></i>
-                    <h4>Order #${responseData.order_id} Completed!</h4>
-                    <p class="fs-3">Total: ₦${parseFloat(responseData.total).toFixed(2)}</p>
-                    <div class="mt-4">
-                        <p class="text-muted">Payment Method: ${responseData.payment_method}</p>
-                    </div>
-                </div>
-            `,
-            icon: 'success',
-            showCancelButton: true,
-            confirmButtonText: 'Print Receipt',
-            cancelButtonText: 'New Order',
-            buttonsStyling: false,
-            customClass: {
-                confirmButton: 'btn btn-success btn-lg me-2',
-                cancelButton: 'btn btn-outline-secondary btn-lg'
-            }
-        });
-
-        if (result.isConfirmed) {
-            printReceipt(responseData.order_id);
-        }
-    }
-
-    function resetAfterOrder() {
-        cart.clear();
-        elements.customerSelect.value = '';
-        elements.discountValue.value = '0';
-        cart.discount = { type: 'percent', value: 0, amount: 0 };
-        updateTotals();
-        renderSearchResults([]);
-
-        elements.input.value = '';
-        elements.input.focus();
-        elements.input.select();
-    }
-
-    function printReceipt(orderId) {
-        const printWindow = window.open(`/pos/receipt/${orderId}?print=true`, '_blank', 'noopener,noreferrer');
-
-        if (printWindow) {
-            printWindow.onload = function() {
-                printWindow.focus();
-
-                // Add print-specific styles
-                const style = printWindow.document.createElement('style');
-                style.textContent = `
-                    @media print {
-                        body { font-size: 12pt; line-height: 1.4; }
-                        .no-print { display: none !important; }
-                        .receipt-header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
-                        .receipt-footer { margin-top: 20px; border-top: 1px dashed #000; padding-top: 10px; font-size: 10pt; }
-                        .receipt-item { border-bottom: 1px dashed #ccc; padding: 5px 0; }
-                        .text-right { text-align: right; }
-                        .text-center { text-align: center; }
-                        .fw-bold { font-weight: bold; }
-                        .mt-3 { margin-top: 15px; }
-                        .mb-3 { margin-bottom: 15px; }
-                        .pt-3 { padding-top: 15px; }
+                    title: 'Success!',
+                    html: `<div class="text-center">
+                        <i class="bi bi-check-circle text-success display-1 mb-3"></i>
+                        <h4>Order #${res.data.order_id} Completed!</h4>
+                        <p class="fs-3">Total: ₦${parseFloat(res.data.total).toFixed(2)}</p>
+                    </div>`,
+                    icon: 'success',
+                    showCancelButton: true,
+                    confirmButtonText: 'Print Receipt',
+                    cancelButtonText: 'New Order'
+                }).then(r => {
+                    if (r.isConfirmed) {
+                        // Open print window
+                        const printWindow = window.open(`/pos/receipt/${res.data.order_id}`, '_blank');
+                        if (printWindow) {
+                            printWindow.focus();
+                        }
                     }
-                    @page { margin: 0.5cm; }
-                `;
-                printWindow.document.head.appendChild(style);
 
-                // Auto-print after a short delay
-                setTimeout(() => {
-                    printWindow.print();
-                    printWindow.onafterprint = () => {
-                        setTimeout(() => printWindow.close(), 500);
-                    };
-                }, 500);
-            };
-        }
-    }
+                    // Reset cart
+                    cart = [];
+                    selectedProducts = [];
+                    productQuantityCache = {};
+                    orderDiscountValue = 0;
+                    discountValue.value = '0';
 
-    async function saveQuickCustomer() {
-        const firstName = document.getElementById('firstName').value.trim();
-        const lastName = document.getElementById('lastName').value.trim();
-        const phoneNumber = document.getElementById('phoneNumber').value.trim();
-        const email = document.getElementById('email').value.trim();
+                    updateCart();
+                    renderAllProducts();
 
-        if (!firstName || !lastName) {
-            ui.showToast('First name and last name are required', 'warning');
-            return;
-        }
-
-        try {
-            const response = await axios.post('{{ route("customers.quick") }}', {
-                first_name: firstName,
-                last_name: lastName,
-                phone_number: phoneNumber,
-                email: email,
-                _token: '{{ csrf_token() }}'
-            });
-
-            if (response.data.success) {
-                // Add to dropdown
-                const option = document.createElement('option');
-                option.value = response.data.customer.id;
-                option.textContent = `${firstName} ${lastName}${phoneNumber ? ` - ${phoneNumber}` : ''}`;
-                elements.customerSelect.appendChild(option);
-
-                // Select the new customer
-                elements.customerSelect.value = response.data.customer.id;
-
-                // Update count
-                const count = parseInt(document.getElementById('customerCount').textContent) + 1;
-                document.getElementById('customerCount').textContent = count;
-
-                // Close modal and reset form
-                ui.modals.quickCustomer.hide();
-                document.getElementById('quickCustomerForm').reset();
-
-                ui.showToast('Customer added successfully', 'success');
+                    input.focus();
+                    input.select();
+                });
+            } else {
+                Swal.fire('Error', res.data.message || 'Failed to process order', 'error');
             }
-        } catch (error) {
-            ui.showToast('Failed to add customer', 'error');
-        }
-    }
-
-    function toggleOfflineMode() {
-        isOfflineMode = elements.offlineModeToggle.checked;
-
-        if (isOfflineMode) {
-            ui.showToast('Offline mode enabled. Orders will be saved locally.', 'warning');
-        } else {
-            ui.showToast('Online mode enabled', 'success');
-        }
-    }
-
-    function syncOfflineOrders() {
-        ui.showToast('Syncing offline orders...', 'info');
-        offline.attemptSync().then(() => {
-            ui.showToast('Sync completed', 'success');
+        })
+        .catch(err => {
+            Swal.close();
+            let msg = 'Failed to complete order.';
+            if (err.response && err.response.data.errors) {
+                msg = Object.values(err.response.data.errors).flat().join('<br>');
+            } else if (err.response && err.response.data.message) {
+                msg = err.response.data.message;
+            }
+            Swal.fire('Error', msg, 'error');
         });
     }
 
-    function lazyLoadImages() {
-        const images = document.querySelectorAll('img[data-src]');
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const img = entry.target;
-                    img.src = img.dataset.src;
-                    img.removeAttribute('data-src');
-                    observer.unobserve(img);
-                }
-            });
+    function showToast(message, type = 'success', duration = 2000) {
+        const toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: duration,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.onmouseenter = Swal.stopTimer;
+                toast.onmouseleave = Swal.resumeTimer;
+            }
         });
-        images.forEach(img => observer.observe(img));
+
+        toast.fire({
+            icon: type,
+            title: message
+        });
     }
 
-    function autoSaveCart() {
-        setInterval(() => {
-            if (cart.cart.length > 0) {
-                cart.saveState();
-            }
-        }, 30000); // Save every 30 seconds
+    function debounce(func, delay) {
+        let timeout;
+        return function executedFunction(...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), delay);
+        };
     }
+
+    // Initial render
+    updateCart();
 });
 </script>
 
