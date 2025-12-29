@@ -626,35 +626,38 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    function openQuantityModal(button) {
-        try {
-            const p = JSON.parse(button.dataset.product.replace(/&apos;/g, "'"));
-            const productId = button.dataset.productId;
-            currentProduct = p;
+function openQuantityModal(button) {
+    try {
+        // FIXED: Correctly handle escaped single quotes
+        let productStr = button.dataset.product.replace(/&apos;/g, "'");
+        const p = JSON.parse(productStr);
+        const productId = button.dataset.productId;
+        currentProduct = p;
 
-            const cartItem = cart.find(i => i.product_id === productId);
-            const cachedQty = productQuantityCache[productId] || 1;
-            const previousQty = cartItem ? cartItem.qty : cachedQty;
+        const cartItem = cart.find(i => i.product_id === productId);
+        const cachedQty = productQuantityCache[productId] || 1;
+        const previousQty = cartItem ? cartItem.qty : cachedQty;
 
-            modalProductLabel.textContent = p.title;
-            const price = p.sale_price || p.price;
-            modalProductPrice.textContent = `₦${parseFloat(price).toFixed(2)}`;
-            modalProductStock.textContent = `Stock: ${p.stock}`;
-            modalProductUnit.textContent = p.primary_unit || 'Unit';
+        modalProductLabel.textContent = p.title;
+        const price = p.sale_price || p.price;
+        modalProductPrice.textContent = `₦${parseFloat(price).toFixed(2)}`;
+        modalProductStock.textContent = `Stock: ${p.stock}`;
+        modalProductUnit.textContent = p.primary_unit || 'Unit';
 
-            modalQty.value = previousQty;
-            previousQtyText.textContent = cartItem ? `In cart: ${previousQty}` : `Previous: ${previousQty}`;
-            previousQtyText.className = cartItem ? 'text-success fw-semibold' : 'text-muted';
+        modalQty.value = previousQty;
+        previousQtyText.textContent = cartItem ? `In cart: ${previousQty}` : `Previous: ${previousQty}`;
+        previousQtyText.className = cartItem ? 'text-success fw-semibold' : 'text-muted';
 
-            updateTotalPrice();
-            removeFromCartBtn.style.display = cartItem ? 'inline-block' : 'none';
+        updateTotalPrice();
+        removeFromCartBtn.style.display = cartItem ? 'inline-block' : 'none';
 
-            quantityModalInstance = new bootstrap.Modal(quantityModal);
-            quantityModalInstance.show();
-        } catch (e) {
-            console.error(e);
-        }
+        quantityModalInstance = new bootstrap.Modal(quantityModal);
+        quantityModalInstance.show();
+    } catch (e) {
+        console.error('Failed to open quantity modal', e);
+        Swal.fire('Error', 'Failed to load product. Please try again.', 'error');
     }
+}
 
     function updateTotalPrice() {
         if (!currentProduct) return;
