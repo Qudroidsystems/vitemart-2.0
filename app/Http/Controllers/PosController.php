@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\Unit;
 use App\Models\Stock;
 use App\Models\StockLocation;
+use App\Models\OrderDiscount;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -49,8 +50,6 @@ class PosController extends Controller
             ->get()
             ->map(function($product) {
                 $primaryUnit = $product->units->first();
-                $currentStock = $product->current_stock;
-
                 return [
                     'id' => $product->id,
                     'title' => $product->title,
@@ -58,11 +57,10 @@ class PosController extends Controller
                     'barcode' => $product->barcode,
                     'price' => $product->price,
                     'sale_price' => $product->sale_price ?? $product->price,
-                    'stock' => $currentStock,
+                    'stock' => $product->current_stock,
                     'thumbnail' => $product->thumbnail ? asset('storage/' . $product->thumbnail) : null,
                     'primary_unit' => $primaryUnit ? $primaryUnit->name : 'Unit',
                     'primary_unit_id' => $primaryUnit ? $primaryUnit->id : null,
-                    'track_stock' => true,
                 ];
             });
 
@@ -70,7 +68,7 @@ class PosController extends Controller
     }
 
     /**
-     * Save POS order with per-item and order-level discounts
+     * Save POS order with per-item and order-level discounts + history tracking
      */
     public function savePosOrder(Request $request)
     {
@@ -101,39 +99,31 @@ class PosController extends Controller
                 $orderItems = [];
                 $orderId = 'POS-' . now()->format('Ymd-His') . '-' . Str::random(4);
 
-                // Get or create default stock location
+                // FIXED: Safe default location creation
                 $defaultLocation = StockLocation::updateOrCreate(
                     ['code' => 'MAIN'],
                     [
-                        'name' => 'Main Store',
+                        'name'       => 'Main Store',
                         'is_default' => true,
-                        'is_active' => true,
+                        'is_active'  => true,
                     ]
                 );
 
-                // Process each item
                 foreach ($request->items as $item) {
                     $product = Product::with('units')->findOrFail($item['product_id']);
                     $selectedUnit = Unit::findOrFail($item['unit_id']);
 
-                    // Calculate how many primary pieces to deduct
                     $piecesToDeduct = $item['qty'];
                     $productUnitPivot = $product->units->where('id', $selectedUnit->id)->first();
-
                     if ($productUnitPivot && $productUnitPivot->pivot->quantity_per_unit > 0) {
                         $piecesToDeduct = $item['qty'] * $productUnitPivot->pivot->quantity_per_unit;
                     }
 
-                    // Check stock
-                    $currentStock = $product->current_stock;
-                    if ($currentStock < $piecesToDeduct) {
-                        throw new \Exception("Insufficient stock for {$product->title}. Available: {$currentStock} primary units, Required: {$piecesToDeduct}");
+                    if ($product->current_stock < $piecesToDeduct) {
+                        throw new \Exception("Insufficient stock for {$product->title}. Available: {$product->current_stock}");
                     }
 
-                    // Original sale price
                     $salePrice = $item['sale_price'];
-
-                    // Per-item discount
                     $discountedPrice = $salePrice;
                     $perItemDiscountAmount = 0;
 
@@ -146,16 +136,14 @@ class PosController extends Controller
                         $discountedPrice = max(0, $salePrice - $perItemDiscountAmount);
                     }
 
-                    // Line total after per-item discount
                     $lineTotal = $discountedPrice * $item['qty'];
                     $subtotal += $lineTotal;
 
-                    // Prepare order item data
                     $orderItems[] = [
                         'product_id'       => $product->id,
                         'quantity'         => $item['qty'],
                         'unit_id'          => $item['unit_id'],
-                        'unit_price'       => $salePrice, // Original price
+                        'unit_price'       => $salePrice,
                         'discount_type'    => $item['discount_type'] ?? null,
                         'discount_value'   => $item['discount_value'] ?? 0,
                         'discounted_price' => $discountedPrice,
@@ -164,9 +152,9 @@ class PosController extends Controller
                         'unit_name'        => $selectedUnit->name ?? null,
                     ];
 
-                    // Stock movement: deduct from inventory
-                    $previousQuantity = $product->stock;
-                    $newQuantity = max(0, $previousQuantity - $piecesToDeduct);
+                    // Deduct stock
+                    $previous = $product->stock;
+                    $new = max(0, $previous - $piecesToDeduct);
 
                     Stock::create([
                         'product_id'        => $product->id,
@@ -174,32 +162,36 @@ class PosController extends Controller
                         'user_id'           => auth()->id(),
                         'type'              => Stock::TYPE_OUT,
                         'quantity'          => $piecesToDeduct,
-                        'previous_quantity' => $previousQuantity,
-                        'new_quantity'      => $newQuantity,
+                        'previous_quantity' => $previous,
+                        'new_quantity'      => $new,
                         'reference_type'    => Stock::REFERENCE_SALE,
                         'reference_number'  => $orderId,
-                        'notes'             => "POS Sale: Sold {$item['qty']} {$selectedUnit->name}(s) of {$product->title}",
+                        'notes'             => "POS Sale: {$item['qty']} {$selectedUnit->name} of {$product->title}",
                         'transaction_date'  => now(),
                     ]);
 
                     $product->decrement('stock', $piecesToDeduct);
                 }
 
-                // Apply order-level discount (after per-item discounts)
+                // Order-level discount
                 $orderDiscountAmount = 0;
+                $orderDiscountType = null;
+                $orderDiscountValue = 0;
+
                 if ($request->filled('discount_value') && $request->filled('discount_type')) {
-                    if ($request->discount_type === 'percent') {
-                        $orderDiscountAmount = ($subtotal * $request->discount_value) / 100;
+                    $orderDiscountType = $request->discount_type;
+                    $orderDiscountValue = $request->discount_value;
+                    if ($orderDiscountType === 'percent') {
+                        $orderDiscountAmount = ($subtotal * $orderDiscountValue) / 100;
                     } else {
-                        $orderDiscountAmount = $request->discount_value;
+                        $orderDiscountAmount = $orderDiscountValue;
                     }
                     $orderDiscountAmount = min($orderDiscountAmount, $subtotal);
                 }
 
                 $grandTotal = $subtotal - $orderDiscountAmount;
 
-                // Create order
-                $orderData = [
+                $order = Order::create([
                     'id'              => $orderId,
                     'customer_id'     => $request->customer_id,
                     'user_id'         => auth()->id(),
@@ -208,26 +200,49 @@ class PosController extends Controller
                     'total_amount'    => $grandTotal,
                     'payment_method'  => $request->payment_method,
                     'order_date'      => now(),
-                    'notes'           => 'POS Sale' . ($orderDiscountAmount > 0 ? " (Order Discount: ₦{$orderDiscountAmount})" : ''),
-                ];
+                    'notes'           => 'POS Sale',
+                    'status'          => 'completed',
+                    'payment_status'  => 'paid',
+                ]);
 
-                if (\Schema::hasColumn('orders', 'status')) {
-                    $orderData['status'] = 'completed';
-                }
-                if (\Schema::hasColumn('orders', 'payment_status')) {
-                    $orderData['payment_status'] = 'paid';
-                }
-
-                $order = Order::create($orderData);
-
-                // Save all order items
                 $order->items()->createMany($orderItems);
 
+                // === DISCOUNT HISTORY TRACKING ===
+                if ($orderDiscountAmount > 0) {
+                    OrderDiscount::create([
+                        'order_id'       => $order->id,
+                        'order_item_id'  => null,
+                        'type'           => 'order',
+                        'discount_type'  => $orderDiscountType,
+                        'discount_value' => $orderDiscountValue,
+                        'amount'         => $orderDiscountAmount,
+                        'applied_by'     => auth()->id(),
+                        'applied_at'     => now(),
+                    ]);
+                }
+
+                foreach ($order->items as $orderItem) {
+                    if ($orderItem->discount_value > 0) {
+                        $itemDiscountAmount = ($orderItem->unit_price - $orderItem->discounted_price) * $orderItem->quantity;
+
+                        OrderDiscount::create([
+                            'order_id'       => $order->id,
+                            'order_item_id'  => $orderItem->id,
+                            'type'           => 'item',
+                            'discount_type'  => $orderItem->discount_type,
+                            'discount_value' => $orderItem->discount_value,
+                            'amount'         => $itemDiscountAmount,
+                            'applied_by'     => auth()->id(),
+                            'applied_at'     => now(),
+                        ]);
+                    }
+                }
+
                 return response()->json([
-                    'success'   => true,
-                    'message'   => 'Order completed successfully!',
-                    'order_id'  => $orderId,
-                    'total'     => $grandTotal,
+                    'success'  => true,
+                    'message'  => 'Order completed successfully!',
+                    'order_id' => $orderId,
+                    'total'    => $grandTotal,
                 ]);
             });
         } catch (\Exception $e) {
@@ -256,7 +271,6 @@ class PosController extends Controller
         }
 
         $primaryUnit = $product->units->first();
-        $currentStock = $product->current_stock;
 
         return response()->json([
             'success' => true,
@@ -267,11 +281,10 @@ class PosController extends Controller
                 'barcode' => $product->barcode,
                 'price' => $product->price,
                 'sale_price' => $product->sale_price ?? $product->price,
-                'stock' => $currentStock,
+                'stock' => $product->current_stock,
                 'thumbnail' => $product->thumbnail ? asset('storage/' . $product->thumbnail) : null,
                 'primary_unit' => $primaryUnit ? $primaryUnit->name : 'Unit',
                 'primary_unit_id' => $primaryUnit ? $primaryUnit->id : null,
-                'track_stock' => true,
             ]
         ]);
     }
@@ -332,11 +345,10 @@ class PosController extends Controller
     public function getProductStock($productId)
     {
         $product = Product::findOrFail($productId);
-        $currentStock = $product->current_stock;
 
         return response()->json([
             'success' => true,
-            'stock' => $currentStock,
+            'stock' => $product->current_stock,
             'product_name' => $product->title
         ]);
     }
@@ -353,9 +365,9 @@ class PosController extends Controller
                 $defaultLocation = StockLocation::updateOrCreate(
                     ['code' => 'MAIN'],
                     [
-                        'name' => 'Main Store',
+                        'name'       => 'Main Store',
                         'is_default' => true,
-                        'is_active' => true,
+                        'is_active'  => true,
                     ]
                 );
 
