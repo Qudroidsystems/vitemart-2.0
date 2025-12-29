@@ -481,13 +481,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // State management
     let cart = [];
-    let allSearchedProducts = []; // Store ALL searched products
+    let allSearchedProducts = []; // Store ALL searched products in order of selection
     let currentSearchQuery = '';
     let productQuantityCache = {};
     let currentProduct = null;
     let currentItemIndex = null;
     let orderDiscountType = 'percent';
     let orderDiscountValue = 0;
+    let printWindow = null;
+    let printCheckInterval = null;
 
     input.focus();
 
@@ -566,6 +568,17 @@ document.addEventListener('DOMContentLoaded', function () {
             e.preventDefault();
             confirmAddBtn.click();
         }
+    });
+
+    // Discount field focus
+    discountValue.addEventListener('click', function() {
+        this.focus();
+        this.select();
+    });
+
+    discountType.addEventListener('click', function() {
+        discountValue.focus();
+        discountValue.select();
     });
 
     // Button click handlers
@@ -701,14 +714,79 @@ document.addEventListener('DOMContentLoaded', function () {
         const isBackdrop = e.target.classList.contains('modal-backdrop');
         const isSearch = e.target === input || input.contains(e.target);
         const isCustomer = e.target === customerSelect || customerSelect.contains(e.target);
+        const isDiscount = e.target === discountValue || discountValue.contains(e.target) ||
+                          e.target === discountType || discountType.contains(e.target);
 
-        if (!isModalOpen && !isModalElement && !isBackdrop && !isSearch && !isCustomer) {
+        if (!isModalOpen && !isModalElement && !isBackdrop && !isSearch && !isCustomer && !isDiscount) {
             setTimeout(() => {
                 input.focus();
                 input.select();
             }, 50);
         }
     });
+
+    // ============================================
+    // CUSTOMER SEARCH FUNCTIONALITY
+    // ============================================
+    function initializeCustomerSearch() {
+        const customerSelectElement = document.getElementById('customerSelect');
+        const originalOptions = Array.from(customerSelectElement.options);
+
+        // Add search functionality to customer dropdown
+        const customerSearchContainer = document.createElement('div');
+        customerSearchContainer.className = 'mb-2';
+        customerSearchContainer.innerHTML = `
+            <input type="text"
+                   id="customerSearchInput"
+                   class="form-control form-control-sm"
+                   placeholder="Search customers...">
+        `;
+
+        customerSelectElement.parentNode.insertBefore(customerSearchContainer, customerSelectElement);
+
+        const customerSearchInput = document.getElementById('customerSearchInput');
+
+        customerSearchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+
+            if (searchTerm.length === 0) {
+                // Restore all options
+                customerSelectElement.innerHTML = '';
+                originalOptions.forEach(option => {
+                    customerSelectElement.appendChild(option.cloneNode(true));
+                });
+                return;
+            }
+
+            // Filter options
+            const filteredOptions = originalOptions.filter(option => {
+                if (option.value === '') return true; // Always show "Walk-in Customer"
+                return option.text.toLowerCase().includes(searchTerm);
+            });
+
+            // Update dropdown
+            customerSelectElement.innerHTML = '';
+            filteredOptions.forEach(option => {
+                customerSelectElement.appendChild(option.cloneNode(true));
+            });
+
+            // Show count
+            const visibleCount = filteredOptions.length - 1; // Exclude "Walk-in Customer"
+            document.getElementById('customerCount').textContent = visibleCount;
+        });
+
+        // Add keyboard shortcut to focus customer search
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'k') {
+                e.preventDefault();
+                customerSearchInput.focus();
+                customerSearchInput.select();
+            }
+        });
+    }
+
+    // Initialize customer search on page load
+    initializeCustomerSearch();
 
     // ============================================
     // FUNCTIONS
@@ -741,7 +819,10 @@ document.addEventListener('DOMContentLoaded', function () {
         resultsBody.innerHTML = '';
         emptySearchRow.style.display = 'none';
 
-        allSearchedProducts.forEach(product => {
+        // Render products in reverse order (latest on top)
+        const sortedProducts = [...allSearchedProducts].reverse();
+
+        sortedProducts.forEach(product => {
             renderProductRow(product);
         });
     }
@@ -811,8 +892,15 @@ document.addEventListener('DOMContentLoaded', function () {
             // Merge new results with existing ones (avoid duplicates)
             const newProducts = res.data || [];
             newProducts.forEach(newProduct => {
-                if (!allSearchedProducts.some(p => p.id === newProduct.id)) {
+                // Check if product already exists in our list
+                const existingIndex = allSearchedProducts.findIndex(p => p.id === newProduct.id);
+
+                if (existingIndex === -1) {
+                    // Add new product to the END of array
                     allSearchedProducts.push(newProduct);
+                } else {
+                    // Update existing product (in case stock changed)
+                    allSearchedProducts[existingIndex] = newProduct;
                 }
             });
 
@@ -852,6 +940,13 @@ document.addEventListener('DOMContentLoaded', function () {
             const product = JSON.parse(button.dataset.product);
             const productId = button.dataset.productId;
             currentProduct = product;
+
+            // Move this product to the end of the array (latest)
+            const productIndex = allSearchedProducts.findIndex(p => p.id === productId);
+            if (productIndex !== -1) {
+                const [movedProduct] = allSearchedProducts.splice(productIndex, 1);
+                allSearchedProducts.push(movedProduct);
+            }
 
             const cartItem = cart.find(i => i.product_id === productId);
             const cachedQty = productQuantityCache[productId] || 1;
@@ -915,7 +1010,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const price = p.sale_price || p.price;
         let unitId = p.primary_unit_id || 1;
 
-        // Make sure product is in searched list
+        // Make sure product is in searched list (add if not)
         if (!allSearchedProducts.some(sp => sp.id === p.id)) {
             allSearchedProducts.push({...p});
         }
@@ -1277,20 +1372,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 }).then(r => {
                     if (r.isConfirmed) {
                         // Open print window
-                        const printWindow = window.open(`/pos/receipt/${res.data.order_id}`, '_blank');
+                        printWindow = window.open(`/pos/receipt/${res.data.order_id}`, '_blank');
                         if (printWindow) {
-                            printWindow.onload = function() {
-                                printWindow.focus();
-                                // Wait a bit for PDF to load, then auto-print
-                                setTimeout(() => {
-                                    printWindow.print();
-                                    printWindow.onafterprint = function() {
-                                        // Clear everything after print
-                                        resetAfterOrder();
-                                        printWindow.close();
-                                    };
-                                }, 1000);
-                            };
+                            // Start monitoring the print window
+                            startMonitoringPrintWindow();
                         }
                     } else {
                         // Clear everything if "New Order" is clicked
@@ -1311,6 +1396,21 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             Swal.fire('Error', msg, 'error');
         });
+    }
+
+    function startMonitoringPrintWindow() {
+        if (printCheckInterval) {
+            clearInterval(printCheckInterval);
+        }
+
+        printCheckInterval = setInterval(function() {
+            if (printWindow && printWindow.closed) {
+                // Print window was closed
+                clearInterval(printCheckInterval);
+                printCheckInterval = null;
+                resetAfterOrder();
+            }
+        }, 500); // Check every 500ms
     }
 
     function resetAfterOrder() {
@@ -1364,6 +1464,45 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 <style>
+    /* Customer Search Styling */
+#customerSearchInput {
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+}
+
+#customerSearchInput:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    outline: none;
+}
+
+/* Discount field focus styling */
+#discountValue:focus, #discountType:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    outline: none;
+}
+
+/* Highlight latest added product */
+tr.selected-product-row {
+    background-color: rgba(25, 135, 84, 0.1) !important;
+    border-left: 4px solid #198754;
+    transition: all 0.3s ease;
+}
+
+/* Remove button styling */
+.remove-from-search-btn {
+    transition: all 0.2s ease;
+}
+
+.remove-from-search-btn:hover {
+    transform: scale(1.05);
+    background-color: #dc3545 !important;
+    color: white !important;
+}
 /* Enhanced animations and transitions */
 .modal.fade .modal-content {
     transform: scale(0.95);
