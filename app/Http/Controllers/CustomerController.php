@@ -6,6 +6,8 @@ use App\Models\Customer;
 use Illuminate\Http\Request;
 use App\Exports\CustomersExport;
 use Maatwebsite\Excel\Facades\Excel;
+  use Illuminate\Support\Facades\DB;
+use Illuminate\Http\JsonResponse;
 
 class CustomerController extends Controller
 {
@@ -140,6 +142,70 @@ class CustomerController extends Controller
         return redirect()->route('customers.index')
             ->with('success', 'Customer updated successfully!');
     }
+
+
+
+/**
+ * Quick store customer from POS
+ */
+public function quickStore(Request $request): JsonResponse
+{
+    // Validate the request
+    $validated = $request->validate([
+        'first_name' => 'required|string|max:100',
+        'last_name' => 'required|string|max:100',
+        'phone_number' => 'nullable|string|max:20|unique:customers,phone_number',
+        'email' => 'nullable|email|max:100|unique:customers,email',
+    ]);
+
+    try {
+        DB::beginTransaction();
+
+        // Generate a customer code
+        $customerCode = 'CUST-' . strtoupper(uniqid());
+
+        // Create the customer with minimal fields
+        $customer = Customer::create([
+            'first_name' => $validated['first_name'],
+            'last_name' => $validated['last_name'],
+            'phone_number' => $validated['phone_number'] ?? null,
+            'email' => $validated['email'] ?? null,
+            'customer_type' => 'retail',
+            'status' => 'active',
+            'customer_code' => $customerCode,
+            'created_by' => auth()->id() ?? 1,
+        ]);
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Customer added successfully!',
+            'customer' => [
+                'id' => $customer->id,
+                'name' => $customer->first_name . ' ' . $customer->last_name,
+                'phone_number' => $customer->phone_number,
+                'email' => $customer->email,
+            ]
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+
+        // Check for duplicate entry
+        if (str_contains($e->getMessage(), 'Duplicate entry')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Phone number or email already exists.'
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to add customer: ' . $e->getMessage()
+        ], 500);
+    }
+}
 
     public function destroy(Customer $customer)
     {

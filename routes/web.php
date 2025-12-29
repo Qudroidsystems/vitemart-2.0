@@ -104,6 +104,8 @@ Route::middleware(['auth'])->group(function () {
             // Customer Routes
     Route::resource('customers', CustomerController::class);
     Route::get('/customers/export', [CustomerController::class, 'export'])->name('customers.export');
+    // Add this route (preferably in your web.php routes)
+    Route::post('/customers/quick', [CustomerController::class, 'quickStore'])->name('customers.quick');
 
     // POS Routes
     Route::get('/pos', [PosController::class, 'index'])->name('pos.index');
