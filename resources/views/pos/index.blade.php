@@ -452,7 +452,7 @@
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-// MAIN POS SCRIPT - CORRECTED VERSION
+// MAIN POS SCRIPT - WITH AUDIO FEATURE
 document.addEventListener('DOMContentLoaded', function () {
     // ============================================
     // INITIALIZATION
@@ -491,37 +491,30 @@ document.addEventListener('DOMContentLoaded', function () {
     let printCheckInterval = null;
     let quantityModal = null;
 
+    // Audio element for thank you sound
+    let thankYouAudio = null;
+
     input.focus();
 
     // ============================================
-    // EVENT LISTENERS - SIMPLIFIED
+    // INITIALIZE MODALS AND AUDIO
     // ============================================
-    input.addEventListener('input', debounce(() => {
-        const q = input.value.trim();
-        currentSearchQuery = q;
-
-        if (q.length >= 2) {
-            searchProducts(q);
-        } else if (q.length === 0) {
-            clearAllUnselectedItems();
-            renderAllSearchedProducts();
-        } else {
-            showEmptySearchState();
-        }
-    }, 300));
-
-    input.addEventListener('keydown', e => {
-        if (e.key === 'Enter') {
-            const q = input.value.trim();
-            if (q) searchProducts(q);
-        }
-    });
-
-    // Initialize modals
-    function initModals() {
+    function initializeApp() {
+        // Initialize quantity modal
         quantityModal = new bootstrap.Modal(document.getElementById('quantityModal'));
 
-        // Quantity Modal Events
+        // Create audio element
+        thankYouAudio = new Audio('/audio/thank-you-sweet-man-235977.mp3');
+        thankYouAudio.preload = 'auto';
+
+        // Set up quantity modal events
+        setupQuantityModal();
+
+        // Initialize customer search
+        initializeCustomerSearch();
+    }
+
+    function setupQuantityModal() {
         document.getElementById('quantityModal').addEventListener('show.bs.modal', updateModalTotal);
 
         document.getElementById('quantityModal').addEventListener('shown.bs.modal', () => {
@@ -576,8 +569,29 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Initialize modals
-    initModals();
+    // ============================================
+    // EVENT LISTENERS
+    // ============================================
+    input.addEventListener('input', debounce(() => {
+        const q = input.value.trim();
+        currentSearchQuery = q;
+
+        if (q.length >= 2) {
+            searchProducts(q);
+        } else if (q.length === 0) {
+            clearAllUnselectedItems();
+            renderAllSearchedProducts();
+        } else {
+            showEmptySearchState();
+        }
+    }, 300));
+
+    input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            const q = input.value.trim();
+            if (q) searchProducts(q);
+        }
+    });
 
     // Button click handlers
     confirmAddBtn.addEventListener('click', addOrUpdateProductInCart);
@@ -640,13 +654,33 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // ============================================
-    // CUSTOMER SEARCH FUNCTIONALITY - FIXED
+    // AUDIO FUNCTIONS
+    // ============================================
+    function playThankYouSound() {
+        if (thankYouAudio) {
+            // Reset audio to start
+            thankYouAudio.currentTime = 0;
+
+            // Play the audio
+            thankYouAudio.play().catch(error => {
+                console.log('Audio play failed:', error);
+                // Show fallback notification
+                showToast('Thank you for your purchase!', 'success', 3000);
+            });
+        } else {
+            // Fallback if audio fails to load
+            showToast('Thank you for your purchase!', 'success', 3000);
+        }
+    }
+
+    // ============================================
+    // CUSTOMER SEARCH FUNCTIONALITY
     // ============================================
     function initializeCustomerSearch() {
         const customerSelectElement = document.getElementById('customerSelect');
         const originalOptions = Array.from(customerSelectElement.options);
 
-        // Create customer search container - ADD IT TO THE RIGHT PLACE
+        // Create customer search container
         const customerContainer = customerSelectElement.closest('.mb-4');
         if (customerContainer) {
             const customerSearchContainer = document.createElement('div');
@@ -713,9 +747,6 @@ document.addEventListener('DOMContentLoaded', function () {
     function updateCustomerCount(count) {
         document.getElementById('customerCount').textContent = count;
     }
-
-    // Initialize customer search on page load
-    initializeCustomerSearch();
 
     // ============================================
     // FUNCTIONS
@@ -1007,7 +1038,7 @@ document.addEventListener('DOMContentLoaded', function () {
         quantityModal.hide();
 
         updateCart();
-        renderAllSearchedProducts(); // Update search table to show added status
+        renderAllSearchedProducts();
         currentProduct = null;
 
         showToast('Product added to cart', 'success');
@@ -1029,7 +1060,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 delete productQuantityCache[id];
                 quantityModal.hide();
                 updateCart();
-                renderAllSearchedProducts(); // Update search table
+                renderAllSearchedProducts();
                 showToast('Product removed from cart', 'success');
             }
         });
@@ -1042,7 +1073,7 @@ document.addEventListener('DOMContentLoaded', function () {
             subtotalEl.textContent = '₦0.00';
             discountEl.textContent = '-₦0.00';
             grandTotalEl.textContent = '₦0.00';
-            renderAllSearchedProducts(); // Update search table to remove "added" status
+            renderAllSearchedProducts();
             return;
         }
 
@@ -1101,14 +1132,13 @@ document.addEventListener('DOMContentLoaded', function () {
             `;
             cartBody.appendChild(row);
 
-            // Add event listener for cart remove button
+            // Add event listeners
             const removeBtn = row.querySelector('.remove-cart-item-btn');
             removeBtn.addEventListener('click', function() {
                 const index = parseInt(this.dataset.index);
                 removeCartItem(index);
             });
 
-            // Add event listener for item discount button
             const discountBtn = row.querySelector('.item-discount-btn');
             discountBtn.addEventListener('click', function() {
                 const productId = this.dataset.productId;
@@ -1123,7 +1153,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 new bootstrap.Modal(document.getElementById('itemDiscountModal')).show();
             });
 
-            // Add event listener for cart quantity button
             const qtyBtn = row.querySelector('.qty-btn-cart');
             qtyBtn.addEventListener('click', function() {
                 openQuantityModal(this);
@@ -1146,7 +1175,6 @@ document.addEventListener('DOMContentLoaded', function () {
         discountEl.textContent = `-₦${orderDiscountAmount.toFixed(2)}`;
         grandTotalEl.textContent = `₦${grandTotal.toFixed(2)}`;
 
-        // Store discount for order submission
         window.currentDiscount = {
             type: orderDiscountType,
             value: orderDiscountValue,
@@ -1346,7 +1374,6 @@ document.addEventListener('DOMContentLoaded', function () {
         updateCart();
         renderAllSearchedProducts();
 
-        // Close modal
         bootstrap.Modal.getInstance(document.getElementById('loadOrderModal')).hide();
         showToast('Order loaded successfully!', 'success');
     }
@@ -1407,14 +1434,15 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }).then(r => {
                     if (r.isConfirmed) {
+                        // Play thank you sound
+                        playThankYouSound();
+
                         // Open print window
                         printWindow = window.open(`/pos/receipt/${res.data.order_id}`, '_blank');
                         if (printWindow) {
-                            // Start monitoring the print window
                             startMonitoringPrintWindow();
                         }
                     } else {
-                        // Clear everything if "New Order" is clicked
                         resetAfterOrder();
                     }
                 });
@@ -1441,7 +1469,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         printCheckInterval = setInterval(function() {
             if (printWindow && printWindow.closed) {
-                // Print window was closed
                 clearInterval(printCheckInterval);
                 printCheckInterval = null;
                 resetAfterOrder();
@@ -1494,7 +1521,8 @@ document.addEventListener('DOMContentLoaded', function () {
         };
     }
 
-    // Initial render
+    // Initialize the application
+    initializeApp();
     updateCart();
 });
 </script>
