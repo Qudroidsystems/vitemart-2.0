@@ -290,7 +290,7 @@
                 <div id="priceInputSection" class="card border-0 bg-light mb-3" style="display: none;">
                     <div class="card-body text-center">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <label class="form-label fw-bold text-dark mb-0">Total Price</label>
+                            <label class="form-label fw-bold text-dark mb-0" id="totalPriceLabel">Total Price</label>
                             <small class="text-muted" id="originalPriceText"></small>
                         </div>
                         <div class="input-group input-group-lg mb-3">
@@ -470,7 +470,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                <button type="button" class="btn btn-primary" id="saveQuickCustomerBtn">Save Customer</button>
+                <button type="button" class="btn btn-primary" id="saveQuickCustomerBtn">Save Customer</button>
             </div>
         </div>
     </div>
@@ -595,11 +595,8 @@ document.addEventListener('DOMContentLoaded', function () {
             qty = parseFloat(qty) || 0;
         }
         if (isUnitMode) {
-            // For units, show appropriate decimal places
-            if (qty >= 1000) return formatNumber(qty, 0);
-            if (qty >= 100) return formatNumber(qty, 1);
-            if (qty >= 10) return formatNumber(qty, 2);
-            return formatNumber(qty, 3);
+            // For units, show only 2 decimal places
+            return formatNumber(qty, 2);
         }
         // For quantity (pieces), no decimals
         return formatNumber(qty, 0);
@@ -702,6 +699,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 modalUnit.focus();
                 modalUnit.select();
                 updatePriceUnitLabel();
+                updateModalLabels();
                 updateModalTotal();
                 updateAmountDisplay();
                 // Check if user has a saved preference
@@ -714,6 +712,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 pricePerUnitInput.disabled = true;
                 modalUnit.value = 1;
                 pricePerUnitInput.value = '';
+                updateModalLabels();
                 updateModalTotal();
                 updateAmountDisplay();
             }
@@ -873,6 +872,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     const unitAmount = parseFloat(modalUnit.value);
                     const totalPrice = unitAmount * originalPricePerUnit;
                     pricePerUnitInput.value = totalPrice.toFixed(2);
+                    updateModalTotal();
+                    updateAmountDisplay();
                     modalUnit.focus();
                     modalUnit.select();
                 } else {
@@ -930,14 +931,25 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    function updateModalLabels() {
+        const totalPriceLabel = document.getElementById('totalPriceLabel');
+        if (currentMeasurementType === 'unit' && selectedUnit) {
+            totalPriceLabel.textContent = `Total Price (per ${selectedUnit.short_name})`;
+        } else {
+            totalPriceLabel.textContent = 'Total Price';
+        }
+    }
+
     function updatePriceUnitLabel() {
         if (selectedUnit) {
             document.getElementById('priceUnitLabel').textContent = selectedUnit.short_name;
             document.getElementById('priceUnitLabel').className = 'text-primary fw-bold';
             document.getElementById('unitDisplay').textContent = selectedUnit.short_name;
+            updateModalLabels();
         } else {
             document.getElementById('priceUnitLabel').textContent = 'Unit';
             document.getElementById('unitDisplay').textContent = 'unit';
+            updateModalLabels();
         }
     }
 
@@ -945,9 +957,16 @@ document.addEventListener('DOMContentLoaded', function () {
         if (currentMeasurementType === 'quantity') {
             const quantity = parseInt(modalQty.value) || 1;
             document.getElementById('amountDisplay').textContent = formatQuantity(quantity);
+            document.getElementById('unitDisplay').textContent = 'unit(s)';
         } else {
             const unitAmount = parseFloat(modalUnit.value) || 1;
-            document.getElementById('amountDisplay').textContent = formatQuantity(unitAmount, true);
+            // Use only 2 decimal places for display
+            document.getElementById('amountDisplay').textContent = formatNumber(unitAmount, 2);
+            if (selectedUnit) {
+                document.getElementById('unitDisplay').textContent = selectedUnit.short_name;
+            } else {
+                document.getElementById('unitDisplay').textContent = 'unit';
+            }
         }
     }
 
@@ -976,6 +995,7 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('originalPriceText').className = 'text-muted fw-semibold';
         }
 
+        updateModalLabels();
         updateModalTotal();
         updateAmountDisplay();
     }
@@ -1005,10 +1025,16 @@ document.addEventListener('DOMContentLoaded', function () {
             const unitAmount = parseFloat(modalUnit.value) || 1;
             pricePerUnitInput.value = (price * unitAmount).toFixed(2);
             originalPricePerUnit = price;
-            document.getElementById('originalPriceText').textContent = `Per ${selectedUnit?.short_name || 'unit'}: ${formatCurrency(price)}`;
+            // This will be updated when unit is selected
+            if (selectedUnit) {
+                document.getElementById('originalPriceText').textContent = `Per ${selectedUnit.short_name}: ${formatCurrency(price)}`;
+            } else {
+                document.getElementById('originalPriceText').textContent = `Per unit: ${formatCurrency(price)}`;
+            }
             document.getElementById('originalPriceText').className = 'text-muted fw-semibold';
         }
 
+        updateModalLabels();
         // Calculate initial display
         updateModalTotal();
         updateAmountDisplay();
@@ -1911,7 +1937,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     <button class="btn btn-sm ${item.is_unit_mode ? 'btn-success' : 'btn-primary'} qty-btn-cart"
                             data-product='${JSON.stringify(item).replace(/'/g, "&apos;")}'
                             data-product-id="${item.product_id}">
-                        ${formatQuantity(item.qty, item.is_unit_mode)} ${displayUnit}
+                        ${formatQuantity(item.qty, true)} ${displayUnit}
                         ${item.is_unit_mode ? '<i class="bi bi-scale ms-1"></i>' : ''}
                     </button>
                 </td>
@@ -2676,6 +2702,20 @@ document.addEventListener('DOMContentLoaded', function () {
 @keyframes slideIn {
     from { transform: translateY(-20px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
+}
+/* Modal title styling */
+#totalPriceLabel {
+    font-size: 1.1rem;
+    color: #0d6efd;
+}
+#totalPriceLabel::after {
+    content: '';
+    display: block;
+    width: 30px;
+    height: 2px;
+    background: linear-gradient(to right, #0d6efd, #20c997);
+    margin-top: 2px;
+    border-radius: 1px;
 }
 /* Focus states */
 #modalQty:focus,
