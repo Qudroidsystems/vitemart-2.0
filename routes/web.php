@@ -99,6 +99,13 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/pos/search', [PosController::class, 'search'])->name('pos.search');
     Route::post('/pos/save-order', [PosController::class, 'savePosOrder'])->name('pos.order.save');
     Route::get('/pos/receipt/{orderId}', [PosController::class, 'receipt'])->name('pos.receipt');
+    // Add this route for product units
+    Route::get('/api/products/{product}/units', [PosController::class, 'getProductUnits'])
+    ->name('api.product.units')
+    ->middleware('auth');
+
+
+
 
 
             // Customer Routes
@@ -106,6 +113,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/customers/export', [CustomerController::class, 'export'])->name('customers.export');
     // Add this route (preferably in your web.php routes)
     Route::post('/customers/quick', [CustomerController::class, 'quickStore'])->name('customers.quick');
+
 
     // POS Routes
     Route::get('/pos', [PosController::class, 'index'])->name('pos.index');

@@ -10,34 +10,34 @@ class Customer extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = [
-        'first_name',
-        'last_name',
-        'email',
-        'phone_number',
-        'phone_number_2',
-        'home_address',
-        'office_address',
-        'gender',
-        'credit_limit',
-        'credit_balance',
-        'outstanding_balance',
-        'customer_type',
-        'status',
-        'loyalty_card_number',
-        'loyalty_points',
-        'date_of_birth',
-        'company_name',
-        'tax_id_number',
-        'contact_person',
-        'notes',
-        'profile_image',
-        'identification_type',
-        'identification_number',
-        'created_by',
-        'updated_by',
-    ];
-
+  // In App\Models\Customer.php
+protected $fillable = [
+    'first_name',
+    'last_name',
+    'email',
+    'phone_number',
+    'phone_number_2',
+    'home_address',
+    'office_address',
+    'gender',
+    'credit_limit',
+    'credit_balance',
+    'outstanding_balance',
+    'customer_type',
+    'status',
+    'loyalty_card_number',
+    'loyalty_points', // Add this line
+    'date_of_birth',
+    'company_name',
+    'tax_id_number',
+    'contact_person',
+    'notes',
+    'profile_image',
+    'identification_type',
+    'identification_number',
+    'created_by',
+    'updated_by',
+];
     protected $casts = [
         'date_of_birth' => 'date',
         'credit_limit' => 'decimal:2',

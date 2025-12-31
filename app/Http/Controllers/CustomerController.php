@@ -89,13 +89,14 @@ class CustomerController extends Controller
             'gender' => 'required|in:male,female',
             'home_address' => 'nullable|string',
             'office_address' => 'nullable|string',
-            'customer_type' => 'required|in:regular,wholesale,corporate',
+            'customer_type' => 'required|in:regular,wholesale,corporate,retail', // Add 'retail'
             'company_name' => 'nullable|string|max:255',
             'tax_id_number' => 'nullable|string|max:100',
             'contact_person' => 'nullable|string|max:200',
             'notes' => 'nullable|string',
             'credit_limit' => 'nullable|numeric|min:0',
             'loyalty_card_number' => 'nullable|string|unique:customers,loyalty_card_number',
+
         ]);
 
         $validated['created_by'] = auth()->id();
@@ -124,7 +125,7 @@ class CustomerController extends Controller
             'gender' => 'required|in:male,female',
             'home_address' => 'nullable|string',
             'office_address' => 'nullable|string',
-            'customer_type' => 'required|in:regular,wholesale,corporate',
+            'customer_type' => 'required|in:regular,wholesale,corporate,retail', // Add 'retail'
             'status' => 'required|in:active,inactive,suspended',
             'company_name' => 'nullable|string|max:255',
             'tax_id_number' => 'nullable|string|max:100',
@@ -150,30 +151,36 @@ class CustomerController extends Controller
  */
 public function quickStore(Request $request): JsonResponse
 {
-    // Validate the request
+    // Use the same validation as your store method
     $validated = $request->validate([
         'first_name' => 'required|string|max:100',
         'last_name' => 'required|string|max:100',
-        'phone_number' => 'nullable|string|max:20|unique:customers,phone_number',
-        'email' => 'nullable|email|max:100|unique:customers,email',
+        'phone_number' => 'required|string|unique:customers,phone_number',
+        'email' => 'nullable|email|unique:customers,email',
     ]);
 
     try {
         DB::beginTransaction();
 
-        // Generate a customer code
-        $customerCode = 'CUST-' . strtoupper(uniqid());
-
-        // Create the customer with minimal fields
         $customer = Customer::create([
             'first_name' => $validated['first_name'],
             'last_name' => $validated['last_name'],
-            'phone_number' => $validated['phone_number'] ?? null,
+            'phone_number' => $validated['phone_number'],
             'email' => $validated['email'] ?? null,
-            'customer_type' => 'retail',
+            'customer_type' => 'regular', // Use one of your existing types
             'status' => 'active',
-            'customer_code' => $customerCode,
-            'created_by' => auth()->id() ?? 1,
+            'created_by' => auth()->id(),
+            // Add other fields with defaults if needed
+            'phone_number_2' => null,
+            'gender' => 'male', // Default value
+            'home_address' => null,
+            'office_address' => null,
+            'company_name' => null,
+            'tax_id_number' => null,
+            'contact_person' => null,
+            'notes' => null,
+            'credit_limit' => 0,
+            'loyalty_card_number' => null,
         ]);
 
         DB::commit();
@@ -192,20 +199,15 @@ public function quickStore(Request $request): JsonResponse
     } catch (\Exception $e) {
         DB::rollBack();
 
-        // Check for duplicate entry
-        if (str_contains($e->getMessage(), 'Duplicate entry')) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Phone number or email already exists.'
-            ], 422);
-        }
+        \Log::error('Customer creation failed', ['error' => $e->getMessage()]);
 
         return response()->json([
             'success' => false,
-            'message' => 'Failed to add customer: ' . $e->getMessage()
+            'message' => 'Failed to add customer. Please check the details and try again.'
         ], 500);
     }
 }
+
 
     public function destroy(Customer $customer)
     {

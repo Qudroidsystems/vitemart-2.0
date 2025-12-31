@@ -9,224 +9,395 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.12.1/JsBarcode.all.min.js"></script>
 
     <style>
+        /* PRINT-OPTIMIZED STYLES */
         body {
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 12px;
-            line-height: 1.4;
-            margin: 0;
-            padding: 0;
-            background: #f5f5f5;
-            height: 100vh;
-            display: flex;
-            align-items: flex-start;
-            justify-content: center;
-            overflow: hidden;
+            font-family: 'Courier New', monospace !important;
+            font-size: 13px !important;
+            line-height: 1.3 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
         }
 
-        /* Fake Printer Slot (visible only on screen) */
-        .printer-slot {
-            width: 100%;
-            max-width: 80mm;
-            height: 25px;
-            background: #222;
-            border-radius: 12px 12px 0 0;
-            margin: 40px auto 0;
-            position: relative;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+        /* Hide all non-print elements */
+        .no-print, .printer-slot {
+            display: none !important;
         }
 
-        .printer-slot::after {
-            content: '';
-            position: absolute;
-            bottom: -8px;
-            left: 5%;
-            right: 5%;
-            height: 12px;
-            background: #111;
-            border-radius: 0 0 12px 12px;
+        /* Receipt Container */
+        .receipt-container {
+            width: 80mm !important;
+            max-width: 80mm !important;
+            margin: 0 auto !important;
+            padding: 15px !important;
+            background: white !important;
+            color: #000 !important;
+            font-weight: 500 !important; /* Slightly bolder for better print */
         }
 
-        /* Receipt Paper Animation */
-        .receipt-paper {
-            width: 80mm;
-            background: white;
-            padding: 20px 15px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-            border-radius: 0 0 8px 8px;
-            animation: emerge 3.5s ease-out forwards;
-            transform: translateY(-120%);
-            margin-top: -20px;
+        /* DARKER TEXT FOR BETTER PRINT QUALITY */
+        .receipt-container * {
+            color: #000 !important;
+            text-shadow: none !important;
         }
 
-        @keyframes emerge {
-            0% { transform: translateY(-120%); }
-            60% { transform: translateY(15px); }
-            100% { transform: translateY(0); }
+        .header h1 {
+            font-size: 18px !important;
+            margin: 8px 0 !important;
+            font-weight: 900 !important; /* Extra bold for store name */
+            letter-spacing: 0.5px !important;
         }
 
-        .receipt {
-            width: 100%;
-            text-align: center;
+        .header p, .motto {
+            font-size: 11px !important;
+            margin: 3px 0 !important;
+            font-weight: 600 !important;
         }
 
-        /* Standard receipt styles */
-        .header h1 { font-size: 18px; margin: 5px 0; font-weight: bold; }
-        .motto { font-size: 11px; font-style: italic; margin: 5px 0; }
-        .logo img { max-width: 60mm; max-height: 30mm; margin: 10px 0; }
-        .header p { margin: 3px 0; font-size: 11px; }
-        .divider { border-top: 1px dashed #000; margin: 12px 0; }
-        table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 11px; }
-        table th { text-align: left; padding: 4px 0; border-bottom: 1px dashed #000; }
-        table td { padding: 4px 0; }
-        .text-right { text-align: right; }
-        .total-row { font-weight: bold; font-size: 14px; border-top: 1px dashed #000; padding-top: 8px; margin-top: 8px; }
-        .footer { margin-top: 20px; font-size: 11px; }
-        .barcode { margin: 20px 0; }
-        .barcode svg { width: 100%; height: 60px; }
-        .barcode-text { font-size: 10px; margin-top: 5px; }
+        .order-info {
+            margin: 12px 0 !important;
+        }
 
-        /* === CRITICAL: Hide animation & printer on actual print === */
+        .order-info p {
+            margin: 4px 0 !important;
+            font-weight: 600 !important;
+            font-size: 11px !important;
+        }
+
+        .order-info strong {
+            font-weight: 800 !important;
+        }
+
+        /* Tables with darker borders */
+        table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            margin: 12px 0 !important;
+            font-size: 11px !important;
+        }
+
+        table th {
+            text-align: left !important;
+            padding: 6px 0 !important;
+            border-bottom: 2px solid #000 !important; /* Thicker border */
+            font-weight: 800 !important;
+            font-size: 12px !important;
+        }
+
+        table td {
+            padding: 5px 0 !important;
+            vertical-align: top !important;
+        }
+
+        .text-right {
+            text-align: right !important;
+        }
+
+        .text-center {
+            text-align: center !important;
+        }
+
+        .text-left {
+            text-align: left !important;
+        }
+
+        /* Divider lines */
+        .divider {
+            border-top: 2px dashed #000 !important; /* Darker and thicker */
+            margin: 12px 0 !important;
+            height: 0 !important;
+        }
+
+        /* Item details */
+        .item-details {
+            font-size: 10px !important;
+            color: #333 !important;
+        }
+
+        /* Totals section */
+        .total-row {
+            font-weight: 900 !important; /* Extra bold for totals */
+            font-size: 14px !important;
+            border-top: 2px solid #000 !important; /* Thicker border */
+            padding-top: 10px !important;
+            margin-top: 10px !important;
+        }
+
+        .subtotal-row {
+            font-weight: 700 !important;
+        }
+
+        /* Barcode */
+        .barcode {
+            margin: 25px 0 !important;
+            text-align: center !important;
+        }
+
+        .barcode svg {
+            width: 100% !important;
+            height: 65px !important;
+        }
+
+        .barcode-text {
+            font-size: 10px !important;
+            margin-top: 5px !important;
+            font-weight: 700 !important;
+            letter-spacing: 1px !important;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 25px !important;
+            font-size: 10px !important;
+            font-weight: 600 !important;
+        }
+
+        .footer p {
+            margin: 4px 0 !important;
+        }
+
+        /* Important notice */
+        .important-notice {
+            font-weight: 900 !important;
+            font-size: 11px !important;
+            margin: 15px 0 !important;
+            text-align: center !important;
+        }
+
+        /* Unit display in items */
+        .unit-display {
+            font-size: 10px !important;
+            font-weight: 700 !important;
+            color: #000 !important;
+            margin-top: 2px !important;
+        }
+
+        /* Ensure no page breaks inside important elements */
+        .no-break {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+        }
+
+        /* Print-specific optimizations */
         @media print {
             body {
-                background: white !important;
-                padding: 0 !important;
                 margin: 0 !important;
-                overflow: visible !important;
+                padding: 0 !important;
+                font-size: 13px !important;
             }
-            .printer-slot { display: none !important; }
-            .receipt-paper {
-                animation: none !important;
-                transform: translateY(0) !important;
+
+            .receipt-container {
+                width: 80mm !important;
+                max-width: 80mm !important;
+                padding: 10px !important;
                 box-shadow: none !important;
-                padding: 10px;
-                margin: 0;
-                border-radius: 0;
+                border: none !important;
+            }
+
+            /* Force black text on print */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                color-adjust: exact !important;
+                color: #000000 !important;
+            }
+
+            /* Prevent page breaks */
+            .receipt-container {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+        }
+
+        /* On-screen preview styles */
+        @media screen {
+            body {
+                background: #f5f5f5 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                min-height: 100vh !important;
+                padding: 20px !important;
+            }
+
+            .receipt-container {
+                box-shadow: 0 10px 40px rgba(0,0,0,0.3) !important;
+                border-radius: 8px !important;
             }
         }
     </style>
 </head>
-<body onload="window.print(); window.onafterprint = function(){ window.close(); }">
+<body onload="window.print(); setTimeout(() => window.close(), 1000);">
 
 @php
     $store = \App\Models\StoreSetting::getSettings();
+    $currency = $store?->currency_symbol ?? '₦';
 @endphp
 
-<!-- Fake Printer (visible only on screen) -->
-<div class="printer-slot"></div>
+<div class="receipt-container no-break">
+    <!-- Store Header -->
+    <div class="header text-center">
+        @if($store?->logo)
+            <div class="logo mb-3">
+                <img src="{{ $store->getLogoUrlAttribute() }}" alt="Store Logo" style="max-width: 60mm; max-height: 30mm; filter: contrast(1.2);">
+            </div>
+        @endif
+        <h1>{{ strtoupper($store?->store_name ?? 'MY SUPERMARKET') }}</h1>
+        @if($store?->motto)
+            <p class="motto">{{ $store->motto }}</p>
+        @endif
+        @if($store?->address)
+            <p><strong>{{ $store->address }}</strong></p>
+        @endif
+        @if($store?->phone)
+            <p><strong>Phone:</strong> {{ $store->phone }}</p>
+        @endif
+        @if($store?->email)
+            <p><strong>Email:</strong> {{ $store->email }}</p>
+        @endif
+        @if($store?->tax_id)
+            <p><strong>Tax ID:</strong> {{ $store->tax_id }}</p>
+        @endif
+    </div>
 
-<!-- Animated Receipt Paper -->
-<div class="receipt-paper">
-    <div class="receipt">
-        <!-- Store Header -->
-        <div class="header">
-            @if($store?->logo)
-                <div class="logo">
-                    <img src="{{ $store->getLogoUrlAttribute() }}" alt="Store Logo">
-                </div>
-            @endif
-            <h1>{{ $store?->store_name ?? 'My Supermarket' }}</h1>
-            @if($store?->motto)
-                <p class="motto">{{ $store->motto }}</p>
-            @endif
-            @if($store?->address)
-                <p>{{ $store->address }}</p>
-            @endif
-            @if($store?->phone)
-                <p>Phone: {{ $store->phone }}</p>
-            @endif
-            @if($store?->email)
-                <p>{{ $store->email }}</p>
-            @endif
-            @if($store?->tax_id)
-                <p>Tax ID: {{ $store->tax_id }}</p>
-            @endif
-        </div>
+    <div class="divider"></div>
 
-        <div class="divider"></div>
-
-        <!-- Order Info -->
-        <div class="order-info" style="text-align:left;">
-            <p><strong>Receipt No:</strong> {{ $order->id }}</p>
-            <p><strong>Date:</strong> {{ $order->order_date->format('d M Y, h:i A') }}</p>
-            <p><strong>Cashier:</strong> {{ auth()->user()->name ?? 'Admin' }}</p>
-            @if($order->customer)
-                <p><strong>Customer:</strong> {{ $order->customer->first_name }} {{ $order->customer->last_name }}</p>
-                @if($order->customer->phone_number)
-                    <p><strong>Phone:</strong> {{ $order->customer->phone_number }}</p>
-                @endif
-            @else
-                <p><strong>Customer:</strong> Walk-in Customer</p>
+    <!-- Order Info -->
+    <div class="order-info">
+        <p><strong>RECEIPT NO:</strong> {{ $order->id }}</p>
+        <p><strong>DATE:</strong> {{ $order->order_date->format('d M Y, h:i A') }}</p>
+        <p><strong>CASHIER:</strong> {{ auth()->user()->name ?? 'Admin' }}</p>
+        @if($order->customer)
+            <p><strong>CUSTOMER:</strong> {{ strtoupper($order->customer->first_name . ' ' . $order->customer->last_name) }}</p>
+            @if($order->customer->phone_number)
+                <p><strong>PHONE:</strong> {{ $order->customer->phone_number }}</p>
             @endif
-            <p><strong>Payment:</strong> {{ ucfirst($order->payment_method) }}</p>
-        </div>
+        @else
+            <p><strong>CUSTOMER:</strong> WALK-IN CUSTOMER</p>
+        @endif
+        <p><strong>PAYMENT:</strong> {{ strtoupper($order->payment_method) }}</p>
+    </div>
 
-        <div class="divider"></div>
+    <div class="divider"></div>
 
-        <!-- Items -->
-        <table>
-            <thead>
-                <tr>
-                    <th style="text-align:left;">Item</th>
-                    <th style="text-align:center;">Qty</th>
-                    <th style="text-align:right;">Price</th>
-                    <th style="text-align:right;">Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($order->items as $item)
-                    <tr>
-                        <td style="word-wrap:break-word;max-width:140px;">
-                            {{ $item->title }}
-                            @if($item->unit_name)
-                                <br><small>{{ $item->quantity }} × {{ $item->unit_name }}</small>
-                            @endif
-                        </td>
-                        <td class="text-center">{{ $item->quantity }}</td>
-                        <td class="text-right">{{ $store?->currency_symbol ?? '$' }}{{ number_format($item->unit_price, 2) }}</td>
-                        <td class="text-right">{{ $store?->currency_symbol ?? '$' }}{{ number_format($item->total_price, 2) }}</td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-
-        <div class="divider"></div>
-
-        <!-- Total -->
-        <table style="font-size:13px;">
-            <tr class="total-row">
-                <td style="text-align:left;"><strong>TOTAL</strong></td>
-                <td style="text-align:right;"><strong>{{ $store?->currency_symbol ?? '$' }}{{ number_format($order->total_amount, 2) }}</strong></td>
+    <!-- Items Table -->
+    <table>
+        <thead>
+            <tr>
+                <th class="text-left">ITEM</th>
+                <th class="text-center">QTY</th>
+                <th class="text-center">UNIT</th>
+                <th class="text-right">PRICE</th>
+                <th class="text-right">TOTAL</th>
             </tr>
-        </table>
+        </thead>
+        <tbody>
+            @foreach($order->items as $item)
+                <tr>
+                    <td class="text-left">
+                        <strong>{{ $item->title }}</strong>
+                        @if($item->sku)
+                            <br><small class="item-details">SKU: {{ $item->sku }}</small>
+                        @endif
+                    </td>
+                    <td class="text-center">
+                        <strong>{{ number_format($item->quantity, $item->is_unit_mode ? 3 : 0) }}</strong>
+                    </td>
+                    <td class="text-center">
+                        @if($item->unit_name)
+                            <span class="unit-display">{{ strtoupper($item->unit_name) }}</span>
+                        @else
+                            <span class="unit-display">PCS</span>
+                        @endif
+                    </td>
+                    <td class="text-right">
+                        <strong>{{ $currency }}{{ number_format($item->unit_price, 2) }}</strong>
+                    </td>
+                    <td class="text-right">
+                        <strong>{{ $currency }}{{ number_format($item->total_price, 2) }}</strong>
+                    </td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
 
-        <div class="divider"></div>
+    <div class="divider"></div>
 
-        <!-- Barcode -->
-        <div class="barcode">
-            <svg id="receipt-barcode"></svg>
-            <div class="barcode-text">{{ $order->id }}</div>
-        </div>
+    <!-- Totals -->
+    <table>
+        <tr class="subtotal-row">
+            <td class="text-left"><strong>SUBTOTAL:</strong></td>
+            <td class="text-right"><strong>{{ $currency }}{{ number_format($order->subtotal ?? ($order->items->sum('total_price')), 2) }}</strong></td>
+        </tr>
+        @if($order->discount_amount > 0)
+            <tr class="subtotal-row">
+                <td class="text-left"><strong>DISCOUNT:</strong></td>
+                <td class="text-right"><strong>-{{ $currency }}{{ number_format($order->discount_amount, 2) }}</strong></td>
+            </tr>
+        @endif
+        <tr class="total-row">
+            <td class="text-left"><strong>GRAND TOTAL:</strong></td>
+            <td class="text-right"><strong>{{ $currency }}{{ number_format($order->total_amount, 2) }}</strong></td>
+        </tr>
+        @if($order->payment_method == 'cash' && isset($order->cash_received))
+            <tr class="subtotal-row">
+                <td class="text-left"><strong>CASH RECEIVED:</strong></td>
+                <td class="text-right"><strong>{{ $currency }}{{ number_format($order->cash_received, 2) }}</strong></td>
+            </tr>
+            <tr class="subtotal-row">
+                <td class="text-left"><strong>CHANGE:</strong></td>
+                <td class="text-right"><strong>{{ $currency }}{{ number_format($order->cash_received - $order->total_amount, 2) }}</strong></td>
+            </tr>
+        @endif
+    </table>
 
-        <!-- Footer -->
-        <div class="footer">
-            <p><strong>{{ $store?->footer_note ?? 'Thank you for shopping with us!' }}</strong></p>
-            <p>Goods sold are non-returnable</p>
-            <p>Printed: {{ now()->format('d M Y h:i A') }}</p>
-        </div>
+    <div class="divider"></div>
 
-        <div style="height:40px;"></div>
+    <!-- Important Notice -->
+    <div class="important-notice">
+        <p>GOODS SOLD ARE NON-RETURNABLE</p>
+        <p>RECEIPT MUST BE PRESENTED FOR ANY COMPLAINTS</p>
+    </div>
+
+    <!-- Barcode -->
+    <div class="barcode">
+        <svg id="receipt-barcode"></svg>
+        <div class="barcode-text">{{ $order->id }}</div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer text-center">
+        <p><strong>{{ $store?->footer_note ?? 'THANK YOU FOR SHOPPING WITH US!' }}</strong></p>
+        <p>** This is a computer-generated receipt **</p>
+        <p><strong>Printed:</strong> {{ now()->format('d M Y h:i A') }}</p>
+        <p>Powered by POS System</p>
     </div>
 </div>
 
 <script>
     JsBarcode("#receipt-barcode", "{{ $order->id }}", {
         format: "CODE128",
-        width: 2,
-        height: 60,
+        width: 2.5,
+        height: 70,
         displayValue: false,
         margin: 10,
+        background: "transparent",
+        lineColor: "#000000",
         flat: true
     });
+
+    // Auto-close after print
+    window.onafterprint = function() {
+        setTimeout(function() {
+            window.close();
+        }, 500);
+    };
+
+    // Fallback close in case onafterprint doesn't fire
+    setTimeout(function() {
+        window.close();
+    }, 5000);
 </script>
 
 </body>

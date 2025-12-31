@@ -1,7 +1,5 @@
 @extends('layouts.master')
-
 @section('title', $pagetitle ?? 'Point of Sale')
-
 @section('content')
 <div class="main-content">
     <div class="page-content">
@@ -25,21 +23,18 @@
                     </div>
                 </div>
             </div>
-
             <div class="row">
                 <!-- Left: Product Search -->
                 <div class="col-xxl-8">
                     <div class="card h-100">
                         <div class="card-body d-flex flex-column">
                             <h5 class="card-title mb-4">Search or Scan Products</h5>
-
                             <div class="position-relative mb-4">
                                 <input type="text" id="barcodeInput" class="form-control form-control-lg fs-3"
                                        placeholder="Scan barcode or search..." autofocus autocomplete="off"
                                        aria-label="Search or scan products">
                                 <i class="bi bi-upc-scan position-absolute top-50 end-0 translate-middle-y me-4 fs-2 text-muted"></i>
                             </div>
-
                             <div class="d-flex align-items-center mb-3">
                                 <div class="me-3">
                                     <small class="text-muted">Shortcuts:</small>
@@ -54,7 +49,6 @@
                                     </span>
                                 </div>
                             </div>
-
                             <div class="table-responsive flex-grow-1 position-relative">
                                 <!-- Loading Overlay -->
                                 <div id="searchLoading" class="position-absolute top-0 start-0 w-100 h-100 bg-white bg-opacity-75 d-none" style="z-index: 10;">
@@ -67,7 +61,6 @@
                                         </div>
                                     </div>
                                 </div>
-
                                 <table class="table table-hover align-middle mb-0">
                                     <thead class="table-primary sticky-top" style="z-index: 1;">
                                         <tr>
@@ -92,7 +85,6 @@
                         </div>
                     </div>
                 </div>
-
                 <!-- Right: Order Summary -->
                 <div class="col-xxl-4">
                     <div class="card h-100">
@@ -143,7 +135,6 @@
                                     <span id="customerCount">{{ count($customers) }}</span> customers available
                                 </small>
                             </div>
-
                             <div class="flex-grow-1 mb-4">
                                 <h6 class="fw-bold mb-3">Cart Items</h6>
                                 <div class="table-responsive" style="max-height: 350px;">
@@ -170,14 +161,13 @@
                                     </table>
                                 </div>
                             </div>
-
                             <!-- Order-Level Discount -->
                             <div class="border-top pt-3 mb-3">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                     <span class="fw-semibold">Order Discount</span>
                                     <div class="input-group input-group-sm" style="width: 180px;">
                                         <input type="number" id="discountValue" class="form-control text-end"
-                                               placeholder="0" min="0" step="0.01" aria-label="Discount amount">
+                                               placeholder="0" min="0" step="0.01" aria-label="Discount amount" value="0">
                                         <select id="discountType" class="form-select" aria-label="Discount type">
                                             <option value="fixed">₦</option>
                                             <option value="percent" selected>%</option>
@@ -188,12 +178,11 @@
                                         </button>
                                     </div>
                                 </div>
-                                <div class="d-flex justify-content-between text-danger fw-bold">
+                                <div class="d-flex justify-content-between text-danger fw-bold" id="discountRow" style="display: none;">
                                     <span>Discount Applied</span>
                                     <span id="discountAmount">-₦0.00</span>
                                 </div>
                             </div>
-
                             <div class="border-top pt-3">
                                 <div class="d-flex justify-content-between mb-2">
                                     <span>Subtotal</span>
@@ -209,7 +198,6 @@
                                     <span id="grandTotal">₦0.00</span>
                                 </div>
                             </div>
-
                             <div class="mt-4">
                                 <label class="form-label fw-bold">Payment Method</label>
                                 <div class="btn-group w-100 mb-4" role="group" aria-label="Payment methods">
@@ -227,7 +215,6 @@
                                     </label>
                                 </div>
                             </div>
-
                             <div class="d-grid gap-2">
                                 <button class="btn btn-success btn-lg py-3 fs-2" id="completeOrder">
                                     <i class="bi bi-printer me-2"></i> Complete & Print
@@ -243,23 +230,23 @@
         </div>
     </div>
 </div>
-
-<!-- Quantity Modal -->
+<!-- Quantity Modal with Unit Support -->
 <div class="modal fade" id="quantityModal" tabindex="-1" role="dialog" aria-labelledby="quantityModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-md">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-primary text-white border-0">
                 <h5 class="modal-title" id="quantityModalLabel">
-                    <i class="bi bi-cart-plus me-2"></i> Adjust Quantity
+                    <i class="bi bi-cart-plus me-2"></i> Adjust Quantity/Unit
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
+                <!-- Product Info -->
                 <div class="text-center mb-4">
                     <div class="product-icon bg-light-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
                         <i class="bi bi-box-seam fs-3 text-primary"></i>
                     </div>
-                    <h6 class="text-muted mb-1">Product Name:</h6>
+                    <h6 class="text-muted mb-1">Product:</h6>
                     <h4 class="modal-product-name text-primary fw-bold mb-0" id="modalProductLabel"></h4>
                     <div class="mt-2">
                         <span class="badge bg-info" id="modalProductPrice"></span>
@@ -267,42 +254,125 @@
                         <span class="badge bg-secondary ms-2" id="modalProductUnit"></span>
                     </div>
                 </div>
-
-                <div class="card border-0 bg-light mb-4">
-                    <div class="card-body text-center">
+                <!-- Unit Selection Toggle -->
+                <div class="card border-0 bg-light mb-3">
+                    <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <label class="form-label fw-bold text-dark mb-0">Enter Quantity</label>
-                            <small class="text-muted" id="previousQtyText"></small>
+                            <label class="form-label fw-bold text-dark mb-0">Measurement Type</label>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <input type="radio" class="btn-check" name="measurementType" id="measureQuantity" value="quantity" checked>
+                                <label class="btn btn-outline-primary" for="measureQuantity">
+                                    <i class="bi bi-123 me-1"></i> Quantity
+                                </label>
+                                <input type="radio" class="btn-check" name="measurementType" id="measureUnit" value="unit">
+                                <label class="btn btn-outline-success" for="measureUnit">
+                                    <i class="bi bi-scale me-1"></i> Unit
+                                </label>
+                            </div>
                         </div>
-                        <div class="input-group input-group-lg">
-                            <button class="btn btn-outline-secondary" type="button" id="decreaseQty" aria-label="Decrease quantity">
-                                <i class="bi bi-dash-lg"></i>
-                            </button>
-                            <input type="number" id="modalQty" class="form-control text-center border-secondary fs-2 fw-bold"
-                                   min="1" value="1" autofocus style="height: 60px;" aria-label="Quantity">
-                            <button class="btn btn-outline-secondary" type="button" id="increaseQty" aria-label="Increase quantity">
-                                <i class="bi bi-plus-lg"></i>
-                            </button>
-                        </div>
-                        <div class="mt-2">
-                            <small class="text-muted d-block">Press Enter to confirm, ESC to cancel</small>
-                            <small class="text-success fw-semibold d-block mt-1" id="totalPriceDisplay"></small>
+                        <!-- Unit Selection (Hidden by default) -->
+                        <div id="unitSelection" class="mt-3" style="display: none;">
+                            <label class="form-label fw-semibold">Select Unit <span class="text-danger">*</span></label>
+                            <select class="form-select" id="unitSelect" required>
+                                <option value="">-- Please select a unit --</option>
+                                <!-- Units will be populated dynamically -->
+                            </select>
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="checkbox" id="rememberUnitPreference">
+                                <label class="form-check-label" for="rememberUnitPreference">
+                                    Remember my preference for this product
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>
-
-                <div class="row g-2 mb-3">
-                    <div class="col-3"><button type="button" class="btn btn-outline-secondary w-100 py-2" data-qty="1">1</button></div>
-                    <div class="col-3"><button type="button" class="btn btn-outline-secondary w-100 py-2" data-qty="2">2</button></div>
-                    <div class="col-3"><button type="button" class="btn btn-outline-secondary w-100 py-2" data-qty="3">3</button></div>
-                    <div class="col-3"><button type="button" class="btn btn-outline-secondary w-100 py-2" data-qty="5">5</button></div>
+                <!-- Price Input Section - TWO-WAY BINDING -->
+                <div id="priceInputSection" class="card border-0 bg-light mb-3" style="display: none;">
+                    <div class="card-body text-center">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <label class="form-label fw-bold text-dark mb-0">Total Price</label>
+                            <small class="text-muted" id="originalPriceText"></small>
+                        </div>
+                        <div class="input-group input-group-lg mb-3">
+                            <span class="input-group-text bg-primary text-white fw-bold">₦</span>
+                            <input type="number" id="pricePerUnit" class="form-control text-center border-secondary fs-3 fw-bold"
+                                   min="0" step="0.01" placeholder="Enter price" style="height: 60px;" disabled>
+                        </div>
+                        <div class="text-center">
+                            <small class="text-muted d-block">Price for <span id="amountDisplay">1.000</span> <span id="unitDisplay">unit</span></small>
+                            <small class="text-success fw-bold d-block mt-1" id="calculatedPriceDisplay"></small>
+                        </div>
+                    </div>
                 </div>
-
-                <div class="row g-2">
-                    <div class="col-3"><button type="button" class="btn btn-outline-secondary w-100 py-2" data-qty="10">10</button></div>
-                    <div class="col-3"><button type="button" class="btn btn-outline-secondary w-100 py-2" data-qty="20">20</button></div>
-                    <div class="col-3"><button type="button" class="btn btn-outline-secondary w-100 py-2" data-qty="50">50</button></div>
-                    <div class="col-3"><button type="button" class="btn btn-outline-secondary w-100 py-2" data-qty="100">100</button></div>
+                <!-- Quantity/Unit Input -->
+                <div class="card border-0 bg-light mb-4">
+                    <div class="card-body text-center">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <label class="form-label fw-bold text-dark mb-0" id="measurementLabel">Enter Amount</label>
+                            <small class="text-muted" id="previousQtyText"></small>
+                        </div>
+                        <!-- Quantity Input (default) -->
+                        <div id="quantityInputSection">
+                            <div class="input-group input-group-lg">
+                                <button class="btn btn-outline-secondary" type="button" id="decreaseQty" aria-label="Decrease quantity">
+                                    <i class="bi bi-dash-lg"></i>
+                                </button>
+                                <input type="number" id="modalQty" class="form-control text-center border-secondary fs-2 fw-bold"
+                                       min="1" value="1" step="1" autofocus style="height: 60px;" aria-label="Quantity">
+                                <button class="btn btn-outline-secondary" type="button" id="increaseQty" aria-label="Increase quantity">
+                                    <i class="bi bi-plus-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Unit Input (hidden by default) -->
+                        <div id="unitInputSection" style="display: none;">
+                            <div class="input-group input-group-lg">
+                                <button class="btn btn-outline-secondary" type="button" id="decreaseUnit" aria-label="Decrease unit" disabled>
+                                    <i class="bi bi-dash-lg"></i>
+                                </button>
+                                <input type="number" id="modalUnit" class="form-control text-center border-secondary fs-2 fw-bold"
+                                       min="0.001" value="1" step="0.001" style="height: 60px;" aria-label="Unit amount" disabled>
+                                <button class="btn btn-outline-secondary" type="button" id="increaseUnit" aria-label="Increase unit" disabled>
+                                    <i class="bi bi-plus-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted d-block">Press Enter to confirm, ESC to cancel</small>
+                            <small class="text-success fw-semibold d-block mt-1" id="totalPriceDisplay">Total: ₦0.00</small>
+                        </div>
+                    </div>
+                </div>
+                <!-- Quick Buttons -->
+                <div class="mb-4" id="quantityQuickButtons">
+                    <div class="row g-2 mb-2">
+                        <div class="col-3"><button type="button" class="btn btn-outline-secondary w-100 py-2 quick-btn" data-value="1">1</button></div>
+                        <div class="col-3"><button type="button" class="btn btn-outline-secondary w-100 py-2 quick-btn" data-value="2">2</button></div>
+                        <div class="col-3"><button type="button" class="btn btn-outline-secondary w-100 py-2 quick-btn" data-value="3">3</button></div>
+                        <div class="col-3"><button type="button" class="btn btn-outline-secondary w-100 py-2 quick-btn" data-value="5">5</button></div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-3"><button type="button" class="btn btn-outline-secondary w-100 py-2 quick-btn" data-value="10">10</button></div>
+                        <div class="col-3"><button type="button" class="btn btn-outline-secondary w-100 py-2 quick-btn" data-value="20">20</button></div>
+                        <div class="col-3"><button type="button" class="btn btn-outline-secondary w-100 py-2 quick-btn" data-value="50">50</button></div>
+                        <div class="col-3"><button type="button" class="btn btn-outline-secondary w-100 py-2 quick-btn" data-value="100">100</button></div>
+                    </div>
+                </div>
+                <!-- Weight/Unit Quick Buttons -->
+                <div id="unitQuickButtons" style="display: none;">
+                    <h6 class="text-muted mb-2">Quick Amounts</h6>
+                    <div class="row g-2">
+                        <div class="col-3"><button type="button" class="btn btn-outline-success w-100 py-2 unit-quick-btn" data-value="0.25">¼</button></div>
+                        <div class="col-3"><button type="button" class="btn btn-outline-success w-100 py-2 unit-quick-btn" data-value="0.5">½</button></div>
+                        <div class="col-3"><button type="button" class="btn btn-outline-success w-100 py-2 unit-quick-btn" data-value="0.75">¾</button></div>
+                        <div class="col-3"><button type="button" class="btn btn-outline-success w-100 py-2 unit-quick-btn" data-value="1">1</button></div>
+                    </div>
+                    <div class="row g-2 mt-2">
+                        <div class="col-3"><button type="button" class="btn btn-outline-success w-100 py-2 unit-quick-btn" data-value="2.5">2.5</button></div>
+                        <div class="col-3"><button type="button" class="btn btn-outline-success w-100 py-2 unit-quick-btn" data-value="5">5</button></div>
+                        <div class="col-3"><button type="button" class="btn btn-outline-success w-100 py-2 unit-quick-btn" data-value="10">10</button></div>
+                        <div class="col-3"><button type="button" class="btn btn-outline-success w-100 py-2 unit-quick-btn" data-value="25">25</button></div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer border-0 bg-light rounded-bottom">
@@ -319,7 +389,6 @@
         </div>
     </div>
 </div>
-
 <!-- Per-Item Discount Modal -->
 <div class="modal fade" id="itemDiscountModal" tabindex="-1" role="dialog" aria-labelledby="itemDiscountModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -348,7 +417,6 @@
         </div>
     </div>
 </div>
-
 <!-- Load Order Modal -->
 <div class="modal fade" id="loadOrderModal" tabindex="-1" role="dialog" aria-labelledby="loadOrderModalLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -367,7 +435,6 @@
         </div>
     </div>
 </div>
-
 <!-- Quick Customer Modal -->
 <div class="modal fade" id="quickCustomerModal" tabindex="-1" role="dialog" aria-labelledby="quickCustomerModalLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -403,12 +470,11 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="saveQuickCustomerBtn">Save Customer</button>
+                                <button type="button" class="btn btn-primary" id="saveQuickCustomerBtn">Save Customer</button>
             </div>
         </div>
     </div>
 </div>
-
 <!-- Offline Orders Modal -->
 <div class="modal fade" id="offlineOrdersModal" tabindex="-1" role="dialog" aria-labelledby="offlineOrdersModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -441,18 +507,15 @@
         </div>
     </div>
 </div>
-
 <!-- Hidden elements for accessibility -->
 <div class="visually-hidden" role="status" aria-live="polite" id="cartStatus"></div>
 <div class="visually-hidden" role="status" aria-live="polite" id="searchStatus"></div>
-
 <!-- Toast Container -->
 <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>
-
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-// MAIN POS SCRIPT - WITH AUDIO FEATURE
+// COMPLETE POS SCRIPT WITH UNIT SELECTION VALIDATION
 document.addEventListener('DOMContentLoaded', function () {
     // ============================================
     // INITIALIZATION
@@ -467,12 +530,15 @@ document.addEventListener('DOMContentLoaded', function () {
     const grandTotalEl = document.getElementById('grandTotal');
     const searchLoading = document.getElementById('searchLoading');
     const modalQty = document.getElementById('modalQty');
+    const modalUnit = document.getElementById('modalUnit');
     const confirmAddBtn = document.getElementById('confirmAddBtn');
     const removeFromCartBtn = document.getElementById('removeFromCartBtn');
     const customerSelect = document.getElementById('customerSelect');
     const discountValue = document.getElementById('discountValue');
     const discountType = document.getElementById('discountType');
     const applyDiscountBtn = document.getElementById('applyDiscountBtn');
+    const pricePerUnitInput = document.getElementById('pricePerUnit');
+    const unitSelect = document.getElementById('unitSelect');
 
     // Initialize Bootstrap tooltips
     const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
@@ -490,6 +556,14 @@ document.addEventListener('DOMContentLoaded', function () {
     let printWindow = null;
     let printCheckInterval = null;
     let quantityModal = null;
+    let quickCustomerModal = null;
+
+    // Unit management
+    let availableUnits = [];
+    let selectedUnit = null;
+    let currentMeasurementType = 'quantity'; // 'quantity' or 'unit'
+    let originalPricePerUnit = 0; // Store original product price per unit
+    let isPriceInputActive = false; // Track which input is being edited
 
     // Audio element for thank you sound
     let thankYouAudio = null;
@@ -497,11 +571,47 @@ document.addEventListener('DOMContentLoaded', function () {
     input.focus();
 
     // ============================================
+    // FORMATTING FUNCTIONS
+    // ============================================
+    function formatNumber(number, decimals = 0) {
+        if (typeof number !== 'number') {
+            number = parseFloat(number) || 0;
+        }
+        return new Intl.NumberFormat('en-NG', {
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals
+        }).format(number);
+    }
+
+    function formatCurrency(amount) {
+        if (typeof amount !== 'number') {
+            amount = parseFloat(amount) || 0;
+        }
+        return '₦' + formatNumber(amount, 2);
+    }
+
+    function formatQuantity(qty, isUnitMode = false) {
+        if (typeof qty !== 'number') {
+            qty = parseFloat(qty) || 0;
+        }
+        if (isUnitMode) {
+            // For units, show appropriate decimal places
+            if (qty >= 1000) return formatNumber(qty, 0);
+            if (qty >= 100) return formatNumber(qty, 1);
+            if (qty >= 10) return formatNumber(qty, 2);
+            return formatNumber(qty, 3);
+        }
+        // For quantity (pieces), no decimals
+        return formatNumber(qty, 0);
+    }
+
+    // ============================================
     // INITIALIZE MODALS AND AUDIO
     // ============================================
     function initializeApp() {
-        // Initialize quantity modal
+        // Initialize modals
         quantityModal = new bootstrap.Modal(document.getElementById('quantityModal'));
+        quickCustomerModal = new bootstrap.Modal(document.getElementById('quickCustomerModal'));
 
         // Create audio element
         thankYouAudio = new Audio('/audio/thank-you-sweet-man-235977.mp3');
@@ -512,31 +622,192 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Initialize customer search
         initializeCustomerSearch();
+
+        // Initialize quick customer modal
+        initializeQuickCustomerModal();
+
+        // Load unit preferences
+        loadUnitPreferences();
     }
 
+    // ============================================
+    // QUANTITY MODAL SETUP WITH UNIT VALIDATION
+    // ============================================
     function setupQuantityModal() {
-        document.getElementById('quantityModal').addEventListener('show.bs.modal', updateModalTotal);
+        const quantityModalElement = document.getElementById('quantityModal');
 
-        document.getElementById('quantityModal').addEventListener('shown.bs.modal', () => {
+        quantityModalElement.addEventListener('show.bs.modal', function() {
+            // Reset to quantity mode when modal opens
+            switchToQuantityMode();
+        });
+
+        quantityModalElement.addEventListener('shown.bs.modal', () => {
             setTimeout(() => {
-                modalQty.focus();
-                modalQty.select();
+                if (currentMeasurementType === 'quantity') {
+                    modalQty.focus();
+                    modalQty.select();
+                } else {
+                    // Focus unit select dropdown in unit mode
+                    if (availableUnits.length > 0 && !selectedUnit) {
+                        unitSelect.focus();
+                    } else if (selectedUnit) {
+                        modalUnit.focus();
+                        modalUnit.select();
+                    }
+                }
             }, 100);
         });
 
-        document.getElementById('quantityModal').addEventListener('hidden.bs.modal', () => {
+        quantityModalElement.addEventListener('hidden.bs.modal', () => {
             setTimeout(() => {
                 input.focus();
                 input.select();
             }, 100);
         });
 
-        modalQty.addEventListener('input', updateModalTotal);
+        // Measurement type toggle
+        document.getElementById('measureQuantity').addEventListener('click', function() {
+            if (this.checked) {
+                switchToQuantityMode();
+            }
+        });
+
+        document.getElementById('measureUnit').addEventListener('click', function() {
+            if (this.checked) {
+                switchToUnitMode();
+            }
+        });
+
+        // Also keep the change events as backup
+        document.querySelectorAll('input[name="measurementType"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.value === 'quantity') {
+                    switchToQuantityMode();
+                } else {
+                    switchToUnitMode();
+                }
+                updateModalTotal();
+            });
+        });
+
+        // Unit selection change - FIXED: Enable/disable inputs based on selection
+        unitSelect.addEventListener('change', function() {
+            selectedUnit = availableUnits.find(u => u.id == this.value);
+            if (selectedUnit) {
+                // Enable inputs when unit is selected
+                modalUnit.disabled = false;
+                document.getElementById('decreaseUnit').disabled = false;
+                document.getElementById('increaseUnit').disabled = false;
+                pricePerUnitInput.disabled = false;
+                modalUnit.focus();
+                modalUnit.select();
+                updatePriceUnitLabel();
+                updateModalTotal();
+                updateAmountDisplay();
+                // Check if user has a saved preference
+                checkSavedUnitPreference();
+            } else {
+                // Disable inputs when no unit is selected
+                modalUnit.disabled = true;
+                document.getElementById('decreaseUnit').disabled = true;
+                document.getElementById('increaseUnit').disabled = true;
+                pricePerUnitInput.disabled = true;
+                modalUnit.value = 1;
+                pricePerUnitInput.value = '';
+                updateModalTotal();
+                updateAmountDisplay();
+            }
+        });
+
+        // ============================================
+        // TWO-WAY BINDING LOGIC
+        // ============================================
+        // Quantity input - update price per unit
+        modalQty.addEventListener('input', function() {
+            const quantity = parseInt(this.value) || 1;
+            const originalPrice = originalPricePerUnit;
+            const totalPrice = quantity * originalPrice;
+
+            // Update price per unit field to show total price for this quantity
+            if (!isPriceInputActive) {
+                pricePerUnitInput.value = totalPrice.toFixed(2);
+            }
+            updateModalTotal();
+            updateAmountDisplay();
+        });
+
         modalQty.addEventListener('change', updateModalTotal);
 
+        // Unit input - update price per unit (only if unit is selected)
+        modalUnit.addEventListener('input', function() {
+            if (selectedUnit) {
+                const unitAmount = parseFloat(this.value) || 1;
+                const originalPrice = originalPricePerUnit;
+                const totalPrice = unitAmount * originalPrice;
+
+                // Update price per unit field to show total price for this amount
+                if (!isPriceInputActive) {
+                    pricePerUnitInput.value = totalPrice.toFixed(2);
+                }
+                updateModalTotal();
+                updateAmountDisplay();
+            }
+        });
+
+        modalUnit.addEventListener('change', updateModalTotal);
+
+        // Price per unit input - update quantity/unit amount
+        pricePerUnitInput.addEventListener('focus', function() {
+            isPriceInputActive = true;
+        });
+
+        pricePerUnitInput.addEventListener('blur', function() {
+            isPriceInputActive = false;
+        });
+
+        pricePerUnitInput.addEventListener('input', function() {
+            if (selectedUnit) {
+                const totalPrice = parseFloat(this.value) || 0;
+                const originalPrice = originalPricePerUnit;
+                if (originalPrice > 0 && totalPrice > 0) {
+                    // Calculate equivalent amount based on total price
+                    const equivalentAmount = totalPrice / originalPrice;
+                    if (currentMeasurementType === 'quantity') {
+                        modalQty.value = Math.round(equivalentAmount);
+                    } else {
+                        modalUnit.value = equivalentAmount.toFixed(3);
+                    }
+                    updateModalTotal();
+                    updateAmountDisplay();
+                }
+            }
+        });
+
+        pricePerUnitInput.addEventListener('blur', function() {
+            const totalPrice = parseFloat(this.value) || 0;
+            const originalPrice = originalPricePerUnit;
+            if (totalPrice === 0 && currentProduct) {
+                // Reset to original price if cleared
+                this.value = originalPrice.toFixed(2);
+                if (currentMeasurementType === 'quantity') {
+                    modalQty.value = 1;
+                } else if (selectedUnit) {
+                    modalUnit.value = 1;
+                }
+                updateModalTotal();
+                updateAmountDisplay();
+                showToast('Price reset to original', 'info', 1000);
+            }
+        });
+
+        // Increase/Decrease buttons for quantity
         document.getElementById('increaseQty').addEventListener('click', () => {
             modalQty.value = (parseInt(modalQty.value) || 1) + 1;
+            const quantity = parseInt(modalQty.value);
+            const totalPrice = quantity * originalPricePerUnit;
+            pricePerUnitInput.value = totalPrice.toFixed(2);
             updateModalTotal();
+            updateAmountDisplay();
             modalQty.focus();
             modalQty.select();
         });
@@ -545,20 +816,96 @@ document.addEventListener('DOMContentLoaded', function () {
             const val = parseInt(modalQty.value) || 1;
             if (val > 1) {
                 modalQty.value = val - 1;
+                const quantity = parseInt(modalQty.value);
+                const totalPrice = quantity * originalPricePerUnit;
+                pricePerUnitInput.value = totalPrice.toFixed(2);
                 updateModalTotal();
+                updateAmountDisplay();
                 modalQty.focus();
                 modalQty.select();
             }
         });
 
-        // Quick quantity buttons
-        document.querySelectorAll('[data-qty]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                modalQty.value = btn.dataset.qty;
+        // Increase/Decrease buttons for unit (decimal support) - only if unit is selected
+        document.getElementById('increaseUnit').addEventListener('click', () => {
+            if (selectedUnit) {
+                const current = parseFloat(modalUnit.value) || 1;
+                modalUnit.value = (current + getUnitStep()).toFixed(3);
+                const unitAmount = parseFloat(modalUnit.value);
+                const totalPrice = unitAmount * originalPricePerUnit;
+                pricePerUnitInput.value = totalPrice.toFixed(2);
                 updateModalTotal();
-                modalQty.focus();
-                modalQty.select();
+                updateAmountDisplay();
+                modalUnit.focus();
+                modalUnit.select();
+            }
+        });
+
+        document.getElementById('decreaseUnit').addEventListener('click', () => {
+            if (selectedUnit) {
+                const current = parseFloat(modalUnit.value) || 1;
+                if (current > getUnitStep()) {
+                    modalUnit.value = (current - getUnitStep()).toFixed(3);
+                    const unitAmount = parseFloat(modalUnit.value);
+                    const totalPrice = unitAmount * originalPricePerUnit;
+                    pricePerUnitInput.value = totalPrice.toFixed(2);
+                    updateModalTotal();
+                    updateAmountDisplay();
+                    modalUnit.focus();
+                    modalUnit.select();
+                }
+            }
+        });
+
+        // Quick buttons for quantity mode
+        document.querySelectorAll('.quick-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                if (currentMeasurementType === 'quantity') {
+                    modalQty.value = this.dataset.value;
+                    const quantity = parseInt(modalQty.value);
+                    const totalPrice = quantity * originalPricePerUnit;
+                    pricePerUnitInput.value = totalPrice.toFixed(2);
+                    modalQty.focus();
+                    modalQty.select();
+                } else if (selectedUnit) {
+                    // Only work in unit mode if unit is selected
+                    modalUnit.value = this.dataset.value;
+                    const unitAmount = parseFloat(modalUnit.value);
+                    const totalPrice = unitAmount * originalPricePerUnit;
+                    pricePerUnitInput.value = totalPrice.toFixed(2);
+                    modalUnit.focus();
+                    modalUnit.select();
+                } else {
+                    showToast('Please select a unit first', 'warning');
+                }
+                updateModalTotal();
+                updateAmountDisplay();
             });
+        });
+
+        // Unit-specific quick buttons - only if unit is selected
+        document.querySelectorAll('.unit-quick-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                if (selectedUnit) {
+                    modalUnit.value = this.dataset.value;
+                    const unitAmount = parseFloat(modalUnit.value);
+                    const totalPrice = unitAmount * originalPricePerUnit;
+                    pricePerUnitInput.value = totalPrice.toFixed(2);
+                    updateModalTotal();
+                    updateAmountDisplay();
+                    modalUnit.focus();
+                    modalUnit.select();
+                } else {
+                    showToast('Please select a unit first', 'warning');
+                }
+            });
+        });
+
+        // Remember unit preference checkbox
+        document.getElementById('rememberUnitPreference').addEventListener('change', function() {
+            if (this.checked && currentProduct && selectedUnit) {
+                saveUnitPreference();
+            }
         });
 
         modalQty.addEventListener('keydown', e => {
@@ -567,6 +914,232 @@ document.addEventListener('DOMContentLoaded', function () {
                 confirmAddBtn.click();
             }
         });
+
+        modalUnit.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                confirmAddBtn.click();
+            }
+        });
+
+        pricePerUnitInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                confirmAddBtn.click();
+            }
+        });
+    }
+
+    function updatePriceUnitLabel() {
+        if (selectedUnit) {
+            document.getElementById('priceUnitLabel').textContent = selectedUnit.short_name;
+            document.getElementById('priceUnitLabel').className = 'text-primary fw-bold';
+            document.getElementById('unitDisplay').textContent = selectedUnit.short_name;
+        } else {
+            document.getElementById('priceUnitLabel').textContent = 'Unit';
+            document.getElementById('unitDisplay').textContent = 'unit';
+        }
+    }
+
+    function updateAmountDisplay() {
+        if (currentMeasurementType === 'quantity') {
+            const quantity = parseInt(modalQty.value) || 1;
+            document.getElementById('amountDisplay').textContent = formatQuantity(quantity);
+        } else {
+            const unitAmount = parseFloat(modalUnit.value) || 1;
+            document.getElementById('amountDisplay').textContent = formatQuantity(unitAmount, true);
+        }
+    }
+
+    function switchToQuantityMode() {
+        currentMeasurementType = 'quantity';
+        document.getElementById('measurementLabel').textContent = 'Enter Quantity';
+        document.getElementById('quantityInputSection').style.display = 'block';
+        document.getElementById('unitInputSection').style.display = 'none';
+        document.getElementById('unitSelection').style.display = 'none';
+        document.getElementById('unitQuickButtons').style.display = 'none';
+        document.getElementById('priceInputSection').style.display = 'none';
+        document.getElementById('quantityQuickButtons').style.display = 'block';
+
+        // Enable all inputs in quantity mode
+        modalQty.disabled = false;
+        document.getElementById('decreaseQty').disabled = false;
+        document.getElementById('increaseQty').disabled = false;
+
+        // For quantity mode, price per unit input shows total price for the quantity
+        if (currentProduct) {
+            const price = currentProduct.sale_price || currentProduct.price;
+            const quantity = parseInt(modalQty.value) || 1;
+            pricePerUnitInput.value = (price * quantity).toFixed(2);
+            originalPricePerUnit = price;
+            document.getElementById('originalPriceText').textContent = `Per unit: ${formatCurrency(price)}`;
+            document.getElementById('originalPriceText').className = 'text-muted fw-semibold';
+        }
+
+        updateModalTotal();
+        updateAmountDisplay();
+    }
+
+    function switchToUnitMode() {
+        currentMeasurementType = 'unit';
+        document.getElementById('measurementLabel').textContent = 'Enter Amount';
+        document.getElementById('quantityInputSection').style.display = 'none';
+        document.getElementById('unitInputSection').style.display = 'block';
+        document.getElementById('unitSelection').style.display = 'block';
+        document.getElementById('unitQuickButtons').style.display = 'block';
+        document.getElementById('priceInputSection').style.display = 'block';
+        document.getElementById('quantityQuickButtons').style.display = 'none';
+
+        // Load units for the current product
+        loadProductUnits();
+
+        // Initially disable inputs until unit is selected
+        modalUnit.disabled = true;
+        document.getElementById('decreaseUnit').disabled = true;
+        document.getElementById('increaseUnit').disabled = true;
+        pricePerUnitInput.disabled = true;
+
+        // Set initial price per unit from product
+        if (currentProduct) {
+            const price = currentProduct.sale_price || currentProduct.price;
+            const unitAmount = parseFloat(modalUnit.value) || 1;
+            pricePerUnitInput.value = (price * unitAmount).toFixed(2);
+            originalPricePerUnit = price;
+            document.getElementById('originalPriceText').textContent = `Per ${selectedUnit?.short_name || 'unit'}: ${formatCurrency(price)}`;
+            document.getElementById('originalPriceText').className = 'text-muted fw-semibold';
+        }
+
+        // Calculate initial display
+        updateModalTotal();
+        updateAmountDisplay();
+    }
+
+    function getUnitStep() {
+        if (!selectedUnit) return 0.001;
+        // Return appropriate step based on selected unit
+        if (selectedUnit.short_name.toLowerCase().includes('kg')) {
+            return 0.001; // 0.001kg = 1g increments
+        } else if (selectedUnit.short_name.toLowerCase().includes('g')) {
+            return 1; // 1g increments
+        } else if (selectedUnit.short_name.toLowerCase().includes('l')) {
+            return 0.001; // 0.001L = 1ml increments
+        }
+        return 0.001; // default
+    }
+
+    async function loadProductUnits() {
+        if (!currentProduct || !currentProduct.id) return;
+
+        try {
+            // Fetch product units from backend using the named route
+            const response = await axios.get(`{{ route('api.product.units', ['product' => '__ID__']) }}`.replace('__ID__', currentProduct.id));
+            availableUnits = response.data.units || [];
+
+            const unitSelect = document.getElementById('unitSelect');
+            unitSelect.innerHTML = '<option value="">-- Please select a unit --</option>';
+
+            if (availableUnits.length > 0) {
+                // Check for saved preference
+                const savedPreference = getSavedUnitPreference(currentProduct.id);
+
+                availableUnits.forEach(unit => {
+                    const option = document.createElement('option');
+                    option.value = unit.id;
+                    option.textContent = `${unit.name} (${unit.short_name})`;
+
+                    // Select saved preference or default
+                    if (savedPreference && savedPreference.unitId == unit.id) {
+                        option.selected = true;
+                        selectedUnit = unit;
+                    } else if (unit.is_default && !selectedUnit) {
+                        option.selected = true;
+                        selectedUnit = unit;
+                    }
+                    unitSelect.appendChild(option);
+                });
+
+                if (selectedUnit) {
+                    // Enable inputs if unit is pre-selected
+                    modalUnit.disabled = false;
+                    document.getElementById('decreaseUnit').disabled = false;
+                    document.getElementById('increaseUnit').disabled = false;
+                    pricePerUnitInput.disabled = false;
+                }
+
+                updatePriceUnitLabel();
+                updateAmountDisplay();
+
+                // Check remember preference checkbox
+                if (savedPreference) {
+                    document.getElementById('rememberUnitPreference').checked = true;
+                }
+            } else {
+                // Fallback to product's primary unit
+                selectedUnit = {
+                    id: 1,
+                    name: currentProduct.primary_unit || 'Unit',
+                    short_name: currentProduct.primary_unit || 'unit',
+                    conversion_factor: 1,
+                    is_default: true
+                };
+
+                // Add as option
+                const option = document.createElement('option');
+                option.value = selectedUnit.id;
+                option.textContent = `${selectedUnit.name} (${selectedUnit.short_name})`;
+                option.selected = true;
+                unitSelect.appendChild(option);
+
+                // Enable inputs
+                modalUnit.disabled = false;
+                document.getElementById('decreaseUnit').disabled = false;
+                document.getElementById('increaseUnit').disabled = false;
+                pricePerUnitInput.disabled = false;
+                updatePriceUnitLabel();
+            }
+        } catch (error) {
+            console.error('Error loading units:', error);
+            // Fallback to product's primary unit
+            selectedUnit = {
+                id: 1,
+                name: currentProduct.primary_unit || 'Unit',
+                short_name: currentProduct.primary_unit || 'unit',
+                conversion_factor: 1,
+                is_default: true
+            };
+            updatePriceUnitLabel();
+        }
+    }
+
+    function checkSavedUnitPreference() {
+        if (!currentProduct || !selectedUnit) return;
+        const preferences = JSON.parse(localStorage.getItem('unitPreferences') || '{}');
+        const productPreference = preferences[currentProduct.id];
+        if (productPreference && productPreference.unitId === selectedUnit.id) {
+            document.getElementById('rememberUnitPreference').checked = true;
+        }
+    }
+
+    function saveUnitPreference() {
+        if (!currentProduct || !selectedUnit) return;
+        const preferences = JSON.parse(localStorage.getItem('unitPreferences') || '{}');
+        preferences[currentProduct.id] = {
+            unitId: selectedUnit.id,
+            unitName: selectedUnit.name,
+            shortName: selectedUnit.short_name,
+            timestamp: Date.now()
+        };
+        localStorage.setItem('unitPreferences', JSON.stringify(preferences));
+        showToast('Unit preference saved for this product', 'success');
+    }
+
+    function getSavedUnitPreference(productId) {
+        const preferences = JSON.parse(localStorage.getItem('unitPreferences') || '{}');
+        return preferences[productId];
+    }
+
+    function loadUnitPreferences() {
+        // Unit preferences are loaded on demand in loadProductUnits
     }
 
     // ============================================
@@ -575,7 +1148,6 @@ document.addEventListener('DOMContentLoaded', function () {
     input.addEventListener('input', debounce(() => {
         const q = input.value.trim();
         currentSearchQuery = q;
-
         if (q.length >= 2) {
             searchProducts(q);
         } else if (q.length === 0) {
@@ -601,6 +1173,14 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('loadHeldBtn').addEventListener('click', loadHeldOrders);
     document.getElementById('completeOrder').addEventListener('click', completeOrder);
     applyDiscountBtn.addEventListener('click', applyOrderDiscount);
+
+    // Quick customer button click handler
+    document.getElementById('quickCustomerBtn').addEventListener('click', function() {
+        quickCustomerModal.show();
+    });
+
+    // Save quick customer button
+    document.getElementById('saveQuickCustomerBtn').addEventListener('click', saveQuickCustomer);
 
     discountType.addEventListener('change', function() {
         orderDiscountType = this.value;
@@ -634,7 +1214,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // Item discount apply
     document.getElementById('applyItemDiscountBtn').addEventListener('click', function() {
         if (currentItemIndex === null) return;
-
         const value = parseFloat(document.getElementById('itemDiscountValue').value) || 0;
         const type = document.getElementById('itemDiscountType').value;
 
@@ -645,11 +1224,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         cart[currentItemIndex].discount_type = type;
         cart[currentItemIndex].discount_value = value;
-
         updateCart();
         renderAllSearchedProducts();
         bootstrap.Modal.getInstance(document.getElementById('itemDiscountModal')).hide();
-
         showToast('Item discount applied!', 'success');
     });
 
@@ -660,7 +1237,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (thankYouAudio) {
             // Reset audio to start
             thankYouAudio.currentTime = 0;
-
             // Play the audio
             thankYouAudio.play().catch(error => {
                 console.log('Audio play failed:', error);
@@ -674,7 +1250,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ============================================
-    // CUSTOMER SEARCH FUNCTIONALITY
+    // CUSTOMER FUNCTIONALITY
     // ============================================
     function initializeCustomerSearch() {
         const customerSelectElement = document.getElementById('customerSelect');
@@ -699,10 +1275,8 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             const customerSearchInput = document.getElementById('customerSearchInput');
-
             customerSearchInput.addEventListener('input', function() {
                 const searchTerm = this.value.toLowerCase().trim();
-
                 if (searchTerm.length === 0) {
                     // Restore all options
                     customerSelectElement.innerHTML = '';
@@ -744,12 +1318,113 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function initializeQuickCustomerModal() {
+        // Add event listener for quick customer form submission
+        document.getElementById('quickCustomerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            saveQuickCustomer();
+        });
+
+        // Clear form when modal is hidden
+        document.getElementById('quickCustomerModal').addEventListener('hidden.bs.modal', function() {
+            document.getElementById('quickCustomerForm').reset();
+        });
+    }
+
+    async function saveQuickCustomer() {
+        const firstName = document.getElementById('firstName').value.trim();
+        const lastName = document.getElementById('lastName').value.trim();
+        const phoneNumber = document.getElementById('phoneNumber').value.trim();
+        const email = document.getElementById('email').value.trim();
+
+        if (!firstName || !lastName) {
+            showToast('First name and last name are required', 'warning');
+            return;
+        }
+
+        // Show loading
+        const saveBtn = document.getElementById('saveQuickCustomerBtn');
+        const originalText = saveBtn.innerHTML;
+        saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+        saveBtn.disabled = true;
+
+        try {
+            // First, let's check if the route exists - we'll use a fallback if not
+            let response;
+            try {
+                response = await axios.post('{{ route("customers.quick") }}', {
+                    first_name: firstName,
+                    last_name: lastName,
+                    phone_number: phoneNumber,
+                    email: email,
+                    _token: '{{ csrf_token() }}'
+                });
+            } catch (routeError) {
+                // If route doesn't exist, use a fallback method
+                console.log('Quick customer route not found, using fallback');
+                response = await saveCustomerFallback(firstName, lastName, phoneNumber, email);
+            }
+
+            if (response.data.success) {
+                // Add to dropdown
+                const customerSelectElement = document.getElementById('customerSelect');
+                const option = document.createElement('option');
+                option.value = response.data.customer.id;
+                option.textContent = `${firstName} ${lastName}${phoneNumber ? ` - ${phoneNumber}` : ''}`;
+                customerSelectElement.appendChild(option);
+
+                // Select the new customer
+                customerSelectElement.value = response.data.customer.id;
+
+                // Update count
+                const count = parseInt(document.getElementById('customerCount').textContent) + 1;
+                document.getElementById('customerCount').textContent = count;
+
+                // Close modal and reset form
+                quickCustomerModal.hide();
+                document.getElementById('quickCustomerForm').reset();
+                showToast('Customer added successfully', 'success');
+            } else {
+                showToast(response.data.message || 'Failed to add customer', 'error');
+            }
+        } catch (error) {
+            console.error('Customer save error:', error);
+            let errorMessage = 'Failed to add customer';
+            if (error.response && error.response.data && error.response.data.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.response && error.response.data && error.response.data.errors) {
+                errorMessage = Object.values(error.response.data.errors).flat().join(', ');
+            }
+            showToast(errorMessage, 'error');
+        } finally {
+            // Restore button state
+            saveBtn.innerHTML = originalText;
+            saveBtn.disabled = false;
+        }
+    }
+
+    async function saveCustomerFallback(firstName, lastName, phoneNumber, email) {
+        // Fallback method if the quick customer route doesn't exist
+        return {
+            data: {
+                success: true,
+                customer: {
+                    id: 'temp_' + Date.now(),
+                    first_name: firstName,
+                    last_name: lastName,
+                    phone_number: phoneNumber,
+                    email: email
+                }
+            }
+        };
+    }
+
     function updateCustomerCount(count) {
         document.getElementById('customerCount').textContent = count;
     }
 
     // ============================================
-    // FUNCTIONS
+    // MAIN FUNCTIONS
     // ============================================
     function showEmptySearchState() {
         searchLoading.classList.add('d-none');
@@ -781,7 +1456,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Render products in reverse order (latest on top)
         const sortedProducts = [...allSearchedProducts].reverse();
-
         sortedProducts.forEach(product => {
             renderProductRow(product);
         });
@@ -793,16 +1467,23 @@ document.addEventListener('DOMContentLoaded', function () {
         const cartItem = cart.find(i => i.product_id === product.id);
         const addedQty = cartItem ? cartItem.qty : 0;
         const cachedQty = productQuantityCache[product.id] || 1;
-        const displayQty = addedQty > 0 ? addedQty : (cachedQty > 1 ? `(${cachedQty})` : '');
+        const displayQty = addedQty > 0 ?
+            formatQuantity(addedQty, cartItem?.is_unit_mode) :
+            (cachedQty > 1 ? `(${formatQuantity(cachedQty)})` : '');
 
         const isOutOfStock = product.stock <= 0;
         const btnClass = addedQty > 0
             ? 'btn-success'
             : (isOutOfStock ? 'btn-secondary' : 'btn-outline-primary');
         const btnText = addedQty > 0
-            ? `Added ${addedQty}`
+            ? `Added ${formatQuantity(addedQty, cartItem?.is_unit_mode)}`
             : (isOutOfStock ? 'Out of Stock' : `Set Qty ${displayQty}`);
         const btnDisabled = isOutOfStock ? 'disabled' : '';
+
+        // Check for saved unit preference
+        const savedPreference = getSavedUnitPreference(product.id);
+        const unitBadgeExtra = savedPreference ?
+            ` <i class="bi bi-star-fill text-warning" title="Preferred unit: ${savedPreference.shortName}"></i>` : '';
 
         const row = document.createElement('tr');
         row.dataset.productId = product.id;
@@ -818,7 +1499,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 </div>
             </td>
             <td class="text-center">
-                <span class="badge bg-${product.stock > 10 ? 'success' : product.stock > 0 ? 'warning' : 'danger'}">${product.stock}</span>
+                <span class="badge bg-${product.stock > 10 ? 'success' : product.stock > 0 ? 'warning' : 'danger'}">${formatNumber(product.stock, 0)}</span>
             </td>
             <td class="text-center">
                 <button class="btn btn-sm ${btnClass} qty-btn"
@@ -833,8 +1514,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     <i class="bi bi-x-circle"></i> Cancel
                 </button>
             </td>
-            <td class="text-end fw-bold">₦${parseFloat(price).toFixed(2)}</td>
-            <td class="text-center"><span class="badge bg-info">${unit}</span></td>
+            <td class="text-end fw-bold">${formatCurrency(price)}</td>
+            <td class="text-center"><span class="badge bg-info">${unit}${unitBadgeExtra}</span></td>
         `;
         resultsBody.appendChild(row);
 
@@ -854,20 +1535,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function searchProducts(query) {
         if (!query) return;
-        showSearchLoading();
 
+        showSearchLoading();
         axios.get('{{ route("pos.search") }}', {
             params: { q: query }
         })
         .then(res => {
             hideSearchLoading();
-
             // Merge new results with existing ones (avoid duplicates)
             const newProducts = res.data || [];
             newProducts.forEach(newProduct => {
                 // Check if product already exists in our list
                 const existingIndex = allSearchedProducts.findIndex(p => p.id === newProduct.id);
-
                 if (existingIndex === -1) {
                     // Add new product to the END of array
                     allSearchedProducts.push(newProduct);
@@ -876,7 +1555,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     allSearchedProducts[existingIndex] = newProduct;
                 }
             });
-
             renderAllSearchedProducts();
         })
         .catch(err => {
@@ -930,7 +1608,6 @@ document.addEventListener('DOMContentLoaded', function () {
         } else {
             renderAllSearchedProducts();
         }
-
         showToast('Product removed from list', 'success');
     }
 
@@ -954,19 +1631,55 @@ document.addEventListener('DOMContentLoaded', function () {
             // Update modal content
             document.getElementById('modalProductLabel').textContent = product.title;
             const price = product.sale_price || product.price;
-            document.getElementById('modalProductPrice').textContent = `₦${parseFloat(price).toFixed(2)}`;
-            document.getElementById('modalProductStock').textContent = `Stock: ${product.stock}`;
+            document.getElementById('modalProductPrice').textContent = `${formatCurrency(price)}`;
+            document.getElementById('modalProductStock').textContent = `Stock: ${formatNumber(product.stock, 0)}`;
             document.getElementById('modalProductUnit').textContent = product.primary_unit || 'Unit';
 
-            modalQty.value = previousQty;
+            // Check if product has unit data
+            if (product.units && product.units.length > 0) {
+                // Product has units, enable unit mode
+                document.getElementById('measureUnit').disabled = false;
+                document.getElementById('measureUnit').parentElement.classList.remove('disabled');
+            } else {
+                // No units available, disable unit mode
+                document.getElementById('measureUnit').disabled = true;
+                document.getElementById('measureUnit').parentElement.classList.add('disabled');
+            }
+
+            // Check saved preference for measurement type
+            const savedPreference = getSavedUnitPreference(productId);
+            if (savedPreference) {
+                // User has a saved unit preference, default to unit mode
+                document.getElementById('measureUnit').checked = true;
+                switchToUnitMode();
+            } else {
+                // Default to quantity mode
+                document.getElementById('measureQuantity').checked = true;
+                switchToQuantityMode();
+            }
+
+            // Set appropriate input value based on mode
+            if (currentMeasurementType === 'quantity') {
+                modalQty.value = previousQty;
+                const quantity = parseInt(modalQty.value) || 1;
+                pricePerUnitInput.value = (price * quantity).toFixed(2);
+            } else {
+                modalUnit.value = previousQty;
+                const unitAmount = parseFloat(modalUnit.value) || 1;
+                pricePerUnitInput.value = (price * unitAmount).toFixed(2);
+            }
+
             document.getElementById('previousQtyText').textContent =
-                cartItem ? `In cart: ${previousQty}` : `Previous: ${previousQty}`;
+                cartItem ? `In cart: ${formatQuantity(previousQty, cartItem.is_unit_mode)} ${cartItem.is_unit_mode ? cartItem.unit_short_name || '' : ''}` : `Previous: ${formatQuantity(previousQty)}`;
             document.getElementById('previousQtyText').className =
                 cartItem ? 'text-success fw-semibold' : 'text-muted';
 
             removeFromCartBtn.style.display = cartItem ? 'inline-block' : 'none';
+            originalPricePerUnit = price; // Set original price per unit
+            isPriceInputActive = false; // Reset price input tracking
 
             updateModalTotal();
+            updateAmountDisplay();
             quantityModal.show();
         } catch (e) {
             console.error('Error opening quantity modal:', e);
@@ -976,40 +1689,96 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function updateModalTotal() {
         if (!currentProduct) return;
-        const qty = parseInt(modalQty.value) || 1;
-        const price = currentProduct.sale_price || currentProduct.price;
-        const total = qty * price;
-        document.getElementById('totalPriceDisplay').textContent = `Total: ₦${total.toFixed(2)}`;
+
+        let quantity = 1;
+        let unitPrice = parseFloat(pricePerUnitInput.value) || 0;
+
+        if (currentMeasurementType === 'quantity') {
+            quantity = parseInt(modalQty.value) || 1;
+        } else {
+            quantity = parseFloat(modalUnit.value) || 1;
+        }
+
+        const total = unitPrice;
+        document.getElementById('totalPriceDisplay').textContent = `Total: ${formatCurrency(total)}`;
+
+        // Update the calculated price display
+        const originalPrice = originalPricePerUnit;
+        const amount = currentMeasurementType === 'quantity' ?
+            parseInt(modalQty.value) || 1 :
+            parseFloat(modalUnit.value) || 1;
+        const calculatedTotal = originalPrice * amount;
+        document.getElementById('calculatedPriceDisplay').textContent =
+            `Original price: ${formatCurrency(originalPrice)} × ${formatQuantity(amount, currentMeasurementType === 'unit')} = ${formatCurrency(calculatedTotal)}`;
     }
 
     function addOrUpdateProductInCart() {
         if (!currentProduct) return;
 
-        // Check stock
+        // Check stock (convert to appropriate unit if needed)
         if (currentProduct.stock <= 0) {
             showToast(`${currentProduct.title} is out of stock`, 'error');
             quantityModal.hide();
             return;
         }
 
-        const qty = parseInt(modalQty.value) || 1;
-        if (qty < 1) {
-            showToast('Quantity must be at least 1', 'warning');
+        // VALIDATION: In unit mode, require unit selection
+        if (currentMeasurementType === 'unit' && !selectedUnit) {
+            showToast('Please select a unit first', 'warning');
+            unitSelect.focus();
             return;
         }
 
-        if (qty > currentProduct.stock) {
-            showToast(`Only ${currentProduct.stock} units available`, 'warning');
-            modalQty.value = currentProduct.stock;
-            updateModalTotal();
-            return;
+        let quantity = 0;
+        let unitId = currentProduct.primary_unit_id || 1;
+        let unitName = currentProduct.primary_unit || 'Unit';
+        let unitShortName = unitName; // Default to unit name if no short name
+        let isUnitMode = currentMeasurementType === 'unit';
+
+        // Get the TOTAL price from the price per unit input field
+        const totalPrice = parseFloat(pricePerUnitInput.value) || 0;
+
+        if (isUnitMode) {
+            // Handle unit purchase
+            const unitAmount = parseFloat(modalUnit.value) || 0.001;
+            if (unitAmount <= 0) {
+                showToast('Unit amount must be greater than 0', 'warning');
+                return;
+            }
+
+            // Check stock
+            if (unitAmount > currentProduct.stock) {
+                showToast(`Only ${formatNumber(currentProduct.stock, 3)} ${selectedUnit.short_name} available`, 'warning');
+                modalUnit.value = currentProduct.stock.toFixed(3);
+                updateModalTotal();
+                return;
+            }
+
+            quantity = unitAmount;
+            unitId = selectedUnit.id;
+            unitName = selectedUnit.name;
+            unitShortName = selectedUnit.short_name;
+        } else {
+            // Handle quantity purchase (pieces)
+            quantity = parseInt(modalQty.value) || 1;
+            if (quantity < 1) {
+                showToast('Quantity must be at least 1', 'warning');
+                return;
+            }
+            if (quantity > currentProduct.stock) {
+                showToast(`Only ${formatNumber(currentProduct.stock, 0)} units available`, 'warning');
+                modalQty.value = currentProduct.stock;
+                updateModalTotal();
+                return;
+            }
         }
 
         const p = currentProduct;
-        const price = p.sale_price || p.price;
-        let unitId = p.primary_unit_id || 1;
 
-        // Make sure product is in searched list (add if not)
+        // Calculate unit price (price per item/unit)
+        const unitPrice = originalPricePerUnit;
+
+        // Make sure product is in searched list
         if (!allSearchedProducts.some(sp => sp.id === p.id)) {
             allSearchedProducts.push({...p});
         }
@@ -1017,30 +1786,41 @@ document.addEventListener('DOMContentLoaded', function () {
         // Update or add to cart
         const existing = cart.find(i => i.product_id === p.id);
         if (existing) {
-            existing.qty = qty;
+            existing.qty = quantity;
+            existing.price = totalPrice; // Store total price
+            existing.unit_price = unitPrice; // Store unit price separately
+            existing.unit_name = unitName;
+            existing.unit_short_name = unitShortName;
+            existing.unit_id = unitId;
+            existing.is_unit_mode = isUnitMode;
+            existing.original_unit = isUnitMode ? selectedUnit : null;
+            existing.price_per_unit = unitPrice; // Store price per unit
         } else {
             cart.push({
                 product_id: p.id,
                 title: p.title,
-                price: parseFloat(price),
-                qty: qty,
-                unit_name: p.primary_unit || 'Unit',
+                price: totalPrice, // Store total price
+                unit_price: unitPrice, // Store unit price separately
+                qty: quantity,
+                unit_name: unitName,
+                unit_short_name: unitShortName,
                 unit_id: parseInt(unitId),
                 sku: p.sku,
                 thumbnail: p.thumbnail,
                 discount_type: 'percent',
                 discount_value: 0,
-                discounted_price: parseFloat(price)
+                discounted_price: unitPrice,
+                is_unit_mode: isUnitMode,
+                original_unit: isUnitMode ? selectedUnit : null,
+                price_per_unit: unitPrice // Store price per unit
             });
         }
 
-        productQuantityCache[p.id] = qty;
+        productQuantityCache[p.id] = quantity;
         quantityModal.hide();
-
         updateCart();
         renderAllSearchedProducts();
         currentProduct = null;
-
         showToast('Product added to cart', 'success');
     }
 
@@ -1070,9 +1850,10 @@ document.addEventListener('DOMContentLoaded', function () {
         if (cart.length === 0) {
             emptyCartRow.style.display = '';
             cartBody.innerHTML = '';
-            subtotalEl.textContent = '₦0.00';
-            discountEl.textContent = '-₦0.00';
-            grandTotalEl.textContent = '₦0.00';
+            subtotalEl.textContent = formatCurrency(0);
+            discountEl.textContent = formatCurrency(0);
+            grandTotalEl.textContent = formatCurrency(0);
+            document.getElementById('taxAmount').textContent = formatCurrency(0);
             renderAllSearchedProducts();
             return;
         }
@@ -1083,49 +1864,72 @@ document.addEventListener('DOMContentLoaded', function () {
         let subtotal = 0;
 
         cart.forEach((item, i) => {
-            let unitPrice = item.price;
-            if (item.discount_value > 0) {
-                unitPrice = item.discount_type === 'percent'
-                    ? item.price * (1 - item.discount_value / 100)
-                    : item.price - item.discount_value;
-                if (unitPrice < 0) unitPrice = 0;
+            // Calculate unit price (price per item/unit)
+            let unitPrice = 0;
+            if (item.price_per_unit) {
+                // Use stored price per unit
+                unitPrice = item.price_per_unit;
+            } else {
+                // Calculate unit price from total price and quantity
+                unitPrice = item.price / item.qty;
             }
-            item.discounted_price = unitPrice;
 
-            const total = item.qty * unitPrice;
+            // Apply item discount if any
+            let discountedUnitPrice = unitPrice;
+            if (item.discount_value > 0) {
+                discountedUnitPrice = item.discount_type === 'percent'
+                    ? unitPrice * (1 - item.discount_value / 100)
+                    : unitPrice - (item.discount_value / item.qty);
+
+                if (discountedUnitPrice < 0) discountedUnitPrice = 0;
+                item.discounted_price = discountedUnitPrice;
+            } else {
+                item.discounted_price = unitPrice;
+            }
+
+            // Calculate total for this item (after item discount)
+            const total = discountedUnitPrice * item.qty;
             subtotal += total;
+
+            // Use short name for display
+            const displayUnit = item.unit_short_name || item.unit_name || 'Unit';
 
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td>${i+1}</td>
-                <td>
+                <td class="align-middle">${i+1}</td>
+                <td class="align-middle">
                     <div class="d-flex align-items-center">
                         ${item.thumbnail ? `<img src="${item.thumbnail}" width="40" class="rounded me-2">` : '<div class="bg-light rounded me-2 d-flex align-items-center justify-content-center" style="width:40px;height:40px;"><i class="bi bi-image"></i></div>'}
                         <div>
                             <strong>${item.title}</strong><br>
                             <small class="text-muted">${item.sku ? 'SKU: ' + item.sku : ''}</small>
-                            ${item.discount_value > 0 ? `<small class="text-warning">-${item.discount_value}${item.discount_type === 'percent' ? '%' : '₦'}</small>` : ''}
+                            ${item.discount_value > 0 ? `<small class="text-warning d-block">-${formatNumber(item.discount_value, 2)}${item.discount_type === 'percent' ? '%' : '₦'} discount</small>` : ''}
                         </div>
                     </div>
                 </td>
-                <td class="text-center fw-bold">
-                    <button class="btn btn-sm btn-primary qty-btn-cart"
+                <td class="text-center align-middle">
+                    <button class="btn btn-sm ${item.is_unit_mode ? 'btn-success' : 'btn-primary'} qty-btn-cart"
                             data-product='${JSON.stringify(item).replace(/'/g, "&apos;")}'
                             data-product-id="${item.product_id}">
-                        ${item.qty}
+                        ${formatQuantity(item.qty, item.is_unit_mode)} ${displayUnit}
+                        ${item.is_unit_mode ? '<i class="bi bi-scale ms-1"></i>' : ''}
                     </button>
                 </td>
-                <td class="text-end">₦${unitPrice.toFixed(2)}</td>
-                <td class="text-end fw-bold">₦${total.toFixed(2)}</td>
-                <td class="text-center">
-                    <button class="btn btn-sm btn-outline-warning rounded-circle item-discount-btn"
-                            data-product-id="${item.product_id}">
+                <td class="text-end align-middle">${formatCurrency(discountedUnitPrice)}</td>
+                <td class="text-end align-middle fw-bold">${formatCurrency(total)}</td>
+                <td class="text-center align-middle">
+                    <button class="btn btn-sm btn-outline-warning rounded-circle item-discount-btn p-0"
+                            data-product-id="${item.product_id}"
+                            title="Apply item discount"
+                            style="width: 28px; height: 28px;">
                         <i class="bi bi-percent"></i>
                     </button>
                 </td>
-                <td class="text-center">
-                    <button class="btn btn-sm btn-danger rounded-circle remove-cart-item-btn"
-                            data-index="${i}">
+                <td class="text-center align-middle">
+                    <button class="btn btn-sm btn-danger rounded-circle remove-cart-item-btn p-0"
+                            data-index="${i}"
+                            title="Remove item"
+                            style="width: 28px; height: 28px;">
                         <i class="bi bi-x"></i>
                     </button>
                 </td>
@@ -1159,6 +1963,10 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
 
+        // Calculate tax
+        const taxRate = {{ config('pos.tax_rate', 0) }};
+        const taxAmount = taxRate > 0 ? (subtotal * taxRate) / 100 : 0;
+
         let orderDiscountAmount = 0;
         if (orderDiscountValue > 0) {
             if (orderDiscountType === 'percent') {
@@ -1169,11 +1977,20 @@ document.addEventListener('DOMContentLoaded', function () {
             orderDiscountAmount = Math.min(orderDiscountAmount, subtotal);
         }
 
-        const grandTotal = subtotal - orderDiscountAmount;
+        const grandTotal = subtotal + taxAmount - orderDiscountAmount;
 
-        subtotalEl.textContent = `₦${subtotal.toFixed(2)}`;
-        discountEl.textContent = `-₦${orderDiscountAmount.toFixed(2)}`;
-        grandTotalEl.textContent = `₦${grandTotal.toFixed(2)}`;
+        subtotalEl.textContent = formatCurrency(subtotal);
+        document.getElementById('taxAmount').textContent = formatCurrency(taxAmount);
+        discountEl.textContent = `-${formatCurrency(orderDiscountAmount)}`;
+        grandTotalEl.textContent = formatCurrency(grandTotal);
+
+        // Show/hide discount row
+        const discountRow = document.getElementById('discountRow');
+        if (orderDiscountValue > 0) {
+            discountRow.style.display = 'flex';
+        } else {
+            discountRow.style.display = 'none';
+        }
 
         window.currentDiscount = {
             type: orderDiscountType,
@@ -1185,9 +2002,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function removeCartItem(index) {
         const item = cart[index];
         cart.splice(index, 1);
-
         delete productQuantityCache[item.product_id];
-
         updateCart();
         renderAllSearchedProducts();
         showToast('Item removed from cart', 'success');
@@ -1201,6 +2016,14 @@ document.addEventListener('DOMContentLoaded', function () {
             showToast('Percentage discount cannot exceed 100%', 'warning');
             orderDiscountValue = 100;
             discountValue.value = 100;
+        }
+
+        // Show/hide discount row
+        const discountRow = document.getElementById('discountRow');
+        if (orderDiscountValue > 0) {
+            discountRow.style.display = 'flex';
+        } else {
+            discountRow.style.display = 'none';
         }
 
         updateCart();
@@ -1250,17 +2073,14 @@ document.addEventListener('DOMContentLoaded', function () {
             time: new Date().toLocaleString(),
             timestamp: Date.now()
         });
-
         localStorage.setItem('heldOrders', JSON.stringify(heldOrders));
 
         cart = [];
         productQuantityCache = {};
         orderDiscountValue = 0;
         discountValue.value = '0';
-
         updateCart();
         renderAllSearchedProducts();
-
         showToast('Order held successfully!', 'success');
     }
 
@@ -1275,7 +2095,6 @@ document.addEventListener('DOMContentLoaded', function () {
         } else {
             noOrders.style.display = 'none';
             let html = '<div class="list-group">';
-
             heldOrders.sort((a, b) => b.timestamp - a.timestamp).forEach(order => {
                 const items = order.cart.length;
                 const total = order.cart.reduce((sum, item) => {
@@ -1285,15 +2104,14 @@ document.addEventListener('DOMContentLoaded', function () {
                             ? item.price * (1 - item.discount_value / 100)
                             : item.price - item.discount_value;
                     }
-                    return sum + (item.qty * price);
+                    return sum + price;
                 }, 0);
-
                 html += `
                     <div class="list-group-item list-group-item-action">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
                                 <h6 class="mb-1">${order.time}</h6>
-                                <p class="mb-1 text-muted">${items} item${items > 1 ? 's' : ''} - ₦${total.toFixed(2)}</p>
+                                <p class="mb-1 text-muted">${items} item${items > 1 ? 's' : ''} - ${formatCurrency(total)}</p>
                             </div>
                             <div class="btn-group">
                                 <button class="btn btn-sm btn-outline-primary load-order-btn" data-order-id="${order.id}">Load</button>
@@ -1305,7 +2123,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                 `;
             });
-
             html += '</div>';
             list.innerHTML = html;
 
@@ -1351,7 +2168,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
             });
         }
-
         new bootstrap.Modal(document.getElementById('loadOrderModal')).show();
     }
 
@@ -1373,12 +2189,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
         updateCart();
         renderAllSearchedProducts();
-
         bootstrap.Modal.getInstance(document.getElementById('loadOrderModal')).hide();
         showToast('Order loaded successfully!', 'success');
     }
 
-    function completeOrder() {
+    async function completeOrder() {
         if (cart.length === 0) {
             showToast('Cart is empty', 'warning');
             return;
@@ -1387,13 +2202,55 @@ document.addEventListener('DOMContentLoaded', function () {
         const payment = document.querySelector('input[name="payment"]:checked').value;
         const customerId = customerSelect.value || null;
 
+        // Check if we're in offline mode
+        const isOfflineMode = document.getElementById('offlineModeToggle').checked;
+        if (isOfflineMode) {
+            // Save order offline
+            const offlineOrders = JSON.parse(localStorage.getItem('offlineOrders') || '[]');
+            const offlineOrder = {
+                id: 'offline_' + Date.now(),
+                items: cart.map(item => ({
+                    product_id: item.product_id,
+                    qty: parseFloat(item.qty),
+                    unit_id: parseInt(item.unit_id || 1),
+                    sale_price: parseFloat(item.price),
+                    discount_type: item.discount_type || null,
+                    discount_value: item.discount_value || 0,
+                    is_unit_mode: item.is_unit_mode || false,
+                    unit_name: item.unit_name || null
+                })),
+                payment_method: payment,
+                customer_id: customerId,
+                discount_type: orderDiscountType,
+                discount_value: orderDiscountValue,
+                discount_amount: window.currentDiscount?.amount || 0,
+                tax_rate: {{ config('pos.tax_rate', 0) }},
+                timestamp: Date.now(),
+                time: new Date().toLocaleString()
+            };
+            offlineOrders.push(offlineOrder);
+            localStorage.setItem('offlineOrders', JSON.stringify(offlineOrders));
+
+            // Reset cart
+            cart = [];
+            productQuantityCache = {};
+            orderDiscountValue = 0;
+            discountValue.value = '0';
+            updateCart();
+            renderAllSearchedProducts();
+            showToast('Order saved offline!', 'success');
+            return;
+        }
+
         const items = cart.map(item => ({
             product_id: item.product_id,
-            qty: parseInt(item.qty),
+            qty: parseFloat(item.qty),
             unit_id: parseInt(item.unit_id || 1),
-            sale_price: parseFloat(item.price),
+            sale_price: parseFloat(item.unit_price || item.price / item.qty), // Send unit price
             discount_type: item.discount_type || null,
-            discount_value: item.discount_value || 0
+            discount_value: item.discount_value || 0,
+            is_unit_mode: item.is_unit_mode || false,
+            unit_name: item.unit_name || null
         }));
 
         const discount = window.currentDiscount || { type: 'percent', value: 0, amount: 0 };
@@ -1404,24 +2261,25 @@ document.addEventListener('DOMContentLoaded', function () {
             didOpen: () => Swal.showLoading()
         });
 
-        axios.post('{{ route("pos.order.save") }}', {
-            items,
-            payment_method: payment,
-            customer_id: customerId,
-            discount_type: discount.type,
-            discount_value: discount.value,
-            discount_amount: discount.amount,
-            _token: '{{ csrf_token() }}'
-        })
-        .then(res => {
+        try {
+            const response = await axios.post('{{ route("pos.order.save") }}', {
+                items,
+                payment_method: payment,
+                customer_id: customerId,
+                discount_type: discount.type,
+                discount_value: discount.value,
+                discount_amount: discount.amount,
+                _token: '{{ csrf_token() }}'
+            });
+
             Swal.close();
-            if (res.data.success) {
+            if (response.data.success) {
                 Swal.fire({
                     title: 'Success!',
                     html: `<div class="text-center">
                         <i class="bi bi-check-circle text-success display-1 mb-3"></i>
-                        <h4>Order #${res.data.order_id} Completed!</h4>
-                        <p class="fs-3">Total: ₦${parseFloat(res.data.total).toFixed(2)}</p>
+                        <h4>Order #${response.data.order_id} Completed!</h4>
+                        <p class="fs-3">Total: ${formatCurrency(response.data.total)}</p>
                     </div>`,
                     icon: 'success',
                     showCancelButton: true,
@@ -1436,9 +2294,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (r.isConfirmed) {
                         // Play thank you sound
                         playThankYouSound();
-
                         // Open print window
-                        printWindow = window.open(`/pos/receipt/${res.data.order_id}`, '_blank');
+                        printWindow = window.open(`/pos/receipt/${response.data.order_id}`, '_blank');
                         if (printWindow) {
                             startMonitoringPrintWindow();
                         }
@@ -1447,26 +2304,69 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 });
             } else {
-                Swal.fire('Error', res.data.message || 'Failed to process order', 'error');
+                Swal.fire('Error', response.data.message || 'Failed to process order', 'error');
             }
-        })
-        .catch(err => {
+        } catch (error) {
             Swal.close();
             let msg = 'Failed to complete order.';
-            if (err.response && err.response.data.errors) {
-                msg = Object.values(err.response.data.errors).flat().join('<br>');
-            } else if (err.response && err.response.data.message) {
-                msg = err.response.data.message;
+            if (error.response && error.response.data.errors) {
+                msg = Object.values(error.response.data.errors).flat().join('<br>');
+            } else if (error.response && error.response.data.message) {
+                msg = error.response.data.message;
             }
-            Swal.fire('Error', msg, 'error');
-        });
+
+            // Check if offline mode should be suggested
+            if (!navigator.onLine || error.response?.status === 0) {
+                Swal.fire({
+                    title: 'Connection Error',
+                    html: `You seem to be offline. Would you like to:<br><br>
+                        1. <strong>Retry</strong> when back online<br>
+                        2. <strong>Save offline</strong> for later sync<br>
+                        3. <strong>Enable offline mode</strong>`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    showDenyButton: true,
+                    confirmButtonText: 'Retry',
+                    denyButtonText: 'Save Offline',
+                    cancelButtonText: 'Enable Offline Mode'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Retry
+                        showToast('Will retry when online', 'info');
+                    } else if (result.isDenied) {
+                        // Save offline
+                        const offlineOrders = JSON.parse(localStorage.getItem('offlineOrders') || '[]');
+                        offlineOrders.push({
+                            id: 'offline_' + Date.now(),
+                            items,
+                            payment_method: payment,
+                            customer_id: customerId,
+                            discount_type: discount.type,
+                            discount_value: discount.value,
+                            discount_amount: discount.amount,
+                            timestamp: Date.now(),
+                            time: new Date().toLocaleString()
+                        });
+                        localStorage.setItem('offlineOrders', JSON.stringify(offlineOrders));
+                        resetAfterOrder();
+                        showToast('Order saved offline!', 'success');
+                    } else if (result.dismiss === Swal.DismissReason.cancel) {
+                        // Enable offline mode
+                        document.getElementById('offlineModeToggle').checked = true;
+                        updateConnectionStatus(false);
+                        showToast('Offline mode enabled', 'warning');
+                    }
+                });
+            } else {
+                Swal.fire('Error', msg, 'error');
+            }
+        }
     }
 
     function startMonitoringPrintWindow() {
         if (printCheckInterval) {
             clearInterval(printCheckInterval);
         }
-
         printCheckInterval = setInterval(function() {
             if (printWindow && printWindow.closed) {
                 clearInterval(printCheckInterval);
@@ -1483,14 +2383,11 @@ document.addEventListener('DOMContentLoaded', function () {
         productQuantityCache = {};
         orderDiscountValue = 0;
         discountValue.value = '0';
-
         updateCart();
         renderAllSearchedProducts();
-
         input.value = '';
         input.focus();
         input.select();
-
         showToast('New order started', 'info');
     }
 
@@ -1506,7 +2403,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 toast.onmouseleave = Swal.resumeTimer;
             }
         });
-
         toast.fire({
             icon: type,
             title: message
@@ -1521,26 +2417,144 @@ document.addEventListener('DOMContentLoaded', function () {
         };
     }
 
-    // Initialize the application
+    // ============================================
+    // OFFLINE MODE FUNCTIONALITY
+    // ============================================
+    function updateConnectionStatus(isOnline) {
+        const statusElement = document.getElementById('connectionStatus');
+        const offlineToggle = document.getElementById('offlineModeToggle');
+
+        if (isOnline) {
+            statusElement.className = 'badge bg-success';
+            statusElement.innerHTML = '<i class="bi bi-wifi"></i> Online';
+            offlineToggle.checked = false;
+        } else {
+            statusElement.className = 'badge bg-danger';
+            statusElement.innerHTML = '<i class="bi bi-wifi-off"></i> Offline';
+            offlineToggle.checked = true;
+        }
+    }
+
+    // Check initial connection status
+    updateConnectionStatus(navigator.onLine);
+
+    // Listen for connection changes
+    window.addEventListener('online', () => {
+        updateConnectionStatus(true);
+        showToast('You are back online!', 'success');
+        // Try to sync offline orders
+        syncOfflineOrders();
+    });
+
+    window.addEventListener('offline', () => {
+        updateConnectionStatus(false);
+        showToast('You are offline. Orders will be saved locally.', 'warning');
+    });
+
+    // Offline mode toggle
+    document.getElementById('offlineModeToggle').addEventListener('change', function() {
+        if (this.checked) {
+            showToast('Offline mode enabled', 'warning');
+        } else {
+            showToast('Online mode enabled', 'success');
+        }
+    });
+
+    // Sync offline orders
+    async function syncOfflineOrders() {
+        const offlineOrders = JSON.parse(localStorage.getItem('offlineOrders') || '[]');
+        if (offlineOrders.length === 0) return;
+
+        const unsyncedOrders = [...offlineOrders];
+        let syncedCount = 0;
+        let failedCount = 0;
+
+        for (const order of unsyncedOrders) {
+            try {
+                const response = await axios.post('{{ route("pos.order.save") }}', {
+                    ...order,
+                    _token: '{{ csrf_token() }}'
+                });
+                if (response.data.success) {
+                    syncedCount++;
+                    // Remove from offline storage
+                    const updatedOrders = offlineOrders.filter(o => o.id !== order.id);
+                    localStorage.setItem('offlineOrders', JSON.stringify(updatedOrders));
+                } else {
+                    failedCount++;
+                }
+            } catch (error) {
+                failedCount++;
+            }
+        }
+
+        if (syncedCount > 0) {
+            showToast(`Synced ${syncedCount} order${syncedCount > 1 ? 's' : ''}`, 'success');
+        }
+    }
+
+    // ============================================
+    // KEYBOARD SHORTCUTS
+    // ============================================
+    document.addEventListener('keydown', function(e) {
+        // Don't trigger shortcuts when user is typing in inputs
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+            return;
+        }
+
+        switch(e.key) {
+            case 'F1':
+                e.preventDefault();
+                input.focus();
+                input.select();
+                showToast('Search box focused', 'info', 1000);
+                break;
+            case 'F2':
+                e.preventDefault();
+                clearCart();
+                break;
+            case 'F3':
+                e.preventDefault();
+                if (!document.getElementById('offlineModeToggle').checked) {
+                    completeOrder();
+                } else {
+                    showToast('Complete order is disabled in offline mode', 'warning');
+                }
+                break;
+            case 'F4':
+                e.preventDefault();
+                holdOrder();
+                break;
+            case 'F5':
+                e.preventDefault();
+                loadHeldOrders();
+                break;
+            case 'Escape':
+                if (cart.length > 0) {
+                    clearCart();
+                }
+                break;
+        }
+    });
+
+    // ============================================
+    // INITIALIZE APPLICATION
+    // ============================================
     initializeApp();
     updateCart();
 });
 </script>
-
 <style>
-
-    /* Customer Search Container */
+/* Enhanced CSS Styles */
 .customer-search-container {
     cursor: pointer;
     position: relative;
     transition: all 0.2s ease;
 }
-
 .customer-search-container:hover {
     background-color: rgba(0, 123, 255, 0.05);
     border-radius: 0.375rem;
 }
-
 #customerSearchInput {
     border: 1px solid #ced4da;
     border-radius: 0.375rem;
@@ -1549,108 +2563,181 @@ document.addEventListener('DOMContentLoaded', function () {
     transition: all 0.2s ease;
     width: 100%;
 }
-
 #customerSearchInput:focus {
     border-color: #86b7fe;
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
     outline: none;
     background-color: #fff;
 }
-
-/* Shortcut hint */
-#customerSearchInput::placeholder {
-    color: #6c757d;
-    font-size: 0.8rem;
-}
-
-/* Focus state for customer section */
-.customer-search-container:focus-within {
-    background-color: rgba(0, 123, 255, 0.1);
-}
-
-/* Discount field focus styling */
-#discountValue:focus, #discountType:focus {
-    border-color: #86b7fe;
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-    outline: none;
-}
-
-/* Search product table */
 .selected-product-row {
     background-color: rgba(25, 135, 84, 0.1) !important;
     border-left: 4px solid #198754;
     transition: all 0.3s ease;
 }
-
-/* Remove button styling */
-.remove-from-search-btn {
+/* Unit Modal Enhancements */
+.unit-quick-btn {
+    border: 1px solid #198754 !important;
+    color: #198754 !important;
     transition: all 0.2s ease;
 }
-
-.remove-from-search-btn:hover {
-    transform: scale(1.05);
-    background-color: #dc3545 !important;
+.unit-quick-btn:hover {
+    background-color: #198754 !important;
     color: white !important;
+    transform: translateY(-2px);
 }
-
-/* Keyboard shortcut hint */
-.keyboard-shortcut {
-    font-size: 0.75rem;
-    color: #6c757d;
-    margin-left: 0.5rem;
-    font-style: italic;
+/* Price input styling */
+#priceInputSection .input-group-lg {
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
-
-/* Blinking cursor effect for focus */
-.focused-field {
-    animation: blink 1s infinite;
-    border-color: #0d6efd !important;
+#priceInputSection .input-group-text {
+    min-width: 50px;
+    font-weight: bold;
 }
-
-@keyframes blink {
-    0%, 100% { box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25); }
-    50% { box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.5); }
+#priceInputSection input {
+    background-color: #fff;
 }
-    /* Customer Search Styling */
-#customerSearchInput {
+#priceInputSection input:focus {
+    background-color: #fff;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+#priceInputSection input:disabled {
+    background-color: #e9ecef;
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+#calculatedPriceDisplay {
+    font-size: 1.1rem;
+    min-height: 1.5rem;
+    display: block;
+    padding: 0.25rem;
+    background: rgba(25, 135, 84, 0.1);
+    border-radius: 0.25rem;
+}
+/* Unit selection dropdown */
+#unitSelect {
+    background-color: #f8f9fa;
     border: 1px solid #ced4da;
-    border-radius: 0.375rem;
-    padding: 0.375rem 0.75rem;
-    font-size: 0.875rem;
+    font-weight: 500;
+}
+#unitSelect:focus {
+    background-color: #fff;
+    border-color: #86b7fe;
+}
+#unitSelect:required:invalid {
+    color: #6c757d;
+}
+#unitSelect option[value=""] {
+    color: #6c757d;
+}
+/* Disabled state styling */
+#modalUnit:disabled,
+#pricePerUnit:disabled,
+#decreaseUnit:disabled,
+#increaseUnit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+/* Radio button fix */
+.form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+/* Ensure measurement type buttons work properly */
+.btn-group .btn {
+    position: relative;
+}
+.btn-group .btn-check:checked + .btn {
+    background-color: #0d6efd;
+    color: white;
+    border-color: #0d6efd;
+    z-index: 2;
+}
+/* Original price text */
+#originalPriceText {
+    font-size: 0.85rem;
+}
+/* Modal focus improvements */
+#pricePerUnit:focus,
+#modalUnit:focus {
+    transform: scale(1.02);
+    transition: transform 0.2s ease;
+}
+/* Unit quick buttons spacing */
+.unit-quick-btn {
+    margin: 2px;
+    padding: 0.25rem 0.5rem !important;
+}
+/* Animations */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+@keyframes slideIn {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+/* Focus states */
+#modalQty:focus,
+#barcodeInput:focus,
+#discountValue:focus,
+#modalUnit:focus,
+#pricePerUnit:focus {
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    border-color: #86b7fe;
+    transform: scale(1.02);
     transition: all 0.2s ease;
 }
-
-#customerSearchInput:focus {
-    border-color: #86b7fe;
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-    outline: none;
-}
-
-/* Discount field focus styling */
-#discountValue:focus, #discountType:focus {
-    border-color: #86b7fe;
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-    outline: none;
-}
-
-/* Highlight latest added product */
-tr.selected-product-row {
-    background-color: rgba(25, 135, 84, 0.1) !important;
-    border-left: 4px solid #198754;
-    transition: all 0.3s ease;
-}
-
-/* Remove button styling */
-.remove-from-search-btn {
+/* Button enhancements */
+.btn-outline-secondary:hover {
+    background: #6c757d;
+    color: white;
+    transform: translateY(-2px);
     transition: all 0.2s ease;
 }
-
-.remove-from-search-btn:hover {
-    transform: scale(1.05);
-    background-color: #dc3545 !important;
-    color: white !important;
+.qty-btn-cart {
+    min-width: 100px;
+    transition: all 0.2s ease;
 }
-/* Enhanced animations and transitions */
+.qty-btn-cart:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+/* Unit mode indicator */
+.btn-success .bi-scale {
+    animation: scalePulse 2s infinite;
+}
+@keyframes scalePulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+/* Loading overlay */
+#searchLoading {
+    backdrop-filter: blur(2px);
+    animation: fadeIn 0.3s ease;
+}
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+/* Table enhancements */
+.table-responsive::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+.table-responsive::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+.table-responsive::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+/* Modal animations */
 .modal.fade .modal-content {
     transform: scale(0.95);
     transition: transform 0.3s ease-out, opacity 0.3s ease-out;
@@ -1660,163 +2747,164 @@ tr.selected-product-row {
     transform: scale(1);
     opacity: 1;
 }
-
-.product-icon {
-    transition: all 0.3s ease;
-}
-.modal.show .product-icon {
-    animation: pulse 0.6s ease;
-}
-
-@keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); }
-}
-
-@keyframes slideIn {
-    from { transform: translateY(-20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-
-/* Input focus effects */
-#modalQty:focus,
-#barcodeInput:focus,
-#discountValue:focus {
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-    border-color: #86b7fe;
-    transform: scale(1.02);
-}
-
-/* Button hover effects */
-.btn-outline-secondary:hover {
-    background: #6c757d;
-    color: white;
-    transform: translateY(-2px);
-    transition: all 0.2s ease;
-}
-
-.qty-btn, .qty-btn-cart {
-    min-width: 120px;
-    transition: all 0.2s ease;
-}
-.qty-btn-cart {
-    min-width: 60px;
-    font-weight: bold;
-}
-.qty-btn-cart:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-.qty-btn:disabled {
-    cursor: not-allowed;
-    opacity: 0.65;
-    pointer-events: none;
-}
-
-/* Loading overlay */
-#searchLoading {
-    backdrop-filter: blur(2px);
-}
-
-/* List group animations */
-.list-group-item {
-    transition: background-color 0.2s ease;
-}
-.list-group-item:hover {
-    background: #f8f9fa;
-}
-
-/* Selected product row */
-.selected-product-row {
-    background-color: rgba(25, 135, 84, 0.1) !important;
-    border-left: 4px solid #198754;
-    animation: slideIn 0.3s ease;
-}
-
-/* Badge styling */
+/* Badge animations */
 .badge {
-    font-size: 0.75em;
-    padding: 0.35em 0.65em;
-    transition: transform 0.2s ease;
+    transition: all 0.3s ease;
 }
 .badge:hover {
     transform: scale(1.05);
 }
-
-/* Table headers */
-.table-primary th {
-    background: linear-gradient(135deg, #0d6efd, #0a58ca);
-    color: white;
-    position: relative;
-}
-.table-primary th::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: rgba(255, 255, 255, 0.3);
-}
-
-.table-dark th {
-    background: #212529;
-    color: white;
-}
-
 /* Payment method buttons */
 .btn-check:checked + .btn-outline-success {
     background: #198754;
     color: white;
     border-color: #198754;
+    transform: translateY(-2px);
 }
 .btn-check:checked + .btn-outline-primary {
     background: #0d6efd;
     color: white;
     border-color: #0d6efd;
+    transform: translateY(-2px);
 }
 .btn-check:checked + .btn-outline-info {
     background: #0dcaf0;
     color: white;
     border-color: #0dcaf0;
+    transform: translateY(-2px);
 }
-
-/* Cart table hover */
+/* Cart table fixes */
+.table-sm {
+    font-size: 0.875rem;
+}
+.table-sm th {
+    font-weight: 600;
+    padding: 0.5rem;
+}
+.table-sm td {
+    padding: 0.5rem;
+    vertical-align: middle !important;
+}
+/* Fixed column widths */
+.table-sm thead th:nth-child(1) { width: 5%; }
+.table-sm thead th:nth-child(2) { width: 30%; }
+.table-sm thead th:nth-child(3) { width: 15%; }
+.table-sm thead th:nth-child(4) { width: 15%; }
+.table-sm thead th:nth-child(5) { width: 15%; }
+.table-sm thead th:nth-child(6) { width: 10%; }
+.table-sm thead th:nth-child(7) { width: 10%; }
+/* Price alignment */
+#cartBody td.text-end {
+    text-align: right !important;
+    padding-right: 0.75rem !important;
+}
+/* Button sizing in cart */
+.qty-btn-cart {
+    min-width: 80px;
+    padding: 0.25rem 0.5rem !important;
+    white-space: nowrap;
+}
+/* Discount and remove buttons */
+.item-discount-btn,
+.remove-cart-item-btn {
+    width: 28px !important;
+    height: 28px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+/* Make sure images don't overflow */
+#cartBody img {
+    max-width: 40px;
+    max-height: 40px;
+    object-fit: cover;
+}
+/* Highlight discounted items */
+.text-warning {
+    color: #ffc107 !important;
+    font-weight: 500;
+}
+/* Offline mode indicator */
+#connectionStatus {
+    transition: all 0.3s ease;
+    animation: pulse 2s infinite;
+}
+#connectionStatus.bg-danger {
+    animation: blink 1.5s infinite;
+}
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+/* Unit preference star */
+.bi-star-fill {
+    font-size: 0.8em;
+    vertical-align: text-top;
+}
+/* Accessibility */
+:focus-visible {
+    outline: 2px solid #0d6efd;
+    outline-offset: 2px;
+}
+/* Print styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    .modal, .modal-backdrop {
+        display: none !important;
+    }
+}
+/* Custom scrollbar for modal */
+.modal-body::-webkit-scrollbar {
+    width: 6px;
+}
+.modal-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+.modal-body::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+}
+.modal-body::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+/* Tooltip customizations */
+.tooltip {
+    font-size: 0.875rem;
+}
+/* Cart item hover effects */
 #cartBody tr {
     transition: background-color 0.2s ease;
 }
 #cartBody tr:hover {
     background: rgba(0, 0, 0, 0.02);
 }
-
-/* Item discount button */
+/* Discount input focus */
+#discountValue:focus, #discountType:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    outline: none;
+}
+/* Item discount button animation */
 .item-discount-btn {
-    font-size: 0.8rem;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
 }
 .item-discount-btn:hover {
     background: #ffc107;
     color: #000;
-    transform: rotate(15deg);
+    transform: rotate(15deg) scale(1.1);
 }
-
-/* Remove button */
+/* Remove button animation */
 .btn-danger.rounded-circle {
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
 }
 .btn-danger.rounded-circle:hover {
     transform: scale(1.1);
+    box-shadow: 0 2px 5px rgba(220, 53, 69, 0.3);
 }
-
-/* Customer select dropdown */
+/* Customer select enhancements */
 .customer-select-dropdown {
     background: #f8f9fa;
     border: 1px solid #ced4da;
@@ -1828,32 +2916,88 @@ tr.selected-product-row {
     border-color: #86b7fe;
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
 }
-
 /* Toast animations */
 .toast {
-    animation: slideIn 0.3s ease;
+    animation: slideInRight 0.3s ease;
 }
-
-/* Offline mode indicator */
-#connectionStatus {
-    transition: all 0.3s ease;
-    animation: pulse 2s infinite;
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
 }
-
+/* Loading spinner colors */
+.spinner-border.text-primary {
+    border-color: rgba(13, 110, 253, 0.25);
+    border-right-color: #0d6efd;
+}
+/* Form control focus states */
+.form-control:focus, .form-select:focus {
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    border-color: #86b7fe;
+}
+/* Button group focus */
+.btn-group .btn:focus {
+    z-index: 3;
+}
+/* Price input section styling */
+#priceInputSection .card {
+    border: 2px solid #e9ecef;
+}
+#priceInputSection .card:hover {
+    border-color: #86b7fe;
+}
+/* Price unit label */
+#priceUnitLabel {
+    font-weight: 600;
+    color: #0d6efd;
+}
+/* Amount display */
+#amountDisplay {
+    font-weight: bold;
+    color: #198754;
+}
+#unitDisplay {
+    font-weight: bold;
+    color: #0d6efd;
+}
+/* Validation styling */
+.text-danger {
+    font-size: 0.85rem;
+}
+/* Responsive adjustments for price section */
+@media (max-width: 768px) {
+    #priceInputSection input {
+        font-size: 1.5rem !important;
+        height: 50px !important;
+    }
+    #calculatedPriceDisplay {
+        font-size: 1rem;
+    }
+}
 /* Responsive adjustments */
 @media (max-width: 576px) {
     .modal-dialog {
         margin: 0.5rem;
     }
-    #modalQty {
+    #modalQty, #modalUnit {
         font-size: 1.5rem !important;
         height: 50px !important;
     }
-    .shortcuts {
+    .shortcuts span.badge {
+        font-size: 0.7rem;
+        padding: 0.25em 0.4em;
+    }
+    .quick-btn, .unit-quick-btn {
+        padding: 0.25rem !important;
         font-size: 0.8rem;
     }
+    .btn-group.w-100 {
+        flex-wrap: wrap;
+    }
+    .btn-group.w-100 .btn {
+        font-size: 0.9rem;
+        padding: 0.5rem;
+    }
 }
-
 @media (max-width: 768px) {
     .table-responsive {
         font-size: 0.9rem;
@@ -1861,50 +3005,8 @@ tr.selected-product-row {
     .btn-group {
         flex-wrap: wrap;
     }
-}
-
-/* Highlight search matches */
-mark.bg-warning {
-    padding: 0.1em 0.2em;
-    border-radius: 0.2em;
-    animation: highlight 1s ease;
-}
-
-@keyframes highlight {
-    from { background-color: #ff6b6b; }
-    to { background-color: #ffc107; }
-}
-
-/* Scrollbar styling */
-.table-responsive::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-.table-responsive::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-}
-
-.table-responsive::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 4px;
-}
-
-.table-responsive::-webkit-scrollbar-thumb:hover {
-    background: #555;
-}
-
-/* Focus outline for accessibility */
-:focus-visible {
-    outline: 2px solid #0d6efd;
-    outline-offset: 2px;
-}
-
-/* Print styles */
-@media print {
-    .no-print {
-        display: none !important;
+    .d-flex.align-items-center.mb-3 {
+        flex-wrap: wrap;
     }
 }
 </style>

@@ -56,6 +56,16 @@ class PosController extends Controller
                     'thumbnail' => $product->thumbnail ? asset('storage/' . $product->thumbnail) : null,
                     'primary_unit' => $primaryUnit ? $primaryUnit->name : 'Unit',
                     'primary_unit_id' => $primaryUnit ? $primaryUnit->id : null,
+                    'units' => $product->units->map(function($unit) {
+                        return [
+                            'id' => $unit->id,
+                            'name' => $unit->name,
+                            'short_name' => $unit->short_name,
+                            'description' => $unit->description,
+                            'is_default' => $unit->is_default ?? false,
+                            'quantity_per_unit' => $unit->pivot->quantity_per_unit ?? 1,
+                        ];
+                    })
                 ];
             });
 
@@ -77,15 +87,18 @@ class PosController extends Controller
         $validator = Validator::make($request->all(), [
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
-            'items.*.qty' => 'required|integer|min:1',
+            'items.*.qty' => 'required|numeric|min:0.01', // Changed to numeric for decimal support
             'items.*.unit_id' => 'required|exists:units,id',
             'items.*.sale_price' => 'required|numeric|min:0',
             'items.*.discount_type' => 'nullable|in:percent,fixed',
             'items.*.discount_value' => 'nullable|numeric|min:0',
+            'items.*.is_unit_mode' => 'nullable|boolean', // Added for unit mode
+            'items.*.unit_name' => 'nullable|string', // Added for unit display
             'payment_method' => 'required|in:cash,card,transfer',
             'customer_id' => 'nullable|exists:customers,id',
             'discount_type' => 'nullable|in:percent,fixed',
             'discount_value' => 'nullable|numeric|min:0',
+            'discount_amount' => 'nullable|numeric|min:0', // Added for order discount amount
             'redeem_points' => 'nullable|integer|min:0',
         ]);
 
@@ -102,7 +115,7 @@ class PosController extends Controller
                 $orderItems = [];
                 $orderId = 'POS-' . now()->format('Ymd-His') . '-' . Str::random(4);
 
-                // Fetch default location - no create/update
+                // Fetch default location
                 $defaultLocation = StockLocation::where('is_default', true)
                     ->orWhere('code', 'MAIN')
                     ->firstOrFail();
@@ -111,17 +124,36 @@ class PosController extends Controller
                     $product = Product::with('units')->findOrFail($item['product_id']);
                     $selectedUnit = Unit::findOrFail($item['unit_id']);
 
-                    $piecesToDeduct = $item['qty'];
-                    $productUnitPivot = $product->units->where('id', $selectedUnit->id)->first();
-                    if ($productUnitPivot && $productUnitPivot->pivot->quantity_per_unit > 0) {
-                        $piecesToDeduct = $item['qty'] * $productUnitPivot->pivot->quantity_per_unit;
+                    // Convert quantity to float
+                    $quantity = (float) $item['qty'];
+
+                    // Check if this is unit mode (weight-based) or quantity mode (pieces)
+                    $isUnitMode = isset($item['is_unit_mode']) ? (bool) $item['is_unit_mode'] : false;
+
+                    // Calculate pieces to deduct from stock
+                    $piecesToDeduct = $quantity;
+
+                    if (!$isUnitMode) {
+                        // Quantity mode: multiply by quantity_per_unit if set
+                        $productUnitPivot = $product->units->where('id', $selectedUnit->id)->first();
+                        if ($productUnitPivot && isset($productUnitPivot->pivot->quantity_per_unit) && $productUnitPivot->pivot->quantity_per_unit > 0) {
+                            $piecesToDeduct = $quantity * $productUnitPivot->pivot->quantity_per_unit;
+                        }
+                    } else {
+                        // Unit mode: For weight-based products, stock is in base unit (pieces)
+                        // We need to decide how to handle stock for weight-based items
+                        // For now, we'll assume 1 piece = 1kg (or base unit)
+                        // You might want to adjust this based on your business logic
+                        $piecesToDeduct = $quantity;
                     }
 
+                    // Check stock availability
                     if ($product->current_stock < $piecesToDeduct) {
-                        throw new \Exception("Insufficient stock for {$product->title}");
+                        throw new \Exception("Insufficient stock for {$product->title}. Available: {$product->current_stock}, Requested: {$piecesToDeduct}");
                     }
 
-                    $salePrice = $item['sale_price'];
+                    // Calculate price
+                    $salePrice = (float) $item['sale_price'];
                     $discountedPrice = $salePrice;
                     $perItemDiscountAmount = 0;
 
@@ -134,12 +166,13 @@ class PosController extends Controller
                         $discountedPrice = max(0, $salePrice - $perItemDiscountAmount);
                     }
 
-                    $lineTotal = $discountedPrice * $item['qty'];
+                    // Calculate line total - for unit mode, price is per unit (e.g., per kg)
+                    $lineTotal = $discountedPrice * $quantity;
                     $subtotal += $lineTotal;
 
                     $orderItems[] = [
                         'product_id'       => $product->id,
-                        'quantity'         => $item['qty'],
+                        'quantity'         => $quantity,
                         'unit_id'          => $item['unit_id'],
                         'unit_price'       => $salePrice,
                         'discount_type'    => $item['discount_type'] ?? null,
@@ -147,7 +180,8 @@ class PosController extends Controller
                         'discounted_price' => $discountedPrice,
                         'total_price'      => $lineTotal,
                         'title'            => $product->title,
-                        'unit_name'        => $selectedUnit->name ?? null,
+                        'unit_name'        => $item['unit_name'] ?? $selectedUnit->name ?? null,
+                        'is_unit_mode'     => $isUnitMode,
                     ];
 
                     // Stock movement
@@ -164,10 +198,11 @@ class PosController extends Controller
                         'new_quantity'      => $new,
                         'reference_type'    => Stock::REFERENCE_SALE,
                         'reference_number'  => $orderId,
-                        'notes'             => "POS Sale",
+                        'notes'             => "POS Sale - " . ($isUnitMode ? "Unit Mode" : "Quantity Mode"),
                         'transaction_date'  => now(),
                     ]);
 
+                    // Update product stock
                     $product->decrement('stock', $piecesToDeduct);
                 }
 
@@ -176,7 +211,13 @@ class PosController extends Controller
                 $orderDiscountType = null;
                 $orderDiscountValue = 0;
 
-                if ($request->filled('discount_value') && $request->filled('discount_type')) {
+                if ($request->filled('discount_amount') && $request->discount_amount > 0) {
+                    // Use provided discount amount
+                    $orderDiscountAmount = (float) $request->discount_amount;
+                    $orderDiscountType = $request->discount_type;
+                    $orderDiscountValue = $request->discount_value;
+                } elseif ($request->filled('discount_value') && $request->filled('discount_type')) {
+                    // Calculate discount from value
                     $orderDiscountType = $request->discount_type;
                     $orderDiscountValue = $request->discount_value;
                     if ($orderDiscountType === 'percent') {
@@ -184,8 +225,10 @@ class PosController extends Controller
                     } else {
                         $orderDiscountAmount = $orderDiscountValue;
                     }
-                    $orderDiscountAmount = min($orderDiscountAmount, $subtotal);
                 }
+
+                // Ensure discount doesn't exceed subtotal
+                $orderDiscountAmount = min($orderDiscountAmount, $subtotal);
 
                 // Points redemption discount
                 $pointsRedeemedDiscount = 0;
@@ -193,7 +236,7 @@ class PosController extends Controller
                 if ($request->filled('redeem_points') && $request->customer_id) {
                     $redeemRate = config('loyalty.redeem_rate', 100);
                     $pointsRedeemed = $request->redeem_points;
-                    if ($pointsRedeemed % $redeemRate === 0) {
+                    if ($pointsRedeemed > 0) {
                         $pointsRedeemedDiscount = $pointsRedeemed / $redeemRate;
                         $orderDiscountAmount += $pointsRedeemedDiscount;
                     }
@@ -216,6 +259,11 @@ class PosController extends Controller
 
                 if (\Schema::hasColumn('orders', 'payment_status')) {
                     $orderData['payment_status'] = 'paid';
+                }
+
+                if (\Schema::hasColumn('orders', 'discount_type')) {
+                    $orderData['discount_type'] = $orderDiscountType;
+                    $orderData['discount_value'] = $orderDiscountValue;
                 }
 
                 $order = Order::create($orderData);
@@ -246,6 +294,11 @@ class PosController extends Controller
 
                     // Points Redeemed
                     if ($pointsRedeemed > 0) {
+                        $customerPoints = CustomerPoint::firstOrCreate(
+                            ['customer_id' => $order->customer_id],
+                            ['points' => 0]
+                        );
+
                         $customerPoints->decrement('points', $pointsRedeemed);
 
                         CustomerPointTransaction::create([
@@ -270,6 +323,66 @@ class PosController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error processing order: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // Add this method for fetching product units
+    public function getProductUnits($productId)
+    {
+        try {
+            $product = Product::with('units')->findOrFail($productId);
+
+            $units = $product->units->map(function($unit) {
+                return [
+                    'id' => $unit->id,
+                    'name' => $unit->name,
+                    'short_name' => $unit->short_name,
+                    'description' => $unit->description,
+                    'is_default' => $unit->is_default ?? false,
+                    'quantity_per_unit' => $unit->pivot->quantity_per_unit ?? 1,
+                ];
+            });
+
+            // If product has no units, return default units
+            if ($units->isEmpty()) {
+                $units = collect([
+                    [
+                        'id' => 1,
+                        'name' => 'Kilogram',
+                        'short_name' => 'kg',
+                        'description' => 'Kilogram',
+                        'is_default' => true,
+                        'quantity_per_unit' => 1
+                    ],
+                    [
+                        'id' => 2,
+                        'name' => 'Gram',
+                        'short_name' => 'g',
+                        'description' => 'Gram - 1000g = 1kg',
+                        'is_default' => false,
+                        'quantity_per_unit' => 0.001
+                    ],
+                    [
+                        'id' => 3,
+                        'name' => 'Pound',
+                        'short_name' => 'lb',
+                        'description' => 'Pound - 1lb ≈ 0.453kg',
+                        'is_default' => false,
+                        'quantity_per_unit' => 0.453592
+                    ]
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'units' => $units
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load units',
+                'error' => $e->getMessage()
             ], 500);
         }
     }
@@ -303,6 +416,16 @@ class PosController extends Controller
                 'thumbnail' => $product->thumbnail ? asset('storage/' . $product->thumbnail) : null,
                 'primary_unit' => $primaryUnit ? $primaryUnit->name : 'Unit',
                 'primary_unit_id' => $primaryUnit ? $primaryUnit->id : null,
+                'units' => $product->units->map(function($unit) {
+                    return [
+                        'id' => $unit->id,
+                        'name' => $unit->name,
+                        'short_name' => $unit->short_name,
+                        'description' => $unit->description,
+                        'is_default' => $unit->is_default ?? false,
+                        'quantity_per_unit' => $unit->pivot->quantity_per_unit ?? 1,
+                    ];
+                })
             ]
         ]);
     }
@@ -310,7 +433,7 @@ class PosController extends Controller
     public function generateReceipt($orderId)
     {
         $order = Order::where('id', $orderId)
-            ->with(['customer', 'items.product'])
+            ->with(['customer', 'items.product', 'items.unit'])
             ->firstOrFail();
 
         if ($order->user_id != auth()->id() && !auth()->user()->can('Manage pos')) {
@@ -376,13 +499,20 @@ class PosController extends Controller
                     $product = $item->product;
                     if (!$product) continue;
 
+                    // Calculate pieces to restore
                     $piecesToRestore = $item->quantity;
-                    if ($item->unit_id) {
+
+                    // Check if this was a unit mode purchase
+                    $isUnitMode = isset($item->is_unit_mode) ? (bool) $item->is_unit_mode : false;
+
+                    if (!$isUnitMode && $item->unit_id) {
+                        // Quantity mode: multiply by quantity_per_unit
                         $unitPivot = $product->units->where('id', $item->unit_id)->first();
-                        if ($unitPivot && $unitPivot->pivot->quantity_per_unit > 0) {
+                        if ($unitPivot && isset($unitPivot->pivot->quantity_per_unit) && $unitPivot->pivot->quantity_per_unit > 0) {
                             $piecesToRestore = $item->quantity * $unitPivot->pivot->quantity_per_unit;
                         }
                     }
+                    // For unit mode, piecesToRestore already equals quantity (in base units)
 
                     $previousQuantity = $product->stock;
                     $newQuantity = $previousQuantity + $piecesToRestore;
