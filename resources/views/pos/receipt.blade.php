@@ -371,7 +371,7 @@
         <p><strong>{{ $store?->footer_note ?? 'THANK YOU FOR SHOPPING WITH US!' }}</strong></p>
         <p>** This is a computer-generated receipt **</p>
         <p><strong>Printed:</strong> {{ now()->format('d M Y h:i A') }}</p>
-        <p>Powered by POS System</p>
+        <p>Powered by ViteMart 2.0 | Developed by Qudroid System</p>
     </div>
 </div>
 
