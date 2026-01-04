@@ -6,7 +6,6 @@
 <div class="main-content">
     <div class="page-content">
         <div class="container-fluid">
-            <!-- PAGE TITLE -->
             <div class="row">
                 <div class="col-12">
                     <div class="page-title-box d-sm-flex align-items-center justify-content-between">
@@ -21,7 +20,6 @@
                 </div>
             </div>
 
-            <!-- ANALYTICS DASHBOARD -->
             <div class="row">
                 <div class="col-xl-3 col-md-6">
                     <div class="card card-animate bg-primary-subtle border-0">
@@ -58,16 +56,16 @@
                     </div>
                 </div>
                 <div class="col-xl-3 col-md-6">
-                    <div class="card card-animate bg-warning-subtle border-0">
+                    <div class="card card-animate bg-info-subtle border-0">
                         <div class="card-body">
                             <div class="d-flex align-items-center">
                                 <div class="flex-grow-1">
-                                    <p class="text-uppercase fw-medium text-warning mb-0">Featured Products</p>
-                                    <h4 class="fs-22 fw-semibold mb-0">{{ $analytics['featured_count'] ?? 0 }}</h4>
+                                    <p class="text-uppercase fw-medium text-info mb-0">Total Cost Value</p>
+                                    <h4 class="fs-22 fw-semibold mb-0">${{ number_format($analytics['total_cost_value'] ?? 0, 2) }}</h4>
                                 </div>
                                 <div class="avatar-sm flex-shrink-0">
-                                    <span class="avatar-title bg-warning rounded-circle fs-3">
-                                        <i class="bi bi-star-fill text-white"></i>
+                                    <span class="avatar-title bg-info rounded-circle fs-3">
+                                        <i class="bi bi-cash-stack"></i>
                                     </span>
                                 </div>
                             </div>
@@ -75,15 +73,15 @@
                     </div>
                 </div>
                 <div class="col-xl-3 col-md-6">
-                    <div class="card card-animate {{ ($analytics['low_stock_count'] ?? 0) > 0 ? 'bg-danger-subtle' : 'bg-info-subtle' }} border-0">
+                    <div class="card card-animate {{ ($analytics['low_stock_count'] ?? 0) > 0 ? 'bg-danger-subtle' : 'bg-warning-subtle' }} border-0">
                         <div class="card-body">
                             <div class="d-flex align-items-center">
                                 <div class="flex-grow-1">
-                                    <p class="text-uppercase fw-medium {{ ($analytics['low_stock_count'] ?? 0) > 0 ? 'text-danger' : 'text-info' }} mb-0">Low Stock Alert</p>
-                                    <h4 class="fs-22 fw-semibold mb-0 {{ ($analytics['low_stock_count'] ?? 0) > 0 ? 'text-danger' : 'text-info' }}">{{ $analytics['low_stock_count'] ?? 0 }}</h4>
+                                    <p class="text-uppercase fw-medium {{ ($analytics['low_stock_count'] ?? 0) > 0 ? 'text-danger' : 'text-warning' }} mb-0">Low Stock Alert</p>
+                                    <h4 class="fs-22 fw-semibold mb-0 {{ ($analytics['low_stock_count'] ?? 0) > 0 ? 'text-danger' : 'text-warning' }}">{{ $analytics['low_stock_count'] ?? 0 }}</h4>
                                 </div>
                                 <div class="avatar-sm flex-shrink-0">
-                                    <span class="avatar-title {{ ($analytics['low_stock_count'] ?? 0) > 0 ? 'bg-danger' : 'bg-info' }} rounded-circle fs-3">
+                                    <span class="avatar-title {{ ($analytics['low_stock_count'] ?? 0) > 0 ? 'bg-danger' : 'bg-warning' }} rounded-circle fs-3">
                                         <i class="bi bi-exclamation-triangle-fill text-white"></i>
                                     </span>
                                 </div>
@@ -93,7 +91,6 @@
                 </div>
             </div>
 
-            <!-- CHARTS & TOP PRODUCTS -->
             <div class="row mt-4">
                 <div class="col-xl-8">
                     <div class="card">
@@ -142,7 +139,6 @@
                 </div>
             </div>
 
-            <!-- PRODUCT LIST -->
             <div id="productList" class="mt-4">
                 <div class="row">
                     <div class="col-lg-12">
@@ -169,9 +165,12 @@
                                         <thead class="table-active">
                                             <tr>
                                                 <th>Product</th>
+                                                <th>Barcode</th>
                                                 <th>Category</th>
-                                                <th>Stock</th>
+                                                <th>Cost Price</th>
                                                 <th>Price</th>
+                                                <th>Margin</th>
+                                                <th>Current Stock</th>
                                                 <th>Sold</th>
                                                 <th>Featured</th>
                                                 <th>Action</th>
@@ -186,34 +185,38 @@
                                                                 @if($product->thumbnail)
                                                                     <img src="{{ asset('storage/' . $product->thumbnail) }}" alt="" class="img-fluid rounded" style="max-height:40px;">
                                                                 @else
-                                                                    <div class="bg-secondary-subtle rounded d-flex align-items-center justify-content-center" style="width:40px;height:40px;"><i class="bi bi-image text-muted fs-5"></i></div>
+                                                                    <div class="bg-secondary-subtle rounded d-flex align-items-center justify-content-center" style="width:40px;height:40px;">
+                                                                        <i class="bi bi-image text-muted fs-5"></i>
+                                                                    </div>
                                                                 @endif
                                                             </div>
                                                             <div>
                                                                 <h6 class="mb-1"><a href="{{ route('products.show', $product->id) }}" class="text-reset">{{ Str::limit($product->title, 50) }}</a></h6>
-                                                                <p class="mb-0 text-muted small">SKU: {{ $product->sku }}</p>
+                                                                <small class="text-muted d-block">
+                                                                    SKU: <span class="fw-semibold">{{ $product->sku }}</span><br>
+                                                                    <i class="bi bi-box-seam me-1"></i>{{ $product->product_type === 'variable' ? 'Variable Product' : 'Simple Product' }}
+                                                                </small>
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td>{{ $product->category?->name ?? 'Uncategorized' }}</td>
-                                                    <td id="stock-{{ $product->id }}" data-current-stock="{{ $product->stock }}">
-                                                        @php
-                                                            $primaryUnit = $product->units->first();
-                                                            $primaryShort = $primaryUnit ? $primaryUnit->short_name : '';
-                                                        @endphp
-                                                        @if($product->stock > 10)
-                                                            <span class="badge bg-success-subtle text-success">{{ $product->stock }} {{ $primaryShort }} in stock</span>
-                                                        @elseif($product->stock > 0)
-                                                            <span class="badge bg-warning-subtle text-warning">{{ $product->stock }} {{ $primaryShort }} low stock</span>
+                                                    <td>
+                                                        @if($product->barcode)
+                                                            <div class="d-flex align-items-center">
+                                                                <span class="badge bg-info-subtle text-info">{{ $product->barcode }}</span>
+                                                                <button class="btn btn-sm btn-outline-secondary ms-1" onclick="copyBarcode('{{ $product->barcode }}')" title="Copy barcode">
+                                                                    <i class="bi bi-copy"></i>
+                                                                </button>
+                                                            </div>
                                                         @else
-                                                            <span class="badge bg-danger-subtle text-danger">Out of stock</span>
+                                                            <span class="text-muted small">Auto-generated</span>
                                                         @endif
-                                                        @if($product->units->count() > 1)
-                                                            <small class="text-muted d-block mt-1">
-                                                                @foreach($product->units->skip(1) as $unit)
-                                                                    {{ floor($product->stock / $unit->pivot->quantity_per_unit) }} {{ $unit->short_name }}<br>
-                                                                @endforeach
-                                                            </small>
+                                                    </td>
+                                                    <td>{{ $product->category?->name ?? 'Uncategorized' }}</td>
+                                                    <td>
+                                                        @if($product->cost_price)
+                                                            <span class="fw-bold">${{ number_format($product->cost_price, 2) }}</span>
+                                                        @else
+                                                            <span class="text-muted">-</span>
                                                         @endif
                                                     </td>
                                                     <td>
@@ -224,6 +227,34 @@
                                                             <span class="badge bg-danger position-relative" style="top:-8px;right:-32px;font-size:0.65rem;">-{{ $discount }}%</span>
                                                         @else
                                                             <span class="fw-bold">${{ number_format($product->price, 2) }}</span>
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        @if($product->cost_price && $product->cost_price > 0)
+                                                            @php
+                                                                $sellingPrice = $product->sale_price ?? $product->price;
+                                                                $margin = $sellingPrice - $product->cost_price;
+                                                                $marginPercent = $product->cost_price > 0 ? ($margin / $product->cost_price) * 100 : 0;
+                                                            @endphp
+                                                            <span class="badge {{ $marginPercent >= 50 ? 'bg-success-subtle text-success' : ($marginPercent >= 20 ? 'bg-warning-subtle text-warning' : 'bg-danger-subtle text-danger') }}">
+                                                                {{ number_format($marginPercent, 1) }}%
+                                                            </span>
+                                                        @else
+                                                            <span class="text-muted">-</span>
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        @php
+                                                            $currentStock = $product->current_stock;
+                                                            $primaryUnit = $product->units->first();
+                                                            $primaryShort = $primaryUnit ? $primaryUnit->short_name : '';
+                                                        @endphp
+                                                        @if($currentStock > 10)
+                                                            <span class="badge bg-success-subtle text-success">{{ $currentStock }} {{ $primaryShort }}</span>
+                                                        @elseif($currentStock > 0)
+                                                            <span class="badge bg-warning-subtle text-warning">{{ $currentStock }} {{ $primaryShort }} low stock</span>
+                                                        @else
+                                                            <span class="badge bg-danger-subtle text-danger">Out of stock</span>
                                                         @endif
                                                     </td>
                                                     <td class="text-center"><span class="fw-semibold">{{ $product->sold_quantity ?? 0 }}</span></td>
@@ -264,7 +295,7 @@
                                                     </td>
                                                 </tr>
                                             @empty
-                                                <tr><td colspan="7" class="text-center py-5 text-muted">No products found</td></tr>
+                                                <tr><td colspan="10" class="text-center py-5 text-muted">No products found</td></tr>
                                             @endforelse
                                         </tbody>
                                     </table>
@@ -285,7 +316,6 @@
                 </div>
             </div>
 
-            <!-- ADD/EDIT MODAL -->
             <div class="modal fade" id="showModal" tabindex="-1" data-bs-backdrop="static">
                 <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
                     <div class="modal-content">
@@ -303,24 +333,67 @@
                                             <div class="card-body">
                                                 <h6 class="card-title mb-3">Basic Information</h6>
                                                 <div class="row g-3">
-                                                    <div class="col-md-6"><label class="form-label">Title *</label><input type="text" name="title" id="title" class="form-control" required></div>
-                                                    <div class="col-md-6"><label class="form-label">SKU *</label><input type="text" name="sku" id="sku" class="form-control" required></div>
-                                                    <div class="col-md-4"><label class="form-label">Price *</label><div class="input-group"><span class="input-group-text">$</span><input type="number" step="0.01" name="price" id="price" class="form-control" required></div></div>
-                                                    <div class="col-md-4"><label class="form-label">Discount %</label><input type="number" min="0" max="100" id="discount_percent" class="form-control"></div>
-                                                    <div class="col-md-4"><label class="form-label">Sale Price</label><div class="input-group"><span class="input-group-text">$</span><input type="number" step="0.01" name="sale_price" id="sale_price" class="form-control"></div></div>
-                                                    <div class="col-md-4"><label class="form-label">Stock *</label><input type="number" name="stock" id="stock" class="form-control" required min="0"></div>
-                                                    <div class="col-md-6"><label class="form-label">Product Type *</label><select name="product_type" id="product_type" class="form-control" required>
-                                                        <option value="simple">Simple Product</option>
-                                                        <option value="variable">Variable Product</option>
-                                                    </select></div>
-                                                    <div class="col-12"><label class="form-label">Description</label><textarea name="description" id="description" rows="4" class="form-control"></textarea></div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Title *</label>
+                                                        <input type="text" name="title" id="title" class="form-control" required>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">SKU *</label>
+                                                        <input type="text" name="sku" id="sku" class="form-control" required>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Barcode</label>
+                                                        <div class="input-group">
+                                                            <input type="text" name="barcode" id="barcode" class="form-control" placeholder="Auto-generate">
+                                                            <button type="button" class="btn btn-outline-secondary" id="generateBarcodeBtn" title="Generate barcode">
+                                                                <i class="bi bi-upc-scan"></i>
+                                                            </button>
+                                                        </div>
+                                                        <small class="text-muted">Leave empty to auto-generate</small>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Product Type *</label>
+                                                        <select name="product_type" id="product_type" class="form-control" required>
+                                                            <option value="simple">Simple Product</option>
+                                                            <option value="variable">Variable Product</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label">Cost Price</label>
+                                                        <div class="input-group">
+                                                            <span class="input-group-text">$</span>
+                                                            <input type="number" step="0.01" name="cost_price" id="cost_price" class="form-control">
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label">Price *</label>
+                                                        <div class="input-group">
+                                                            <span class="input-group-text">$</span>
+                                                            <input type="number" step="0.01" name="price" id="price" class="form-control" required>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label">Discount %</label>
+                                                        <input type="number" min="0" max="100" id="discount_percent" class="form-control">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label">Sale Price</label>
+                                                        <div class="input-group">
+                                                            <span class="input-group-text">$</span>
+                                                            <input type="number" step="0.01" name="sale_price" id="sale_price" class="form-control">
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <label class="form-label">Description</label>
+                                                        <textarea name="description" id="description" rows="4" class="form-control"></textarea>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
 
                                         <div id="variationsSection" style="display:none;">
                                             <div class="card mt-4">
-                                                <div class="card-header d-flex justify-content-between">
+                                                <div class="card-header d-flex justify-content-between align-items-center">
                                                     <h6 class="mb-0">Product Variations</h6>
                                                     <div>
                                                         <input type="number" min="0" max="100" id="bulk_discount" class="form-control form-control-sm d-inline w-auto me-2" placeholder="Bulk %">
@@ -397,9 +470,7 @@
                                         <div class="card mb-3">
                                             <div class="card-body">
                                                 <h6 class="mb-3">Additional Units</h6>
-                                                <div id="unitsContainer">
-                                                    <!-- Dynamic unit rows will be added here -->
-                                                </div>
+                                                <div id="unitsContainer"></div>
                                                 <button type="button" class="btn btn-outline-secondary btn-sm mt-2" id="addUnit">+ Add Unit</button>
                                             </div>
                                         </div>
@@ -429,7 +500,6 @@
     </div>
 </div>
 
-<!-- JavaScript -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -441,16 +511,15 @@ document.addEventListener('DOMContentLoaded', function () {
         axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken.getAttribute('content');
     }
 
-    // Sales Chart
     const salesChartCtx = document.getElementById('salesChart');
     if (salesChartCtx) {
         new Chart(salesChartCtx, {
             type: 'line',
             data: {
-                labels: @json($analytics['sales_chart']['labels'] ?? []),
+                labels: [],
                 datasets: [{
                     label: 'Daily Sales ($)',
-                    data: @json($analytics['sales_chart']['data'] ?? []),
+                    data: [],
                     borderColor: '#0d6efd',
                     backgroundColor: 'rgba(13,110,253,0.1)',
                     tension: 0.4,
@@ -467,18 +536,32 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Toggle Variations
+    window.copyBarcode = function(barcode) {
+        navigator.clipboard.writeText(barcode).then(() => {
+            Swal.fire({
+                icon: 'success',
+                title: 'Copied!',
+                text: 'Barcode copied to clipboard',
+                timer: 1500,
+                showConfirmButton: false
+            });
+        }).catch(() => {
+            Swal.fire({
+                icon: 'error',
+                title: 'Failed',
+                text: 'Could not copy barcode'
+            });
+        });
+    };
+
     const productTypeSelect = document.getElementById('product_type');
     const variationsSection = document.getElementById('variationsSection');
     function toggleVariationsSection() {
-        if (productTypeSelect && variationsSection) {
-            variationsSection.style.display = productTypeSelect.value === 'variable' ? 'block' : 'none';
-        }
+        variationsSection.style.display = productTypeSelect.value === 'variable' ? 'block' : 'none';
     }
     productTypeSelect?.addEventListener('change', toggleVariationsSection);
     toggleVariationsSection();
 
-    // Price calculation
     const priceInput = document.getElementById('price');
     const discountInput = document.getElementById('discount_percent');
     const salePriceInput = document.getElementById('sale_price');
@@ -492,20 +575,18 @@ document.addEventListener('DOMContentLoaded', function () {
     priceInput?.addEventListener('input', calculateSalePrice);
     discountInput?.addEventListener('input', calculateSalePrice);
 
-    // Bulk discount
     document.getElementById('applyBulkDiscount')?.addEventListener('click', function () {
         const bulk = parseFloat(document.getElementById('bulk_discount').value) || 0;
-        if (bulk < 0 || bulk > 100) return Swal.fire('Invalid', 'Discount 0-100', 'warning');
+        if (bulk < 0 || bulk > 100) return Swal.fire('Invalid', 'Discount must be 0-100%', 'warning');
         document.querySelectorAll('#variationsTable tbody tr').forEach(row => {
             const priceIn = row.querySelector('input[name*="price"]');
             const saleIn = row.querySelector('input[name*="sale_price"]');
             const price = parseFloat(priceIn?.value) || 0;
             if (price > 0) saleIn.value = (price * (1 - bulk / 100)).toFixed(2);
         });
-        Swal.fire('Applied!', `${bulk}% discount applied`, 'success');
+        Swal.fire('Applied', `${bulk}% discount applied to all variations`, 'success');
     });
 
-    // Add/Remove Attributes
     let attrIndex = 1;
     document.getElementById('addAttribute')?.addEventListener('click', () => {
         const html = `<div class="row g-3 align-items-end attribute-row mt-3">
@@ -517,7 +598,6 @@ document.addEventListener('DOMContentLoaded', function () {
         attrIndex++;
     });
 
-    // Add/Remove Units
     let unitIndex = 0;
     document.getElementById('addUnit')?.addEventListener('click', () => {
         const html = `
@@ -541,12 +621,17 @@ document.addEventListener('DOMContentLoaded', function () {
         unitIndex++;
     });
 
-    // Remove events
     document.addEventListener('click', e => {
         if (e.target.classList.contains('remove-attribute')) e.target.closest('.attribute-row').remove();
         if (e.target.classList.contains('remove-unit')) e.target.closest('.unit-row').remove();
         if (e.target.classList.contains('remove-variation')) e.target.closest('tr').remove();
     });
+
+    function generateVariationBarcode(baseSku, attributes) {
+        const attrString = Object.values(attributes || {}).join('-').toUpperCase().replace(/\s+/g, '');
+        const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+        return `${baseSku}-${attrString}-${random}`.substring(0, 20);
+    }
 
     document.getElementById('generateVariations')?.addEventListener('click', () => {
         const attrs = [];
@@ -565,42 +650,91 @@ document.addEventListener('DOMContentLoaded', function () {
             acc.flatMap(obj => attr.values.map(val => ({ ...obj, [attr.name]: val })))
         , [{}]);
 
-        let tableHTML = `<table class="table table-bordered"><thead><tr>
-            <th>Variant</th><th>SKU</th><th>Price</th><th>Sale Price</th><th>Stock</th><th>Image</th><th>Action</th>
-        </tr></thead><tbody>`;
+        const baseSku = document.getElementById('sku').value || 'PROD';
+
+        let tableHTML = `<div class="table-responsive">
+            <table class="table table-bordered table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>Variant</th>
+                    <th>SKU</th>
+                    <th>Barcode</th>
+                    <th>Cost Price</th>
+                    <th>Price</th>
+                    <th>Sale Price</th>
+                    <th>Image</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>`;
 
         combinations.forEach((combo, i) => {
-            const variantName = Object.entries(combo).map(([k, v]) => `${k}: ${v}`).join(' | ');
+            const variantName = Object.entries(combo).map(([k, v]) => `<span class="badge bg-primary me-1">${k}: ${v}</span>`).join(' ');
+            const attrInputs = Object.entries(combo).map(([k, v]) =>
+                `<input type="hidden" name="variations[${i}][attributes][${k}]" value="${v}">`).join('');
+            const generatedBarcode = generateVariationBarcode(baseSku, combo);
+
             tableHTML += `<tr>
-                <td><small>${variantName}</small>${Object.entries(combo).map(([k, v]) =>
-                    `<input type="hidden" name="variations[${i}][attributes][${k}]" value="${v}">`).join('')}
-                </td>
-                <td><input type="text" name="variations[${i}][sku]" class="form-control form-control-sm" required></td>
-                <td><input type="number" step="0.01" name="variations[${i}][price]" class="form-control form-control-sm" required></td>
-                <td><input type="number" step="0.01" name="variations[${i}][sale_price]" class="form-control form-control-sm"></td>
-                <td><input type="number" name="variations[${i}][stock]" class="form-control form-control-sm" required min="0"></td>
                 <td>
-                    <input type="file" name="variations[${i}][image]" class="form-control form-control-sm variation-image" accept="image/*">
-                    <img class="variation-preview mt-2 img-fluid rounded" style="max-height:80px;display:none;">
+                    <div class="d-flex flex-wrap gap-1">${variantName}</div>
+                    ${attrInputs}
                 </td>
-                <td><button type="button" class="btn btn-danger btn-sm remove-variation">Remove</button></td>
+                <td>
+                    <input type="text" name="variations[${i}][sku]" class="form-control form-control-sm" value="${baseSku}-VAR${i+1}">
+                </td>
+                <td>
+                    <input type="text" name="variations[${i}][barcode]" class="form-control form-control-sm" value="${generatedBarcode}">
+                    <small class="text-muted d-block">Auto-generated</small>
+                </td>
+                <td><input type="number" step="0.01" name="variations[${i}][cost_price]" class="form-control form-control-sm" placeholder="0.00"></td>
+                <td><input type="number" step="0.01" name="variations[${i}][price]" class="form-control form-control-sm" required placeholder="0.00"></td>
+                <td><input type="number" step="0.01" name="variations[${i}][sale_price]" class="form-control form-control-sm" placeholder="0.00"></td>
+                <td>
+                    <div class="d-flex flex-column align-items-center">
+                        <input type="file" name="variations[${i}][image]" class="form-control form-control-sm variation-image" accept="image/*">
+                        <img class="variation-preview mt-2 img-fluid rounded" style="max-height:60px;width:60px;object-fit:cover;display:none;">
+                    </div>
+                </td>
+                <td>
+                    <button type="button" class="btn btn-danger btn-sm remove-variation"><i class="bi bi-trash"></i></button>
+                </td>
             </tr>`;
         });
 
-        tableHTML += `</tbody></table>`;
+        tableHTML += `</tbody></table></div>`;
         document.getElementById('variationsTable').innerHTML = tableHTML;
     });
 
-    // Image previews (thumbnail, gallery, variation)
+    document.getElementById('generateBarcodeBtn')?.addEventListener('click', function() {
+        const sku = document.getElementById('sku').value || 'PROD';
+        const random = Math.random().toString(36).substring(2, 10).toUpperCase();
+        document.getElementById('barcode').value = `${sku}-${random}`.substring(0, 20);
+    });
+
+    document.addEventListener('input', function(e) {
+        if (e.target.name && e.target.name.includes('variations') && e.target.name.includes('sku')) {
+            const baseSku = document.getElementById('sku').value || 'PROD';
+            const row = e.target.closest('tr');
+            const barcodeInput = row.querySelector('input[name*="barcode"]');
+            if (barcodeInput && !barcodeInput.value.trim()) {
+                const attrInputs = row.querySelectorAll('input[type="hidden"][name*="attributes"]');
+                const attributes = {};
+                attrInputs.forEach(input => {
+                    const match = input.name.match(/\[attributes\]\[([^\]]+)\]/);
+                    if (match) attributes[match[1]] = input.value;
+                });
+                barcodeInput.value = generateVariationBarcode(baseSku, attributes);
+            }
+        }
+    });
+
     document.getElementById('thumbnail_input')?.addEventListener('change', function(e) {
         if (e.target.files[0]) {
             const reader = new FileReader();
             reader.onload = ev => {
-                const preview = document.getElementById('thumbnail_preview');
-                const placeholder = document.getElementById('thumbnail_placeholder');
-                preview.src = ev.target.result;
-                preview.style.display = 'block';
-                placeholder.style.display = 'none';
+                document.getElementById('thumbnail_preview').src = ev.target.result;
+                document.getElementById('thumbnail_preview').style.display = 'block';
+                document.getElementById('thumbnail_placeholder').style.display = 'none';
             };
             reader.readAsDataURL(e.target.files[0]);
         }
@@ -626,7 +760,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (e.target.classList.contains('variation-image') && e.target.files[0]) {
             const reader = new FileReader();
             reader.onload = ev => {
-                const preview = e.target.closest('td')?.querySelector('.variation-preview');
+                const preview = e.target.closest('td').querySelector('.variation-preview');
                 if (preview) {
                     preview.src = ev.target.result;
                     preview.style.display = 'block';
@@ -636,36 +770,31 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Reset form
     window.resetForm = function () {
         document.getElementById('productForm').reset();
         document.getElementById('product_id').value = '';
         document.getElementById('modalTitle').textContent = 'Add Product';
-        document.getElementById('submitBtn').innerHTML = '<span class="spinner-border spinner-border-sm d-none me-1" id="submitSpinner"></span> Save Product';
-        toggleVariationsSection();
+        document.getElementById('thumbnail_preview').style.display = 'none';
+        document.getElementById('thumbnail_placeholder').style.display = 'block';
+        document.getElementById('imageGallery').innerHTML = '';
+        document.getElementById('variationsTable').innerHTML = '';
+        document.getElementById('unitsContainer').innerHTML = '';
         document.getElementById('attributesContainer').innerHTML = `
             <div class="row g-3 align-items-end attribute-row">
                 <div class="col-md-5"><input type="text" class="form-control" placeholder="e.g. Color" name="attributes[0][name]"></div>
                 <div class="col-md-6"><input type="text" class="form-control" placeholder="Red, Blue, Green" name="attributes[0][values]"></div>
                 <div class="col-md-1"><button type="button" class="btn btn-danger btn-sm remove-attribute">Remove</button></div>
             </div>`;
-        document.getElementById('variationsTable').innerHTML = '';
-        document.getElementById('imageGallery').innerHTML = '';
-        document.getElementById('thumbnail_preview').style.display = 'none';
-        document.getElementById('thumbnail_placeholder').style.display = 'block';
-        document.querySelectorAll('.variation-preview').forEach(img => img.style.display = 'none');
-        document.getElementById('unitsContainer').innerHTML = '';
+        toggleVariationsSection();
         attrIndex = 1;
         unitIndex = 0;
     };
 
-    // EDIT PRODUCT - Load data
     document.addEventListener('click', function(e) {
         if (e.target.matches('.edit-item-btn') || e.target.closest('.edit-item-btn')) {
             const btn = e.target.matches('.edit-item-btn') ? e.target : e.target.closest('.edit-item-btn');
-            const id = btn.dataset.id || localStorage.getItem('editProductId');
+            const id = btn.dataset.id;
             if (!id) return;
-            localStorage.removeItem('editProductId');
 
             Swal.fire({ title: 'Loading...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
@@ -676,9 +805,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     document.getElementById('product_id').value = p.id;
                     document.getElementById('title').value = p.title || '';
                     document.getElementById('sku').value = p.sku || '';
+                    document.getElementById('barcode').value = p.barcode || '';
                     document.getElementById('price').value = p.price || '';
+                    document.getElementById('cost_price').value = p.cost_price || '';
                     document.getElementById('sale_price').value = p.sale_price || '';
-                    document.getElementById('stock').value = p.stock || 0;
                     document.getElementById('description').value = p.description || '';
                     document.getElementById('product_type').value = p.product_type || 'simple';
                     document.getElementById('brand_id').value = p.brand_id || '';
@@ -686,19 +816,15 @@ document.addEventListener('DOMContentLoaded', function () {
                     document.getElementById('primary_unit_id').value = p.primary_unit_id || '';
                     document.getElementById('is_featured').checked = !!p.is_featured;
 
-                    // Thumbnail
-                    const thumbPrev = document.getElementById('thumbnail_preview');
-                    const thumbPlace = document.getElementById('thumbnail_placeholder');
                     if (p.thumbnail) {
-                        thumbPrev.src = p.thumbnail;
-                        thumbPrev.style.display = 'block';
-                        thumbPlace.style.display = 'none';
+                        document.getElementById('thumbnail_preview').src = p.thumbnail;
+                        document.getElementById('thumbnail_preview').style.display = 'block';
+                        document.getElementById('thumbnail_placeholder').style.display = 'none';
                     } else {
-                        thumbPrev.style.display = 'none';
-                        thumbPlace.style.display = 'block';
+                        document.getElementById('thumbnail_preview').style.display = 'none';
+                        document.getElementById('thumbnail_placeholder').style.display = 'block';
                     }
 
-                    // Gallery
                     const gallery = document.getElementById('imageGallery');
                     gallery.innerHTML = '';
                     if (p.gallery?.length) {
@@ -711,20 +837,19 @@ document.addEventListener('DOMContentLoaded', function () {
                         });
                     }
 
-                    // Additional Units
+                    document.getElementById('unitsContainer').innerHTML = '';
                     if (p.additional_units?.length) {
                         p.additional_units.forEach(u => {
                             document.getElementById('addUnit').click();
                             const rows = document.querySelectorAll('.unit-row');
-                            const row = rows[rows.length - 1];
-                            row.querySelector('select[name*="unit_id"]').value = u.unit_id;
-                            row.querySelector('input[name*="quantity_per_unit"]').value = u.quantity_per_unit;
+                            const last = rows[rows.length - 1];
+                            last.querySelector('select[name*="unit_id"]').value = u.unit_id;
+                            last.querySelector('input[name*="quantity_per_unit"]').value = u.quantity_per_unit;
                         });
                     }
 
-                    // Variations
                     toggleVariationsSection();
-                    if (p.product_type === 'variable' && p.attributes?.length && p.variations?.length) {
+                    if (p.product_type === 'variable' && p.attributes?.length > 0) {
                         document.getElementById('attributesContainer').innerHTML = `
                             <div class="row g-3 align-items-end attribute-row">
                                 <div class="col-md-5"><input type="text" class="form-control" placeholder="e.g. Color" name="attributes[0][name]"></div>
@@ -735,38 +860,39 @@ document.addEventListener('DOMContentLoaded', function () {
                         attrIndex = 0;
                         p.attributes.forEach(attr => {
                             if (attrIndex > 0) document.getElementById('addAttribute').click();
-                            const row = document.querySelectorAll('.attribute-row')[attrIndex];
-                            row.querySelector('input[name$="[name]"]').value = attr.name;
-                            row.querySelector('input[name$="[values]"]').value = attr.values.join(', ');
+                            const rows = document.querySelectorAll('.attribute-row');
+                            const row = rows[attrIndex];
+                            row.querySelector('input[name$="[name]"]').value = attr.name || '';
+                            row.querySelector('input[name$="[values]"]').value = attr.values || '';
                             attrIndex++;
                         });
 
                         setTimeout(() => {
                             document.getElementById('generateVariations').click();
                             setTimeout(() => {
+                                const tableRows = document.querySelectorAll('#variationsTable tbody tr');
                                 p.variations.forEach((v, i) => {
-                                    const row = document.querySelectorAll('#variationsTable tbody tr')[i];
-                                    if (row) {
-                                        row.querySelector('input[name*="sku"]').value = v.sku || '';
-                                        row.querySelector('input[name*="price"]').value = v.price || '';
-                                        row.querySelector('input[name*="sale_price"]').value = v.sale_price || '';
-                                        row.querySelector('input[name*="stock"]').value = v.stock || 0;
+                                    const row = tableRows[i];
+                                    if (!row) return;
 
-                                        if (v.image) {
-                                            const preview = row.querySelector('.variation-preview');
-                                            preview.src = v.image;
-                                            preview.style.display = 'block';
-                                        }
+                                    row.querySelector('input[name*="sku"]').value = v.sku || '';
+                                    row.querySelector('input[name*="barcode"]').value = v.barcode || '';
+                                    row.querySelector('input[name*="cost_price"]').value = v.cost_price || '';
+                                    row.querySelector('input[name*="price"]').value = v.price || '';
+                                    row.querySelector('input[name*="sale_price"]').value = v.sale_price || '';
 
-                                        if (v.attributes) {
-                                            Object.entries(v.attributes).forEach(([key, val]) => {
-                                                const hidden = row.querySelector(`input[name="variations[${i}][attributes][${key}]"]`);
-                                                if (hidden) hidden.value = val;
-                                            });
-                                        }
+                                    if (v.image) {
+                                        const preview = row.querySelector('.variation-preview');
+                                        preview.src = v.image;
+                                        preview.style.display = 'block';
                                     }
+
+                                    Object.entries(v.attributes).forEach(([key, val]) => {
+                                        const hidden = row.querySelector(`input[name="variations[${i}][attributes][${key}]"]`);
+                                        if (hidden) hidden.value = val;
+                                    });
                                 });
-                            }, 100);
+                            }, 150);
                         }, 100);
                     }
 
@@ -782,7 +908,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // DELETE PRODUCT
     document.addEventListener('click', function(e) {
         if (e.target.matches('.remove-item-btn') || e.target.closest('.remove-item-btn')) {
             const btn = e.target.matches('.remove-item-btn') ? e.target : e.target.closest('.remove-item-btn');
@@ -793,22 +918,20 @@ document.addEventListener('DOMContentLoaded', function () {
                 text: "This action cannot be undone!",
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#d33',
                 confirmButtonText: 'Yes, delete!'
             }).then(result => {
                 if (result.isConfirmed) {
                     axios.delete(`/products/${id}`)
-                        .then(res => {
-                            Swal.fire('Deleted!', res.data.message || 'Product deleted', 'success')
+                        .then(() => {
+                            Swal.fire('Deleted!', 'Product has been deleted', 'success')
                                 .then(() => location.reload());
                         })
-                        .catch(() => Swal.fire('Error!', 'Failed to delete', 'error'));
+                        .catch(() => Swal.fire('Error', 'Failed to delete', 'error'));
                 }
             });
         }
     });
 
-    // FORM SUBMIT
     document.getElementById('productForm').addEventListener('submit', function(e) {
         e.preventDefault();
         const formData = new FormData(this);
@@ -823,11 +946,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
         axios.post(url, formData, { headers: { 'Content-Type': 'multipart/form-data' } })
             .then(res => {
-                Swal.fire('Success!', res.data.message || 'Saved!', 'success')
+                Swal.fire('Success!', res.data.message || 'Product saved successfully', 'success')
                     .then(() => location.reload());
             })
             .catch(err => {
-                let msg = 'Error occurred';
+                let msg = 'An error occurred';
                 if (err.response?.data?.errors) {
                     msg = Object.values(err.response.data.errors).flat().join('<br>');
                 } else if (err.response?.data?.message) {

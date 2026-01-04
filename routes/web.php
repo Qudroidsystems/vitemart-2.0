@@ -1,26 +1,30 @@
 <?php
 
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\HomeController;
-use App\Http\Controllers\RoleController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\BrandController;
-use App\Http\Controllers\OrderController;
-use App\Http\Controllers\BannerController;
 use App\Http\Controllers\APIAuthController;
+use App\Http\Controllers\BannerController;
 use App\Http\Controllers\BiodataController;
-use App\Http\Controllers\ProductController;
-use App\Http\Controllers\PosController;
+use App\Http\Controllers\BrandController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerController;
-use App\Http\Controllers\OverviewController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\OrderController;
+use App\Http\Controllers\OverviewController;
 use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\PosController;
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductReviewController;
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SalesController;
+use App\Http\Controllers\SalesPersonController;
 use App\Http\Controllers\StockLocationController;
 use App\Http\Controllers\StoreSettingController;
+use App\Http\Controllers\UserController;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
+
+
 
 // Public Routes
 Route::get('/', function () {
@@ -208,12 +212,16 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/api/stock-value-report', [InventoryController::class, 'getStockValueReport'])->name('inventory.api.stock-value-report');
     });
 
+    Route::get('/inventory/export/stock-levels/pdf', [InventoryController::class, 'exportStockLevelsPDF'])
+    ->name('inventory.export.stock-levels.pdf');
     // Real-time stock updates
     Route::get('/inventory/realtime-product-stock', [InventoryController::class, 'realtimeProductStock']);
     Route::get('/inventory/product/{productId}/location/{locationId}/stock', [InventoryController::class, 'getLocationStock']);
     // Sync product stock (admin only)
-    Route::post('/inventory/sync-stocks', [InventoryController::class, 'syncAllProductStocks'])
-        ->name('inventory.sync-stocks');
+    Route::post('/inventory/sync-stocks', [InventoryController::class, 'syncAllProductStocks']) ->name('inventory.sync-stocks');
+    Route::get('/inventory/export/stock-levels/pdf', [InventoryController::class, 'exportStockLevelsPDF'])->name('inventory.export.stock-levels.pdf');
+    // Add this route
+    Route::get('/inventory/recalculate-stock', [InventoryController::class, 'recalculateStock']) ->name('inventory.recalculate-stock');
 
 
 
@@ -233,6 +241,35 @@ Route::middleware(['auth'])->group(function () {
 
     // routes/web.php
     Route::post('/orders/save-pos', [OrderController::class, 'savePosOrder'])->name('orders.saveorders');
+
+    // Sales Analytics & Management
+    Route::get('/sales', [SalesController::class, 'index'])->name('sales.index');
+    Route::get('/sales/{id}/details', [SalesController::class, 'ajaxDetails'])->name('sales.ajax.details');
+    Route::get('/sales/export/pdf', [SalesController::class, 'exportPdf'])->name('sales.export.pdf');
+
+    // User-specific sales
+    Route::get('/sales/user/{userId}', [SalesController::class, 'userSales'])->name('sales.user');
+    Route::get('/sales/user/{userId}/export/pdf', [SalesController::class, 'exportUserSalesPdf'])->name('sales.user.pdf');
+
+    // Commissions routes
+    Route::prefix('sales/commissions')->group(function () {
+        Route::get('/', [SalesController::class, 'commissions'])->name('sales.commissions');
+        Route::get('/{id}/details', [SalesController::class, 'commissionDetails'])->name('sales.commission.details');
+        Route::post('/{id}/mark-paid', [SalesController::class, 'markAsPaid'])->name('sales.commission.mark.paid');
+        Route::post('/bulk-mark-paid', [SalesController::class, 'bulkMarkAsPaid'])->name('sales.commission.bulk.mark.paid');
+        Route::get('/export/pdf', [SalesController::class, 'exportCommissionsPdf'])->name('sales.commissions.export.pdf');
+    });
+
+
+    // Sales Person Routes
+    Route::prefix('salesperson')->group(function () {
+        Route::get('/dashboard', [SalesPersonController::class, 'dashboard'])->name('salesperson.dashboard');
+        Route::get('/export/pdf', [SalesPersonController::class, 'exportPdf'])->name('salesperson.export.pdf');
+        Route::get('/commissions', [SalesPersonController::class, 'commissionStatement'])->name('salesperson.commissions');
+        Route::get('/commissions/export/pdf', [SalesPersonController::class, 'exportCommissionPdf'])->name('salesperson.commissions.export.pdf');
+        Route::get('/performance', [SalesPersonController::class, 'performance'])->name('salesperson.performance');
+    });
+
 
 
     });

@@ -17,10 +17,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
-    use HasApiTokens, HasFactory, Notifiable, HasRoles; // ← THIS LINE
+    use HasApiTokens, HasFactory, Notifiable, HasRoles;
 
+    /**
+     * The attributes that are mass assignable.
+     */
     protected $fillable = [
-        // 'role',
         'first_name',
         'last_name',
         'username',
@@ -44,14 +46,21 @@ class User extends Authenticatable implements MustVerifyEmail
         'quiet_hours_end',
         'last_notification_at',
         'notification_count',
+        'commission_rate', // For sales commission per user (e.g., 5.00%)
     ];
 
+    /**
+     * The attributes that should be hidden for serialization.
+     */
     protected $hidden = [
         'password',
         'remember_token',
         'fcm_tokens',
     ];
 
+    /**
+     * The attributes that should be cast.
+     */
     protected $casts = [
         'email_verified_at' => 'datetime',
         'date_of_birth'     => 'date',
@@ -66,6 +75,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'email_notifications_enabled' => 'boolean',
         'quiet_hours_start' => 'datetime:H:i',
         'quiet_hours_end'   => 'datetime:H:i',
+        'commission_rate'   => 'decimal:2',
     ];
 
     // Relationships
@@ -94,17 +104,23 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Stock::class);
     }
 
-    // Accessors
+    // Critical Accessors - Fix orderBy('name') error
     public function getFullNameAttribute(): string
     {
         return trim("{$this->first_name} {$this->last_name}");
     }
 
+    /**
+     * This accessor allows orderBy('name') and $user->name to work
+     */
     public function getNameAttribute(): string
     {
         return $this->getFullNameAttribute();
     }
 
+    /**
+     * Optional: Allows setting name and splitting into first/last
+     */
     public function setNameAttribute($value): void
     {
         $parts = explode(' ', trim($value), 2);
@@ -112,7 +128,7 @@ class User extends Authenticatable implements MustVerifyEmail
         $this->attributes['last_name']  = $parts[1] ?? '';
     }
 
-    // Scopes — Critical for your CustomerController
+    // Scopes
     public function scopeCustomers($query)
     {
         return $query->where('role', 'user');
@@ -233,5 +249,16 @@ class User extends Authenticatable implements MustVerifyEmail
     public function sendEmailVerificationNotification()
     {
         $this->notify(new VerifyEmail);
+    }
+
+    // Commission Helpers (Optional but useful)
+    public function getTotalCommissionAttribute(): float
+    {
+        return $this->orders()->sum('commission_amount');
+    }
+
+    public function getPendingCommissionAttribute(): float
+    {
+        return $this->orders()->where('commission_amount', '>', 0)->sum('commission_amount');
     }
 }

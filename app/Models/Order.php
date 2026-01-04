@@ -14,10 +14,10 @@ class Order extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
+   protected $fillable = [
         'id',
         'user_id',
-        'customer_id', // Add this
+        'customer_id',
         'status',
         'total_amount',
         'shipping_cost',
@@ -32,6 +32,8 @@ class Order extends Model
         'barcode_data',
         'paid_at',
         'payment_status',
+        'commission_rate',      // NEW
+        'commission_amount',    // NEW
     ];
 
     protected $casts = [
@@ -43,10 +45,11 @@ class Order extends Model
         'paid_at' => 'datetime',
         'billing_address_same_as_shipping' => 'boolean',
         'barcode_data' => 'array',
+        'commission_rate' => 'decimal:2',     // NEW
+        'commission_amount' => 'decimal:2',   // NEW
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
-
     protected $keyType = 'string';
     public $incrementing = false;
 
@@ -195,5 +198,47 @@ class Order extends Model
     public function refundableAmount()
     {
         return $this->total_amount - $this->totalRefunded();
+    }
+
+    /**
+     * Calculate and save commission when order is completed
+     */
+    public function calculateAndSaveCommission()
+    {
+        if (!in_array($this->status, ['completed', 'delivered'])) {
+            return;
+        }
+
+        $salesPerson = $this->user;
+        if (!$salesPerson) {
+            return;
+        }
+
+        // Use order-specific rate if set, otherwise use user's default
+        $rate = $this->commission_rate ?? ($salesPerson->commission_rate ?? 5.00);
+
+        $amount = ($this->total_amount * $rate) / 100;
+
+        $this->update([
+            'commission_rate' => $rate,
+            'commission_amount' => $amount
+        ]);
+    }
+
+    /**
+     * Get formatted commission
+     */
+    public function getFormattedCommissionAttribute(): string
+    {
+        return '₦' . number_format($this->commission_amount ?? 0, 2);
+    }
+
+    /**
+     * Get commission badge
+     */
+    public function getCommissionBadgeAttribute(): string
+    {
+        if (!$this->commission_amount) return '<span class="badge bg-secondary">No commission</span>';
+        return '<span class="badge bg-success">₦' . number_format($this->commission_amount, 2) . ' (' . $this->commission_rate . '%)</span>';
     }
 }

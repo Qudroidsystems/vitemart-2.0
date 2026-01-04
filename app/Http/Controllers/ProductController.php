@@ -38,6 +38,7 @@ class ProductController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
                   ->orWhere('sku', 'like', "%{$search}%")
+                  ->orWhere('barcode', 'like', "%{$search}%")
                   ->orWhere('description', 'like', "%{$search}%")
                   ->orWhereHas('brand', fn($q) => $q->where('name', 'like', "%{$search}%"))
                   ->orWhereHas('category', fn($q) => $q->where('name', 'like', "%{$search}%"));
@@ -70,7 +71,15 @@ class ProductController extends Controller
         $categories = Category::whereNull('parent_id')->with('children')->orderBy('name')->get();
         $units = Unit::orderBy('name')->get();
 
-        return view('products.index', compact('products', 'brands', 'categories', 'units', 'pagetitle'));
+        $analytics = [
+            'total_products' => Product::count(),
+            'total_revenue' => Product::sum('price'),
+            'total_cost_value' => Product::sum('cost_price'),
+            'low_stock_count' => Product::where('stock', '<=', 10)->where('stock', '>', 0)->count(),
+            'top_products' => Product::orderBy('sold_quantity', 'desc')->limit(5)->get(),
+        ];
+
+        return view('products.index', compact('products', 'brands', 'categories', 'units', 'pagetitle', 'analytics'));
     }
 
     public function create()
@@ -99,31 +108,57 @@ class ProductController extends Controller
 
         $units = Unit::orderBy('name')->get();
 
+        $attributes = $product->attributes->map(function ($attr) {
+            $values = is_array($attr->values)
+                ? implode(', ', $attr->values)
+                : ($attr->values ?? '');
+            return [
+                'name'   => $attr->name,
+                'values' => $values
+            ];
+        })->toArray();
+
+        $variations = $product->variations->map(function ($var) {
+            $attributes = is_array($var->attributes)
+                ? $var->attributes
+                : (json_decode($var->attributes, true) ?? []);
+
+            return [
+                'id'         => $var->id,
+                'sku'        => $var->sku ?? '',
+                'barcode'    => $var->barcode ?? '',
+                'price'      => $var->price ?? 0,
+                'cost_price' => $var->cost_price ?? 0,
+                'sale_price' => $var->sale_price ?? null,
+                'image'      => $var->image ? asset('storage/' . $var->image) : null,
+                'attributes' => $attributes
+            ];
+        })->toArray();
+
         return response()->json([
-            'id'           => $product->id,
-            'title'        => $product->title,
-            'sku'          => $product->sku,
-            'price'        => $product->price,
-            'sale_price'   => $product->sale_price,
-            'stock'        => $product->stock,
-            'description'  => $product->description ?? '',
-            'product_type' => $product->product_type ?? 'simple',
-            'is_featured'  => (bool) $product->is_featured,
-            'brand_id'     => $product->brand_id,
-            'category_id'  => $product->category_id,
-            'primary_unit_id' => $product->units->first()->id ?? null,
+            'id'               => $product->id,
+            'title'            => $product->title,
+            'sku'              => $product->sku,
+            'barcode'          => $product->barcode ?? '',
+            'price'            => $product->price,
+            'cost_price'       => $product->cost_price ?? 0,
+            'sale_price'       => $product->sale_price ?? null,
+            'description'      => $product->description ?? '',
+            'product_type'     => $product->product_type ?? 'simple',
+            'is_featured'      => (bool) $product->is_featured,
+            'brand_id'         => $product->brand_id,
+            'category_id'      => $product->category_id,
+            'primary_unit_id'  => $product->units->first()?->id,
+
             'additional_units' => $product->units->skip(1)->map(function ($unit) {
                 return [
-                    'unit_id' => $unit->id,
+                    'unit_id'           => $unit->id,
                     'quantity_per_unit' => $unit->pivot->quantity_per_unit,
                 ];
             })->toArray(),
-            // Thumbnail
-            'thumbnail' => $product->thumbnail
-                ? asset('storage/' . $product->thumbnail)
-                : null,
 
-            // Gallery
+            'thumbnail' => $product->thumbnail ? asset('storage/' . $product->thumbnail) : null,
+
             'gallery' => $product->images->map(function ($img) {
                 return [
                     'id'  => $img->id,
@@ -131,30 +166,8 @@ class ProductController extends Controller
                 ];
             })->toArray(),
 
-            // Attributes (for variable products)
-            'attributes' => $product->attributes->map(function ($attr) {
-                return [
-                    'name'   => $attr->name,
-                    'values' => is_array($attr->values)
-                        ? implode(', ', $attr->values)
-                        : $attr->values
-                ];
-            })->toArray(),
-
-            // Variations
-            'variations' => $product->variations->map(function ($var) {
-                return [
-                    'id'         => $var->id,
-                    'sku'        => $var->sku ?? '',
-                    'price'      => $var->price,
-                    'sale_price' => $var->sale_price,
-                    'stock'      => $var->stock,
-                    'image'      => $var->image
-                        ? asset('storage/' . $var->image)
-                        : null,
-                    'attributes' => is_array($var->attributes) ? $var->attributes : json_decode($var->attributes, true) ?? []
-                ];
-            })->toArray(),
+            'attributes' => $attributes,
+            'variations' => $variations,
 
             'units' => $units,
         ]);
@@ -165,26 +178,32 @@ class ProductController extends Controller
         $request->merge(['is_featured' => $request->has('is_featured')]);
 
         $rules = [
-            'title'        => 'required|string|max:255',
-            'sku'          => 'required|string|unique:products,sku',
-            'price'        => 'required|numeric|min:0',
-            'sale_price'   => 'nullable|numeric|min:0|lt:price',
-            'stock'        => 'required|integer|min:0',
-            'thumbnail'    => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
-            'images.*'     => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
-            'brand_id'     => 'nullable|exists:brands,id',
-            'category_id'  => 'nullable|exists:categories,id',
-            'primary_unit_id' => 'required|exists:units,id',
-            'description'  => 'nullable|string',
-            'product_type' => 'required|in:simple,variable',
-            'is_featured'  => 'required|boolean',
-            'units.*.unit_id' => 'nullable|exists:units,id|distinct',
+            'title'                  => 'required|string|max:255',
+            'sku'                    => 'required|string|unique:products,sku',
+            'barcode'                => 'nullable|string|unique:products,barcode',
+            'price'                  => 'required|numeric|min:0',
+            'cost_price'             => 'nullable|numeric|min:0',
+            'sale_price'             => 'nullable|numeric|min:0|lt:price',
+            'thumbnail'              => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'images.*'               => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'brand_id'               => 'nullable|exists:brands,id',
+            'category_id'            => 'nullable|exists:categories,id',
+            'primary_unit_id'        => 'required|exists:units,id',
+            'description'            => 'nullable|string',
+            'product_type'           => 'required|in:simple,variable',
+            'is_featured'            => 'boolean',
+            'units.*.unit_id'        => 'nullable|exists:units,id|distinct',
             'units.*.quantity_per_unit' => 'nullable|numeric|min:0.01',
+
+            'variations.*.sku'       => 'nullable|string',
+            'variations.*.barcode'   => 'nullable|string|max:50|unique:product_variations,barcode',
+            'variations.*.price'     => 'required|numeric|min:0',
+            'variations.*.cost_price'=> 'nullable|numeric|min:0',
+            'variations.*.sale_price'=> 'nullable|numeric|min:0',
+            'variations.*.image'     => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
         ];
 
-        $validator = Validator::make($request->all(), $rules, [
-            'sale_price.lt' => 'Sale price must be less than regular price',
-        ]);
+        $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
             return response()->json([
@@ -203,9 +222,11 @@ class ProductController extends Controller
             $product = Product::create([
                 'title'        => $request->title,
                 'sku'          => $request->sku,
+                'barcode'      => $request->barcode ?? $this->generateMainBarcode($request->sku),
                 'price'        => $request->price,
+                'cost_price'   => $request->cost_price,
                 'sale_price'   => $request->sale_price,
-                'stock'        => $request->stock,
+                'stock'        => 0,
                 'thumbnail'    => $thumbnailPath,
                 'description'  => $request->description,
                 'product_type' => $request->product_type,
@@ -221,9 +242,7 @@ class ProductController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Product created successfully',
-                'product' => $product->load('variations', 'units')
             ], 201);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -239,26 +258,32 @@ class ProductController extends Controller
         $request->merge(['is_featured' => $request->has('is_featured')]);
 
         $rules = [
-            'title'        => 'required|string|max:255',
-            'sku'          => 'required|string|unique:products,sku,' . $id,
-            'price'        => 'required|numeric|min:0',
-            'sale_price'   => 'nullable|numeric|min:0|lt:price',
-            'stock'        => 'required|integer|min:0',
-            'thumbnail'    => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
-            'images.*'     => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
-            'brand_id'     => 'nullable|exists:brands,id',
-            'category_id'  => 'nullable|exists:categories,id',
-            'primary_unit_id' => 'required|exists:units,id',
-            'description'  => 'nullable|string',
-            'product_type' => 'required|in:simple,variable',
-            'is_featured'  => 'required|boolean',
-            'units.*.unit_id' => 'nullable|exists:units,id|distinct',
+            'title'                  => 'required|string|max:255',
+            'sku'                    => 'required|string|unique:products,sku,' . $id,
+            'barcode'                => 'nullable|string|unique:products,barcode,' . $id,
+            'price'                  => 'required|numeric|min:0',
+            'cost_price'             => 'nullable|numeric|min:0',
+            'sale_price'             => 'nullable|numeric|min:0|lt:price',
+            'thumbnail'              => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'images.*'               => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'brand_id'               => 'nullable|exists:brands,id',
+            'category_id'            => 'nullable|exists:categories,id',
+            'primary_unit_id'        => 'required|exists:units,id',
+            'description'            => 'nullable|string',
+            'product_type'           => 'required|in:simple,variable',
+            'is_featured'            => 'boolean',
+            'units.*.unit_id'        => 'nullable|exists:units,id|distinct',
             'units.*.quantity_per_unit' => 'nullable|numeric|min:0.01',
+
+            'variations.*.sku'       => 'nullable|string',
+            'variations.*.barcode'   => 'nullable|string|max:50|unique:product_variations,barcode',
+            'variations.*.price'     => 'required|numeric|min:0',
+            'variations.*.cost_price'=> 'nullable|numeric|min:0',
+            'variations.*.sale_price'=> 'nullable|numeric|min:0',
+            'variations.*.image'     => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
         ];
 
-        $validator = Validator::make($request->all(), $rules, [
-            'sale_price.lt' => 'Sale price must be less than regular price',
-        ]);
+        $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
             return response()->json([
@@ -270,15 +295,14 @@ class ProductController extends Controller
 
         try {
             $data = $request->only([
-                'title', 'sku', 'price', 'sale_price', 'stock', 'description',
-                'product_type', 'brand_id', 'category_id'
+                'title', 'sku', 'barcode', 'price', 'cost_price', 'sale_price',
+                'description', 'product_type', 'brand_id', 'category_id'
             ]);
             $data['is_featured'] = $request->boolean('is_featured');
+            $data['barcode'] = $data['barcode'] ?? $this->generateMainBarcode($data['sku']);
 
             if ($request->hasFile('thumbnail')) {
-                if ($product->thumbnail) {
-                    Storage::disk('public')->delete($product->thumbnail);
-                }
+                if ($product->thumbnail) Storage::disk('public')->delete($product->thumbnail);
                 $data['thumbnail'] = $request->file('thumbnail')->store('product', 'public');
             }
 
@@ -291,9 +315,7 @@ class ProductController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Product updated successfully',
-                'product' => $product->load('variations', 'units')
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -302,25 +324,91 @@ class ProductController extends Controller
         }
     }
 
+    private function generateMainBarcode($sku)
+    {
+        $random = strtoupper(substr(md5(microtime()), 0, 8));
+        return substr("{$sku}-{$random}", 0, 20);
+    }
+
     private function syncUnits($product, $request)
     {
         $product->units()->detach();
 
-        // Attach primary unit with quantity_per_unit = 1
         if ($request->primary_unit_id) {
-            $product->units()->attach($request->primary_unit_id, [
-                'quantity_per_unit' => 1
-            ]);
+            $product->units()->attach($request->primary_unit_id, ['quantity_per_unit' => 1]);
         }
 
-        // Attach additional units
         if ($request->has('units') && is_array($request->units)) {
             foreach ($request->units as $u) {
                 if (!empty($u['unit_id']) && !empty($u['quantity_per_unit']) && $u['unit_id'] != $request->primary_unit_id) {
-                    $product->units()->attach($u['unit_id'], [
-                        'quantity_per_unit' => (float) $u['quantity_per_unit']
+                    $product->units()->attach($u['unit_id'], ['quantity_per_unit' => (float) $u['quantity_per_unit']]);
+                }
+            }
+        }
+    }
+
+    private function syncImages($product, $request)
+    {
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $image) {
+                $path = $image->store('product/gallery', 'public');
+                $product->images()->create(['image_path' => $path]);
+            }
+        }
+    }
+
+    private function syncAttributesAndVariations($product, $request)
+    {
+        $product->attributes()->delete();
+        $product->variations()->delete();
+
+        if ($request->has('attributes') && is_array($request->attributes)) {
+            foreach ($request->attributes as $attr) {
+                $name = trim($attr['name'] ?? '');
+                $valuesInput = trim($attr['values'] ?? '');
+                if ($name && $valuesInput) {
+                    $values = array_filter(preg_split('/[\s,]+/', $valuesInput));
+                    $product->attributes()->create([
+                        'name'   => $name,
+                        'values' => $values
                     ]);
                 }
+            }
+        }
+
+        if ($request->product_type === 'variable' && $request->has('variations') && is_array($request->variations)) {
+            foreach ($request->variations as $var) {
+                $imagePath = null;
+                if (isset($var['image']) && $var['image'] instanceof \Illuminate\Http\UploadedFile) {
+                    $imagePath = $var['image']->store('product/variations', 'public');
+                }
+
+                $attributes = [];
+                if (isset($var['attributes']) && is_array($var['attributes'])) {
+                    foreach ($var['attributes'] as $key => $value) {
+                        if ($value !== null && $value !== '') {
+                            $attributes[$key] = $value;
+                        }
+                    }
+                }
+
+                $barcode = $var['barcode'] ?? null;
+                if (!$barcode) {
+                    $baseSku = $product->sku ?? 'PROD';
+                    $attrString = collect($attributes)->values()->join('-')->strtoupper()->replace(' ', '');
+                    $random = strtoupper(substr(md5(microtime()), 0, 6));
+                    $barcode = substr("{$baseSku}-{$attrString}-{$random}", 0, 20);
+                }
+
+                $product->variations()->create([
+                    'sku'        => $var['sku'] ?? null,
+                    'barcode'    => $barcode,
+                    'price'      => $var['price'] ?? 0,
+                    'cost_price' => $var['cost_price'] ?? null,
+                    'sale_price' => $var['sale_price'] ?? null,
+                    'image'      => $imagePath,
+                    'attributes' => $attributes
+                ]);
             }
         }
     }
@@ -442,67 +530,10 @@ class ProductController extends Controller
         ]);
     }
 
-    private function syncImages($product, $request)
-    {
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $image) {
-                $path = $image->store('product/gallery', 'public');
-                $product->images()->create(['image_path' => $path]);
-            }
-        }
-    }
-
-    private function syncAttributesAndVariations($product, $request)
-    {
-        $product->attributes()->delete();
-        $product->variations()->delete();
-
-        if ($request->has('attributes') && is_array($request->attributes)) {
-            foreach ($request->attributes as $attr) {
-                $name = trim($attr['name'] ?? '');
-                $valuesInput = trim($attr['values'] ?? '');
-                if ($name && $valuesInput) {
-                    $values = array_filter(preg_split('/[\s,]+/', $valuesInput));
-                    $product->attributes()->create([
-                        'name'   => $name,
-                        'values' => $values
-                    ]);
-                }
-            }
-        }
-
-        if ($request->product_type === 'variable' && $request->has('variations') && is_array($request->variations)) {
-            foreach ($request->variations as $var) {
-                $imagePath = null;
-                if (isset($var['image']) && $var['image'] instanceof \Illuminate\Http\UploadedFile) {
-                    $imagePath = $var['image']->store('product/variations', 'public');
-                }
-
-                $attributes = [];
-                if (isset($var['attributes']) && is_array($var['attributes'])) {
-                    foreach ($var['attributes'] as $key => $value) {
-                        if ($value !== null && $value !== '') {
-                            $attributes[$key] = $value;
-                        }
-                    }
-                }
-
-                $product->variations()->create([
-                    'price'      => $var['price'] ?? 0,
-                    'sale_price' => $var['sale_price'] ?? null,
-                    'stock'      => $var['stock'] ?? 0,
-                    'image'      => $imagePath,
-                    'attributes' => $attributes
-                ]);
-            }
-        }
-    }
-
     public function search(Request $request)
     {
         $query = $request->q;
 
-        // First, ensure default unit exists
         $defaultUnit = Unit::where('is_default', true)->first();
         if (!$defaultUnit) {
             $defaultUnit = Unit::create([
@@ -522,7 +553,6 @@ class ProductController extends Controller
             ->limit(10)
             ->get()
             ->map(function($product) use ($defaultUnit) {
-                // Ensure product has at least one unit
                 if ($product->units->isEmpty()) {
                     $product->units()->attach($defaultUnit->id, [
                         'quantity_per_unit' => 1
@@ -536,8 +566,11 @@ class ProductController extends Controller
                     'id' => $product->id,
                     'title' => $product->title,
                     'sku' => $product->sku,
+                    'barcode' => $product->barcode,
                     'price' => $product->price,
+                    'cost_price' => $product->cost_price,
                     'thumbnail' => $product->thumbnail ? asset('storage/' . $product->thumbnail) : null,
+                    'current_stock' => $product->current_stock,
                     'primary_unit_id' => $primaryUnit->id,
                     'primary_unit' => $primaryUnit->name,
                 ];
@@ -583,7 +616,7 @@ class ProductController extends Controller
     public function template()
     {
         $headers = [
-            'title','sku','price','sale_price','stock','description','brand_id','category_id','is_featured','primary_unit_id'
+            'title','sku','barcode','price','cost_price','sale_price','description','brand_id','category_id','is_featured','primary_unit_id'
         ];
 
         $callback = function() use ($headers) {
@@ -619,7 +652,7 @@ class ProductController extends Controller
     public function bulkUpdate(Request $request)
     {
         $ids = explode(',', $request->product_ids);
-        $data = $request->only(['price', 'sale_price', 'stock', 'is_featured', 'category_id']);
+        $data = $request->only(['price', 'cost_price', 'sale_price', 'is_featured', 'category_id']);
         $data = array_filter($data);
 
         Product::whereIn('id', $ids)->update($data);
@@ -627,7 +660,6 @@ class ProductController extends Controller
         return response()->json(['message' => 'Bulk update completed']);
     }
 
-    // New method to get units
     public function getUnits()
     {
         $units = Unit::orderBy('name')->get();

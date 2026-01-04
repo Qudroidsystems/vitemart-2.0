@@ -35,24 +35,89 @@
                             @endcan
                         </div>
                         <div class="card-body">
+                            <!-- SEARCH AND FILTER BAR -->
+                            <div class="row mb-3">
+                                <div class="col-md-8">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                        <input type="text" id="searchInput" class="form-control" placeholder="Search locations by name, code, address, or contact...">
+                                        <button class="btn btn-outline-secondary" type="button" id="clearSearch">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="d-flex gap-2">
+                                        <select id="statusFilter" class="form-select form-select-sm">
+                                            <option value="">All Status</option>
+                                            <option value="active">Active</option>
+                                            <option value="inactive">Inactive</option>
+                                        </select>
+                                        <select id="defaultFilter" class="form-select form-select-sm">
+                                            <option value="">All Locations</option>
+                                            <option value="default">Default Only</option>
+                                            <option value="non-default">Non-default</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- RESULTS INFO -->
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div id="resultsInfo" class="text-muted">
+                                            Showing {{ $locations->count() }} locations
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-outline-secondary btn-sm" id="exportCsv">
+                                                <i class="bi bi-download me-1"></i> Export
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             @if($locations->count() > 0)
-                                <div class="table-responsive">
-                                    <table class="table table-centered align-middle table-nowrap mb-0">
+                                <div class="table-responsive" id="locationsTableContainer">
+                                    <table class="table table-centered align-middle table-nowrap mb-0" id="locationsTable">
                                         <thead class="table-light">
                                             <tr>
-                                                <th width="5%">#</th>
-                                                <th>Name</th>
-                                                <th>Code</th>
+                                                <th width="5%">
+                                                    <a href="#" class="sortable-header" data-sort="id">
+                                                        # <i class="bi bi-arrow-down-up"></i>
+                                                    </a>
+                                                </th>
+                                                <th>
+                                                    <a href="#" class="sortable-header" data-sort="name">
+                                                        Name <i class="bi bi-arrow-down-up"></i>
+                                                    </a>
+                                                </th>
+                                                <th>
+                                                    <a href="#" class="sortable-header" data-sort="code">
+                                                        Code <i class="bi bi-arrow-down-up"></i>
+                                                    </a>
+                                                </th>
                                                 <th>Address</th>
                                                 <th>Contact</th>
-                                                <th>Status</th>
+                                                <th>
+                                                    <a href="#" class="sortable-header" data-sort="status">
+                                                        Status <i class="bi bi-arrow-down-up"></i>
+                                                    </a>
+                                                </th>
                                                 <th>Default</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
-                                        <tbody>
+                                        <tbody id="locationsTableBody">
                                             @foreach($locations as $location)
-                                                <tr>
+                                                <tr class="location-row"
+                                                    data-name="{{ strtolower($location->name) }}"
+                                                    data-code="{{ strtolower($location->code ?? '') }}"
+                                                    data-address="{{ strtolower($location->address ?? '') }}"
+                                                    data-contact="{{ strtolower($location->contact_person ?? '') }}"
+                                                    data-status="{{ $location->is_active ? 'active' : 'inactive' }}"
+                                                    data-default="{{ $location->is_default ? 'default' : 'non-default' }}">
                                                     <td>{{ $loop->iteration }}</td>
                                                     <td>
                                                         <div class="fw-semibold">{{ $location->name }}</div>
@@ -115,6 +180,29 @@
                                         </tbody>
                                     </table>
                                 </div>
+
+                                <!-- PAGINATION (for server-side implementation) -->
+                                @if($locations instanceof \Illuminate\Pagination\LengthAwarePaginator && $locations->hasPages())
+                                <div class="row mt-3">
+                                    <div class="col-12">
+                                        <nav aria-label="Page navigation">
+                                            <ul class="pagination pagination-sm justify-content-end mb-0">
+                                                {{ $locations->links() }}
+                                            </ul>
+                                        </nav>
+                                    </div>
+                                </div>
+                                @endif
+
+                                <!-- NO RESULTS MESSAGE (hidden by default) -->
+                                <div id="noResults" class="text-center py-5 text-muted d-none">
+                                    <i class="bi bi-search fs-1"></i>
+                                    <p class="mt-2">No locations found matching your search</p>
+                                    <button class="btn btn-outline-primary mt-2" id="clearFiltersBtn">
+                                        Clear all filters
+                                    </button>
+                                </div>
+
                             @else
                                 <div class="text-center py-5 text-muted">
                                     <i class="bi bi-inbox fs-1"></i>
@@ -135,782 +223,408 @@
     </div>
 </div>
 
-<!-- ADD LOCATION MODAL -->
-<div class="modal fade" id="addLocationModal" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <form id="addLocationForm">
-                @csrf
-                <div class="modal-header">
-                    <h5 class="modal-title">Add Stock Location</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Name <span class="text-danger">*</span></label>
-                        <input type="text" name="name" class="form-control" required placeholder="e.g., Main Warehouse, Store Front">
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Code</label>
-                            <input type="text" name="code" class="form-control" placeholder="e.g., WH1, STORE1">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Phone</label>
-                            <input type="text" name="phone" class="form-control" placeholder="e.g., (123) 456-7890">
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Address</label>
-                        <textarea name="address" class="form-control" rows="2" placeholder="Full address..."></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Contact Person</label>
-                        <input type="text" name="contact_person" class="form-control" placeholder="e.g., John Doe">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Email</label>
-                        <input type="email" name="email" class="form-control" placeholder="e.g., contact@example.com">
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" name="is_default" id="is_default">
-                                <label class="form-check-label" for="is_default">Set as Default Location</label>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" name="is_active" id="is_active" checked>
-                                <label class="form-check-label" for="is_active">Active</label>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mb-0">
-                        <label class="form-label">Notes</label>
-                        <textarea name="notes" class="form-control" rows="3" placeholder="Additional information..."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary" id="addLocationBtn">
-                        <span class="spinner-border spinner-border-sm d-none me-1" id="addLocationSpinner"></span>
-                        Add Location
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- EDIT LOCATION MODAL -->
-<div class="modal fade" id="editLocationModal" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <form id="editLocationForm">
-                @csrf
-                @method('PUT')
-                <div class="modal-header">
-                    <h5 class="modal-title">Edit Stock Location</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body" id="editLocationBody">
-                    <!-- Content will be loaded here -->
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary" id="editLocationBtn">
-                        <span class="spinner-border spinner-border-sm d-none me-1" id="editLocationSpinner"></span>
-                        Update Location
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- VIEW LOCATION MODAL -->
-<div class="modal fade" id="viewLocationModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Location Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="viewLocationBody">
-                <!-- Content will be loaded here -->
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
+<!-- Add your existing modals here (addLocationModal, editLocationModal, viewLocationModal) -->
 
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded - Initializing stock locations script');
-    
-    // Get CSRF token
-    const csrfToken = document.querySelector('meta[name="csrf-token"]');
-    if (csrfToken) {
-        axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken.getAttribute('content');
-        console.log('CSRF token found:', csrfToken.getAttribute('content'));
-    } else {
-        console.error('CSRF token not found!');
-    }
-    
-    axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
-    
-    // Function to escape HTML to prevent XSS
-    function escapeHtml(text) {
-        if (text === null || text === undefined) return '';
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-    
-    // Function to format date
-    function formatDate(dateString) {
-        if (!dateString) return 'N/A';
-        try {
-            const date = new Date(dateString);
-            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        } catch (e) {
-            return 'Invalid date';
+
+    // Search and Filter Variables
+    let currentSearch = '';
+    let currentStatusFilter = '';
+    let currentDefaultFilter = '';
+    let currentSort = {
+        field: 'id',
+        direction: 'asc'
+    };
+
+    // DOM Elements
+    const searchInput = document.getElementById('searchInput');
+    const clearSearchBtn = document.getElementById('clearSearch');
+    const statusFilter = document.getElementById('statusFilter');
+    const defaultFilter = document.getElementById('defaultFilter');
+    const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+    const locationsTableBody = document.getElementById('locationsTableBody');
+    const locationsTable = document.getElementById('locationsTable');
+    const noResultsDiv = document.getElementById('noResults');
+    const resultsInfo = document.getElementById('resultsInfo');
+    const exportCsvBtn = document.getElementById('exportCsv');
+
+    // Initialize DataTable functionality
+    function initializeDataTable() {
+        console.log('Initializing data table functionality');
+
+        // Add event listeners for search
+        if (searchInput) {
+            searchInput.addEventListener('input', debounce(function() {
+                currentSearch = this.value.toLowerCase().trim();
+                filterAndSortLocations();
+            }, 300));
         }
-    }
-    
-    // Function to format currency
-    function formatCurrency(amount) {
-        if (amount === null || amount === undefined) return '$0.00';
-        return '$' + parseFloat(amount).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
-    }
-    
-    // Add location form
-    const addLocationForm = document.getElementById('addLocationForm');
-    if (addLocationForm) {
-        console.log('Add location form found');
-        
-        addLocationForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            console.log('Add location form submitted');
-            
-            const btn = document.getElementById('addLocationBtn');
-            const spinner = document.getElementById('addLocationSpinner');
-            
-            if (btn) {
-                btn.disabled = true;
-                console.log('Submit button disabled');
-            }
-            
-            if (spinner) {
-                spinner.classList.remove('d-none');
-                console.log('Spinner shown');
-            }
-            
-            // Collect form data
-            const formData = new FormData(this);
-            const data = {};
-            
-            for (let [key, value] of formData.entries()) {
-                data[key] = value;
-            }
-            
-            // Convert checkboxes to boolean
-            data.is_default = this.querySelector('[name="is_default"]').checked ? 1 : 0;
-            data.is_active = this.querySelector('[name="is_active"]').checked ? 1 : 0;
-            
-            console.log('Form data to submit:', data);
-            console.log('Route:', '{{ route("stock-locations.store") }}');
-            
-            // Make the AJAX request
-            axios.post('{{ route("stock-locations.store") }}', data)
-                .then(response => {
-                    console.log('Response received:', response.data);
-                    
-                    if (response.data.success) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Success!',
-                            text: response.data.message,
-                            confirmButtonText: 'OK'
-                        }).then((result) => {
-                            if (result.isConfirmed) {
-                                // Close modal
-                                const modalElement = document.getElementById('addLocationModal');
-                                if (modalElement) {
-                                    const modal = bootstrap.Modal.getInstance(modalElement);
-                                    if (modal) {
-                                        modal.hide();
-                                        console.log('Modal closed');
-                                    }
-                                }
-                                
-                                // Clear form
-                                this.reset();
-                                
-                                // Reload page to show updated data
-                                console.log('Reloading page...');
-                                location.reload();
-                            }
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error!',
-                            text: response.data.message || 'Unknown error occurred'
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('AJAX Error:', error);
-                    console.error('Error response:', error.response);
-                    
-                    let errorMessage = 'Failed to add location. Please try again.';
-                    
-                    if (error.response) {
-                        // Server responded with error
-                        if (error.response.status === 422 && error.response.data.errors) {
-                            // Validation errors
-                            errorMessage = Object.values(error.response.data.errors)
-                                .flat()
-                                .map(err => `<li>${escapeHtml(err)}</li>`)
-                                .join('');
-                            errorMessage = `<ul style="text-align: left; padding-left: 20px;">${errorMessage}</ul>`;
-                        } else if (error.response.data.message) {
-                            errorMessage = escapeHtml(error.response.data.message);
-                        } else if (error.response.status === 500) {
-                            errorMessage = 'Server error. Please try again later.';
-                        }
-                    } else if (error.request) {
-                        // Request made but no response
-                        errorMessage = 'No response from server. Please check your internet connection.';
-                    } else {
-                        // Something else happened
-                        errorMessage = error.message || 'Unknown error occurred';
-                    }
-                    
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error!',
-                        html: errorMessage
-                    });
-                })
-                .finally(() => {
-                    if (btn) {
-                        btn.disabled = false;
-                        console.log('Submit button re-enabled');
-                    }
-                    
-                    if (spinner) {
-                        spinner.classList.add('d-none');
-                        console.log('Spinner hidden');
-                    }
-                });
-        });
-    } else {
-        console.error('Add location form not found!');
-    }
-    
-    // Edit location button click
-    document.addEventListener('click', function(e) {
-        const editBtn = e.target.closest('.edit-location-btn');
-        if (editBtn) {
-            e.preventDefault();
-            const locationId = editBtn.dataset.id;
-            console.log('Edit clicked for location ID:', locationId);
-            
-            // Use the route helper for edit
-            const editUrl = `{{ route('stock-locations.edit', ':id') }}`.replace(':id', locationId);
-            console.log('Fetching edit data from:', editUrl);
-            
-            axios.get(editUrl)
-                .then(response => {
-                    console.log('Edit response:', response.data);
-                    if (response.data.success) {
-                        const location = response.data.location;
-                        
-                        // Build the edit form HTML
-                        let html = `
-                            <div class="mb-3">
-                                <label class="form-label">Name <span class="text-danger">*</span></label>
-                                <input type="text" name="name" class="form-control" required value="${escapeHtml(location.name)}">
-                            </div>
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">Code</label>
-                                    <input type="text" name="code" class="form-control" value="${escapeHtml(location.code || '')}" placeholder="e.g., WH1, STORE1">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Phone</label>
-                                    <input type="text" name="phone" class="form-control" value="${escapeHtml(location.phone || '')}" placeholder="e.g., (123) 456-7890">
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Address</label>
-                                <textarea name="address" class="form-control" rows="2" placeholder="Full address...">${escapeHtml(location.address || '')}</textarea>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Contact Person</label>
-                                <input type="text" name="contact_person" class="form-control" value="${escapeHtml(location.contact_person || '')}" placeholder="e.g., John Doe">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Email</label>
-                                <input type="email" name="email" class="form-control" value="${escapeHtml(location.email || '')}" placeholder="e.g., contact@example.com">
-                            </div>
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <div class="form-check form-switch">
-                                        <input class="form-check-input" type="checkbox" name="is_default" id="edit_is_default" ${location.is_default ? 'checked' : ''} ${location.is_default ? 'disabled' : ''}>
-                                        <label class="form-check-label" for="edit_is_default">Set as Default Location</label>
-                                        ${location.is_default ? '<small class="text-muted d-block">This is the current default location</small>' : ''}
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-check form-switch">
-                                        <input class="form-check-input" type="checkbox" name="is_active" id="edit_is_active" ${location.is_active ? 'checked' : ''}>
-                                        <label class="form-check-label" for="edit_is_active">Active</label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mb-0">
-                                <label class="form-label">Notes</label>
-                                <textarea name="notes" class="form-control" rows="3" placeholder="Additional information...">${escapeHtml(location.notes || '')}</textarea>
-                            </div>
-                            <input type="hidden" name="id" value="${location.id}">
-                        `;
-                        
-                        document.getElementById('editLocationBody').innerHTML = html;
-                        
-                        // Show the modal
-                        const editModal = new bootstrap.Modal(document.getElementById('editLocationModal'));
-                        editModal.show();
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: response.data.message || 'Failed to load location data'
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('Edit error:', error);
-                    console.error('Error response:', error.response);
-                    
-                    let errorMessage = 'Failed to load location data for editing';
-                    
-                    if (error.response?.status === 404) {
-                        errorMessage = 'Location not found';
-                    } else if (error.response?.data?.message) {
-                        errorMessage = error.response.data.message;
-                    }
-                    
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: errorMessage
-                    });
-                });
-        }
-        
-        // View location button click
-        const viewBtn = e.target.closest('.view-location-btn');
-        if (viewBtn) {
-            e.preventDefault();
-            const locationId = viewBtn.dataset.id;
-            console.log('View clicked for location ID:', locationId);
-            
-            // Use the route helper for show - make sure the route exists
-            const viewUrl = `{{ route('stock-locations.show', ':id') }}`.replace(':id', locationId);
-            console.log('Fetching view data from:', viewUrl);
-            
-            axios.get(viewUrl)
-                .then(response => {
-                    console.log('View response:', response.data);
-                    if (response.data.success) {
-                        const location = response.data.location;
-                        
-                        let html = `
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label class="form-label fw-semibold">Name:</label>
-                                    <p>${escapeHtml(location.name)}</p>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-semibold">Code:</label>
-                                    <p>${escapeHtml(location.code || 'N/A')}</p>
-                                </div>
-                            </div>
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label class="form-label fw-semibold">Status:</label>
-                                    <p><span class="badge bg-${location.is_active ? 'success' : 'danger'}">${location.is_active ? 'Active' : 'Inactive'}</span></p>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-semibold">Default:</label>
-                                    <p>${location.is_default ? '<span class="badge bg-primary">Default Location</span>' : 'No'}</p>
-                                </div>
-                            </div>
-                        `;
-                        
-                        // Add address if exists
-                        if (location.address) {
-                            html += `
-                                <div class="row mb-3">
-                                    <div class="col-12">
-                                        <label class="form-label fw-semibold">Address:</label>
-                                        <p>${escapeHtml(location.address).replace(/\n/g, '<br>')}</p>
-                                    </div>
-                                </div>
-                            `;
-                        }
-                        
-                        // Add contact info if exists
-                        if (location.contact_person || location.phone || location.email) {
-                            html += `
-                                <div class="row mb-3">
-                                    <div class="col-12">
-                                        <label class="form-label fw-semibold">Contact Information:</label>
-                                        <p>
-                                            ${location.contact_person ? `<strong>${escapeHtml(location.contact_person)}</strong><br>` : ''}
-                                            ${location.phone ? `<i class="bi bi-telephone me-1"></i> ${escapeHtml(location.phone)}<br>` : ''}
-                                            ${location.email ? `<i class="bi bi-envelope me-1"></i> ${escapeHtml(location.email)}` : ''}
-                                        </p>
-                                    </div>
-                                </div>
-                            `;
-                        }
-                        
-                        // Add notes if exists
-                        if (location.notes) {
-                            html += `
-                                <div class="row mb-3">
-                                    <div class="col-12">
-                                        <label class="form-label fw-semibold">Notes:</label>
-                                        <p>${escapeHtml(location.notes).replace(/\n/g, '<br>')}</p>
-                                    </div>
-                                </div>
-                            `;
-                        }
-                        
-                        // Add timestamps
-                        html += `
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <label class="form-label fw-semibold">Created:</label>
-                                    <p>${formatDate(location.created_at)}</p>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-semibold">Last Updated:</label>
-                                    <p>${formatDate(location.updated_at)}</p>
-                                </div>
-                            </div>
-                        `;
-                        
-                        // Add stock summary if available
-                        if (response.data.stock_summary) {
-                            const summary = response.data.stock_summary;
-                            html += `
-                                <hr>
-                                <h6 class="mb-3">Stock Summary</h6>
-                                <div class="row">
-                                    <div class="col-md-6 mb-2">
-                                        <small class="text-muted">Total Stock In:</small>
-                                        <div class="fw-semibold">${summary.total_in || 0}</div>
-                                    </div>
-                                    <div class="col-md-6 mb-2">
-                                        <small class="text-muted">Total Stock Out:</small>
-                                        <div class="fw-semibold">${summary.total_out || 0}</div>
-                                    </div>
-                                    <div class="col-md-6 mb-2">
-                                        <small class="text-muted">Adjustments:</small>
-                                        <div class="fw-semibold">${summary.total_adjustments || 0}</div>
-                                    </div>
-                                    <div class="col-md-6 mb-2">
-                                        <small class="text-muted">Transfers:</small>
-                                        <div class="fw-semibold">${summary.total_transfers || 0}</div>
-                                    </div>
-                                    <div class="col-12 mb-2">
-                                        <small class="text-muted">Total Stock Value:</small>
-                                        <div class="fw-semibold">${formatCurrency(summary.total_value || 0)}</div>
-                                    </div>
-                                </div>
-                            `;
-                        }
-                        
-                        // Add recent transactions if available
-                        if (response.data.location && response.data.location.stocks && response.data.location.stocks.length > 0) {
-                            html += `
-                                <hr>
-                                <h6 class="mb-3">Recent Transactions</h6>
-                                <div class="table-responsive">
-                                    <table class="table table-sm table-borderless">
-                                        <thead>
-                                            <tr>
-                                                <th>Date</th>
-                                                <th>Product</th>
-                                                <th>Type</th>
-                                                <th>Qty</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                            `;
-                            
-                            response.data.location.stocks.forEach(transaction => {
-                                const typeColors = {
-                                    'in': 'success',
-                                    'out': 'danger',
-                                    'adjustment': 'warning',
-                                    'transfer': 'info'
-                                };
-                                
-                                html += `
-                                    <tr>
-                                        <td><small>${formatDate(transaction.created_at)}</small></td>
-                                        <td><small>${escapeHtml(transaction.product?.title || 'N/A')}</small></td>
-                                        <td><span class="badge bg-${typeColors[transaction.type] || 'secondary'}">${transaction.type}</span></td>
-                                        <td><small>${transaction.quantity}</small></td>
-                                    </tr>
-                                `;
-                            });
-                            
-                            html += `
-                                        </tbody>
-                                    </table>
-                                </div>
-                            `;
-                        }
-                        
-                        document.getElementById('viewLocationBody').innerHTML = html;
-                        
-                        // Show the modal
-                        const viewModal = new bootstrap.Modal(document.getElementById('viewLocationModal'));
-                        viewModal.show();
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: response.data.message || 'Failed to load location details'
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('View error:', error);
-                    console.error('Error response:', error.response);
-                    
-                    let errorMessage = 'Failed to load location details';
-                    
-                    if (error.response?.status === 404) {
-                        errorMessage = 'Location not found';
-                    } else if (error.response?.status === 405) {
-                        errorMessage = 'GET method not allowed for this route. Please check your routes configuration.';
-                    } else if (error.response?.data?.message) {
-                        errorMessage = error.response.data.message;
-                    }
-                    
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: errorMessage
-                    });
-                });
-        }
-        
-        // Delete location button click
-        const deleteBtn = e.target.closest('.delete-location-btn');
-        if (deleteBtn) {
-            e.preventDefault();
-            const locationId = deleteBtn.dataset.id;
-            console.log('Delete clicked for location ID:', locationId);
-            
-            Swal.fire({
-                title: 'Delete Location?',
-                text: "This action cannot be undone!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, delete it!',
-                cancelButtonText: 'Cancel'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Use the route helper for destroy
-                    const deleteUrl = `{{ route('stock-locations.destroy', ':id') }}`.replace(':id', locationId);
-                    console.log('Deleting from:', deleteUrl);
-                    
-                    axios.delete(deleteUrl)
-                        .then(response => {
-                            console.log('Delete response:', response.data);
-                            if (response.data.success) {
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: 'Deleted!',
-                                    text: response.data.message,
-                                    timer: 1500,
-                                    showConfirmButton: false
-                                }).then(() => {
-                                    console.log('Reloading page after delete...');
-                                    location.reload();
-                                });
-                            } else {
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Error',
-                                    text: response.data.message
-                                });
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Delete error:', error);
-                            let errorMessage = 'Failed to delete location';
-                            
-                            if (error.response?.data?.message) {
-                                errorMessage = error.response.data.message;
-                            }
-                            
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Error',
-                                text: errorMessage
-                            });
-                        });
+
+        // Clear search button
+        if (clearSearchBtn) {
+            clearSearchBtn.addEventListener('click', function() {
+                if (searchInput) {
+                    searchInput.value = '';
+                    currentSearch = '';
+                    filterAndSortLocations();
                 }
             });
         }
-    });
-    
-    // Edit location form submission
-    const editLocationForm = document.getElementById('editLocationForm');
-    if (editLocationForm) {
-        editLocationForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            console.log('Edit location form submitted');
-            
-            const btn = document.getElementById('editLocationBtn');
-            const spinner = document.getElementById('editLocationSpinner');
-            
-            if (btn) btn.disabled = true;
-            if (spinner) spinner.classList.remove('d-none');
-            
-            // Collect form data
-            const formData = new FormData(this);
-            const data = {};
-            
-            for (let [key, value] of formData.entries()) {
-                data[key] = value;
-            }
-            
-            // Convert checkboxes to boolean
-            const isDefaultCheckbox = this.querySelector('[name="is_default"]');
-            const isActiveCheckbox = this.querySelector('[name="is_active"]');
-            data.is_default = isDefaultCheckbox && !isDefaultCheckbox.disabled && isDefaultCheckbox.checked ? 1 : 0;
-            data.is_active = isActiveCheckbox && isActiveCheckbox.checked ? 1 : 0;
-            
-            const locationId = data.id;
-            console.log('Updating location ID:', locationId);
-            console.log('Form data:', data);
-            
-            // Use the route helper for update
-            const updateUrl = `{{ route('stock-locations.update', ':id') }}`.replace(':id', locationId);
-            console.log('Updating via:', updateUrl);
-            
-            // Use POST with _method=PUT for Laravel
-            data._method = 'PUT';
-            
-            axios.post(updateUrl, data)
-                .then(response => {
-                    console.log('Update response:', response.data);
-                    if (response.data.success) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Success!',
-                            text: response.data.message,
-                            confirmButtonText: 'OK'
-                        }).then(() => {
-                            // Close modal
-                            const modalElement = document.getElementById('editLocationModal');
-                            if (modalElement) {
-                                const modal = bootstrap.Modal.getInstance(modalElement);
-                                if (modal) modal.hide();
-                            }
-                            
-                            // Reload page to show updated data
-                            location.reload();
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error!',
-                            text: response.data.message || 'Failed to update location'
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('Update error:', error);
-                    console.error('Error response:', error.response);
-                    
-                    let errorMessage = 'Failed to update location. Please try again.';
-                    
-                    if (error.response?.status === 422 && error.response.data.errors) {
-                        // Validation errors
-                        errorMessage = Object.values(error.response.data.errors)
-                            .flat()
-                            .map(err => `<li>${escapeHtml(err)}</li>`)
-                            .join('');
-                        errorMessage = `<ul style="text-align: left; padding-left: 20px;">${errorMessage}</ul>`;
-                    } else if (error.response?.data?.message) {
-                        errorMessage = error.response.data.message;
-                    }
-                    
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error!',
-                        html: errorMessage
-                    });
-                })
-                .finally(() => {
-                    if (btn) btn.disabled = false;
-                    if (spinner) spinner.classList.add('d-none');
-                });
+
+        // Status filter
+        if (statusFilter) {
+            statusFilter.addEventListener('change', function() {
+                currentStatusFilter = this.value;
+                filterAndSortLocations();
+            });
+        }
+
+        // Default location filter
+        if (defaultFilter) {
+            defaultFilter.addEventListener('change', function() {
+                currentDefaultFilter = this.value;
+                filterAndSortLocations();
+            });
+        }
+
+        // Clear all filters button
+        if (clearFiltersBtn) {
+            clearFiltersBtn.addEventListener('click', function() {
+                resetFilters();
+            });
+        }
+
+        // Sortable headers
+        const sortableHeaders = document.querySelectorAll('.sortable-header');
+        sortableHeaders.forEach(header => {
+            header.addEventListener('click', function(e) {
+                e.preventDefault();
+                const sortField = this.dataset.sort;
+                toggleSort(sortField);
+            });
         });
+
+        // Export CSV button
+        if (exportCsvBtn) {
+            exportCsvBtn.addEventListener('click', exportToCSV);
+        }
+
+        console.log('Data table functionality initialized');
     }
-    
-    // Reset add form when modal closes
-    const addModal = document.getElementById('addLocationModal');
-    if (addModal) {
-        addModal.addEventListener('hidden.bs.modal', function () {
-            console.log('Add modal closed, resetting form');
-            const form = document.getElementById('addLocationForm');
-            if (form) {
-                form.reset();
+
+    // Debounce function for search input
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func.apply(this, args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    // Filter and sort locations
+    function filterAndSortLocations() {
+        const rows = document.querySelectorAll('.location-row');
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const name = row.dataset.name || '';
+            const code = row.dataset.code || '';
+            const address = row.dataset.address || '';
+            const contact = row.dataset.contact || '';
+            const status = row.dataset.status || '';
+            const isDefault = row.dataset.default || '';
+
+            let matchesSearch = true;
+            let matchesStatus = true;
+            let matchesDefault = true;
+
+            // Apply search filter
+            if (currentSearch) {
+                matchesSearch = name.includes(currentSearch) ||
+                               code.includes(currentSearch) ||
+                               address.includes(currentSearch) ||
+                               contact.includes(currentSearch);
+            }
+
+            // Apply status filter
+            if (currentStatusFilter) {
+                matchesStatus = status === currentStatusFilter;
+            }
+
+            // Apply default filter
+            if (currentDefaultFilter) {
+                matchesDefault = isDefault === currentDefaultFilter;
+            }
+
+            // Show/hide row based on filters
+            if (matchesSearch && matchesStatus && matchesDefault) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
             }
         });
+
+        // Sort visible rows
+        sortVisibleRows(rows);
+
+        // Update results info
+        updateResultsInfo(visibleCount);
+
+        // Show/hide no results message
+        if (noResultsDiv) {
+            if (visibleCount === 0 && rows.length > 0) {
+                noResultsDiv.classList.remove('d-none');
+                if (locationsTable) {
+                    locationsTable.style.display = 'none';
+                }
+            } else {
+                noResultsDiv.classList.add('d-none');
+                if (locationsTable) {
+                    locationsTable.style.display = '';
+                }
+            }
+        }
     }
-    
-    // Reset edit form when modal closes
-    const editModal = document.getElementById('editLocationModal');
-    if (editModal) {
-        editModal.addEventListener('hidden.bs.modal', function () {
-            console.log('Edit modal closed, clearing form');
-            document.getElementById('editLocationBody').innerHTML = '';
+
+    // Sort visible rows
+    function sortVisibleRows(rows) {
+        const visibleRows = Array.from(rows).filter(row => row.style.display !== 'none');
+
+        visibleRows.sort((a, b) => {
+            let aValue, bValue;
+
+            switch (currentSort.field) {
+                case 'name':
+                    aValue = a.querySelector('td:nth-child(2) .fw-semibold')?.textContent || '';
+                    bValue = b.querySelector('td:nth-child(2) .fw-semibold')?.textContent || '';
+                    break;
+                case 'code':
+                    aValue = a.querySelector('td:nth-child(3)')?.textContent || '';
+                    bValue = b.querySelector('td:nth-child(3)')?.textContent || '';
+                    break;
+                case 'status':
+                    aValue = a.querySelector('td:nth-child(6) .badge')?.textContent || '';
+                    bValue = b.querySelector('td:nth-child(6) .badge')?.textContent || '';
+                    break;
+                default: // id
+                    aValue = parseInt(a.querySelector('td:nth-child(1)')?.textContent || 0);
+                    bValue = parseInt(b.querySelector('td:nth-child(1)')?.textContent || 0);
+            }
+
+            // Convert to lowercase for string comparison
+            if (typeof aValue === 'string') {
+                aValue = aValue.toLowerCase();
+                bValue = bValue.toLowerCase();
+            }
+
+            if (currentSort.direction === 'asc') {
+                return aValue > bValue ? 1 : -1;
+            } else {
+                return aValue < bValue ? 1 : -1;
+            }
+        });
+
+        // Update table order
+        const tbody = document.querySelector('#locationsTable tbody');
+        if (tbody) {
+            // Remove existing rows
+            rows.forEach(row => tbody.removeChild(row));
+
+            // Add sorted rows back
+            visibleRows.forEach((row, index) => {
+                // Update the serial number
+                const serialCell = row.querySelector('td:nth-child(1)');
+                if (serialCell) {
+                    serialCell.textContent = index + 1;
+                }
+                tbody.appendChild(row);
+            });
+        }
+
+        // Update sort indicators
+        updateSortIndicators();
+    }
+
+    // Toggle sort field and direction
+    function toggleSort(field) {
+        if (currentSort.field === field) {
+            // Toggle direction
+            currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            // New field, default to asc
+            currentSort.field = field;
+            currentSort.direction = 'asc';
+        }
+
+        filterAndSortLocations();
+    }
+
+    // Update sort indicators in headers
+    function updateSortIndicators() {
+        const headers = document.querySelectorAll('.sortable-header');
+        headers.forEach(header => {
+            const icon = header.querySelector('i');
+            const field = header.dataset.sort;
+
+            if (icon) {
+                // Reset all icons
+                icon.className = 'bi bi-arrow-down-up';
+
+                // Set active sort indicator
+                if (field === currentSort.field) {
+                    icon.className = currentSort.direction === 'asc'
+                        ? 'bi bi-arrow-up'
+                        : 'bi bi-arrow-down';
+                }
+            }
         });
     }
-    
-    // Reset view modal when it closes
-    const viewModal = document.getElementById('viewLocationModal');
-    if (viewModal) {
-        viewModal.addEventListener('hidden.bs.modal', function () {
-            console.log('View modal closed, clearing content');
-            document.getElementById('viewLocationBody').innerHTML = '';
+
+    // Update results information
+    function updateResultsInfo(visibleCount) {
+        if (resultsInfo) {
+            const totalRows = document.querySelectorAll('.location-row').length;
+            let infoText = `Showing ${visibleCount} of ${totalRows} locations`;
+
+            if (currentSearch || currentStatusFilter || currentDefaultFilter) {
+                infoText += ' (filtered)';
+
+                // Add active filters info
+                const activeFilters = [];
+                if (currentSearch) activeFilters.push(`search: "${currentSearch}"`);
+                if (currentStatusFilter) activeFilters.push(`status: ${currentStatusFilter}`);
+                if (currentDefaultFilter) activeFilters.push(`default: ${currentDefaultFilter}`);
+
+                if (activeFilters.length > 0) {
+                    infoText += ` - Filters: ${activeFilters.join(', ')}`;
+                }
+            }
+
+            resultsInfo.textContent = infoText;
+        }
+    }
+
+    // Reset all filters
+    function resetFilters() {
+        if (searchInput) {
+            searchInput.value = '';
+            currentSearch = '';
+        }
+
+        if (statusFilter) {
+            statusFilter.value = '';
+            currentStatusFilter = '';
+        }
+
+        if (defaultFilter) {
+            defaultFilter.value = '';
+            currentDefaultFilter = '';
+        }
+
+        currentSort = {
+            field: 'id',
+            direction: 'asc'
+        };
+
+        filterAndSortLocations();
+        updateSortIndicators();
+    }
+
+    // Export to CSV function
+    function exportToCSV() {
+        const visibleRows = document.querySelectorAll('.location-row');
+        const csvData = [];
+
+        // Add header row
+        csvData.push(['#', 'Name', 'Code', 'Address', 'Contact', 'Status', 'Default', 'Notes']);
+
+        // Add data rows
+        visibleRows.forEach(row => {
+            if (row.style.display !== 'none') {
+                const cells = row.querySelectorAll('td');
+                const rowData = [
+                    cells[0].textContent,
+                    cells[1].querySelector('.fw-semibold')?.textContent || '',
+                    cells[2].textContent,
+                    cells[3].textContent,
+                    cells[4].querySelector('div')?.textContent || '',
+                    cells[5].querySelector('.badge')?.textContent || '',
+                    cells[6].querySelector('.badge')?.textContent || cells[6].textContent,
+                    cells[1].querySelector('small')?.textContent || ''
+                ];
+                csvData.push(rowData);
+            }
+        });
+
+        // Convert to CSV string
+        const csvContent = csvData.map(row =>
+            row.map(cell => {
+                // Escape quotes and wrap in quotes if contains comma or quotes
+                const cellStr = String(cell).replace(/"/g, '""');
+                return /[,"\n]/.test(cellStr) ? `"${cellStr}"` : cellStr;
+            }).join(',')
+        ).join('\n');
+
+        // Create and download file
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `stock_locations_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // Show success message
+        Swal.fire({
+            icon: 'success',
+            title: 'Exported Successfully',
+            text: `Exported ${csvData.length - 1} locations to CSV file`,
+            timer: 2000,
+            showConfirmButton: false
         });
     }
-    
-    console.log('Stock locations script initialized successfully');
+
+    // Refresh table after CRUD operations
+    window.refreshLocationsTable = function() {
+        console.log('Refreshing locations table...');
+
+        // This could be enhanced to fetch fresh data from server
+        // For now, we'll just reset filters and show all data
+        resetFilters();
+
+        // Or if you want server-side refresh:
+        // axios.get('{{ route("stock-locations.index") }}')
+        //     .then(response => {
+        //         // Update table with new data
+        //         // This would require more complex implementation
+        //     });
+    };
+
+    // Initialize everything
+    initializeDataTable();
+
+    // Add refresh function to window for access from modals
+    window.refreshTable = refreshLocationsTable;
+
+    console.log('Stock locations script with search functionality initialized successfully');
 });
+
+// Add this function to your existing JavaScript for CRUD operations
+// In your add/edit/delete success callbacks, call: window.refreshTable();
+
 </script>
+
+<!-- Add your existing CRUD JavaScript code here -->
 
 @endsection

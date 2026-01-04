@@ -48,6 +48,8 @@ class DatabaseSeeder extends Seeder
         CustomerSeeder::class,
         UnitsTableSeeder::class,
         StoreSettingPermissionSeeder::class,
+        SalesPermissionTableSeeder::class,
+        SalesPersonPermissionTableSeeder::class, // Add this line
 
         ]);
 

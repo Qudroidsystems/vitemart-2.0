@@ -103,6 +103,14 @@
    @if (Route::is('settings.store.*'))
          @include('layouts.pages-assets.css.users-list-css')
     @endif
+
+     @if (Route::is('sales.*'))
+         @include('layouts.pages-assets.css.users-list-css')
+    @endif
+
+    @if (Route::is('salesperson.*'))
+         @include('layouts.pages-assets.css.users-list-css')
+    @endif
 </head>
 
 <body>
@@ -362,6 +370,18 @@
                                         @can('View low stock alerts')
                                             <li class="nav-item">
                                                 <a href="{{ route('inventory.low-stock-alerts') }}" class="nav-link" role="button" data-key="t-signin"> Low Stock Alerts </a>
+                                            </li>
+                                        @endcan
+
+                                         @can('View sale')
+                                            <li class="nav-item">
+                                                <a href="{{ route('sales.index') }}" class="nav-link" role="button" data-key="t-signin"> Sales Management </a>
+                                            </li>
+                                        @endcan
+
+                                        @can('View personal sales dashboard')
+                                            <li class="nav-item">
+                                                <a href="{{ route('salesperson.dashboard') }}" class="nav-link" role="button" data-key="t-signin"> Sales Person Management </a>
                                             </li>
                                         @endcan
                                     </ul>
@@ -645,11 +665,15 @@
 
           @yield('content')
 
-        <footer class="footer">
+       <footer class="footer">
             <div class="container-fluid">
                 <div class="row">
                     <div class="col-sm-6">
-                        <script>document.write(new Date().getFullYear())</script> © primefarm.ng
+                        <script>document.write(new Date().getFullYear())</script> ©
+                        @php
+                            $storeSettings = \App\Models\StoreSetting::first();
+                        @endphp
+                        {{ $storeSettings->store_name ?? 'Store Name' }}
                     </div>
                     <div class="col-sm-6">
                         <div class="text-sm-end d-none d-sm-block">
@@ -1422,20 +1446,26 @@
       @endif
 
      @if (Route::is('inventory.*') || Route::is('stock-locations.*'))
-                @include('layouts.pages-assets.js.inventory-list-js')
+            @include('layouts.pages-assets.js.inventory-list-js')
      @endif
 
      @if (Route::is('orders.*'))
-                @include('layouts.pages-assets.js.order-list-js')
+         @include('layouts.pages-assets.js.order-list-js')
      @endif
 
      @if (Route::is('customers.*'))
-                @include('layouts.pages-assets.js.customer-list-js')
+            @include('layouts.pages-assets.js.customer-list-js')
      @endif
 
     @if (Route::is('settings.store.*'))
-                @include('layouts.pages-assets.js.storesetting-list-js')
-     @endif
+            @include('layouts.pages-assets.js.storesetting-list-js')
+    @endif
+    @if (Route::is('sales.*'))
+            @include('layouts.pages-assets.js.sale-list-js')
+    @endif
+     @if (Route::is('salesperson.*'))
+            @include('layouts.pages-assets.js.sale-list-js')
+    @endif
       </body>
 
       </html>

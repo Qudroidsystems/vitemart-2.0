@@ -31,7 +31,7 @@
                             <h5 class="card-title mb-4">Search or Scan Products</h5>
                             <div class="position-relative mb-4">
                                 <input type="text" id="barcodeInput" class="form-control form-control-lg fs-3"
-                                       placeholder="Scan barcode or search..." autofocus autocomplete="off"
+                                       placeholder="Scan barcode or search by name/SKU..." autofocus autocomplete="off"
                                        aria-label="Search or scan products">
                                 <i class="bi bi-upc-scan position-absolute top-50 end-0 translate-middle-y me-4 fs-2 text-muted"></i>
                             </div>
@@ -252,6 +252,12 @@
                         <span class="badge bg-info" id="modalProductPrice"></span>
                         <span class="badge bg-warning ms-2" id="modalProductStock"></span>
                         <span class="badge bg-secondary ms-2" id="modalProductUnit"></span>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted d-flex justify-content-center gap-2">
+                            <span id="modalProductSku"></span>
+                            <span id="modalProductBarcode"></span>
+                        </small>
                     </div>
                 </div>
                 <!-- Unit Selection Toggle -->
@@ -515,7 +521,8 @@
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-// COMPLETE POS SCRIPT WITH UNIT SELECTION VALIDATION
+// COMPLETE POS SCRIPT WITH UNIT SELECTION VALIDATION AND BARCODE SCANNING
+// COMPLETE POS SCRIPT WITH UNIT SELECTION VALIDATION AND BARCODE SCANNING
 document.addEventListener('DOMContentLoaded', function () {
     // ============================================
     // INITIALIZATION
@@ -558,6 +565,10 @@ document.addEventListener('DOMContentLoaded', function () {
     let quantityModal = null;
     let quickCustomerModal = null;
 
+    // Barcode scanning
+    let barcodeBuffer = '';
+    let barcodeTimeout = null;
+
     // Unit management
     let availableUnits = [];
     let selectedUnit = null;
@@ -569,6 +580,137 @@ document.addEventListener('DOMContentLoaded', function () {
     let thankYouAudio = null;
 
     input.focus();
+
+    // ============================================
+    // BARCODE SCANNING FUNCTIONALITY
+    // ============================================
+    input.addEventListener('keydown', function(e) {
+        // Check if it's a barcode scanner input (typically fast input with Enter key)
+        if (e.key === 'Enter') {
+            e.preventDefault();
+
+            const scannedCode = input.value.trim();
+            if (scannedCode) {
+                processBarcode(scannedCode);
+            }
+            return;
+        }
+    });
+
+    // Also keep the existing input event for manual search
+    input.addEventListener('input', debounce(() => {
+        const q = input.value.trim();
+        currentSearchQuery = q;
+
+        // Don't trigger search if we're in barcode scanning mode
+        // Barcodes are typically processed with Enter key
+        if (q.length >= 2 && !isLikelyBarcode(q)) {
+            searchProducts(q);
+        } else if (q.length === 0) {
+            clearAllUnselectedItems();
+            renderAllSearchedProducts();
+        } else {
+            showEmptySearchState();
+        }
+    }, 300));
+
+    // Function to process barcode
+    async function processBarcode(barcode) {
+        if (!barcode) return;
+
+        input.value = '';
+        showSearchLoading();
+
+        try {
+            // Use the existing search endpoint which already handles exact barcode matches
+            const response = await axios.get('{{ route("pos.search") }}', {
+                params: { q: barcode }
+            });
+
+            const products = response.data || [];
+
+            if (products.length > 0) {
+                // Since your search method returns exact barcode match first,
+                // we can assume the first product is what we want
+                const product = products[0];
+
+                // Check if product is already in searched list
+                const existingIndex = allSearchedProducts.findIndex(p => p.id === product.id);
+                if (existingIndex === -1) {
+                    allSearchedProducts.push(product);
+                } else {
+                    allSearchedProducts[existingIndex] = product;
+                }
+
+                // Check if product is in cart
+                const cartItem = cart.find(i => i.product_id === product.id);
+                if (cartItem) {
+                    // Product already in cart, open quantity modal to adjust
+                    const button = document.querySelector(`[data-product-id="${product.id}"]`);
+                    if (button) {
+                        openQuantityModal(button);
+                    }
+                } else {
+                    // Product not in cart, open quantity modal to add
+                    const productJson = JSON.stringify(product).replace(/'/g, "&apos;");
+                    const tempButton = document.createElement('button');
+                    tempButton.dataset.product = productJson;
+                    tempButton.dataset.productId = product.id;
+                    openQuantityModal(tempButton);
+                }
+
+                renderAllSearchedProducts();
+                hideSearchLoading();
+
+                // Play sound for barcode scan success
+                playScanSound();
+            } else {
+                hideSearchLoading();
+                showToast('Product not found', 'error');
+            }
+        } catch (error) {
+            hideSearchLoading();
+            console.error('Barcode scan error:', error);
+            showToast('Error scanning barcode', 'error');
+        }
+    }
+
+    // Helper function to check if input is likely a barcode
+    function isLikelyBarcode(input) {
+        // Check for common barcode patterns
+        if (input.length >= 8 && input.length <= 14 && /^\d+$/.test(input)) {
+            return true; // Numeric barcode (EAN, UPC)
+        }
+
+        if (input.startsWith('PROD') && input.length > 10) {
+            return true; // Custom product code
+        }
+
+        return false;
+    }
+
+    // Function to play scan sound
+    function playScanSound() {
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        } catch (e) {
+            console.log('Audio context not supported');
+        }
+    }
 
     // ============================================
     // FORMATTING FUNCTIONS
@@ -625,6 +767,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Load unit preferences
         loadUnitPreferences();
+
+        // Focus management for barcode scanning
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.modal') &&
+                !e.target.closest('#customerSelect') &&
+                !e.target.closest('#discountValue') &&
+                e.target.id !== 'barcodeInput') {
+                input.focus();
+                input.select();
+            }
+        });
     }
 
     // ============================================
@@ -1171,27 +1324,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // ============================================
     // EVENT LISTENERS
     // ============================================
-    input.addEventListener('input', debounce(() => {
-        const q = input.value.trim();
-        currentSearchQuery = q;
-        if (q.length >= 2) {
-            searchProducts(q);
-        } else if (q.length === 0) {
-            clearAllUnselectedItems();
-            renderAllSearchedProducts();
-        } else {
-            showEmptySearchState();
-        }
-    }, 300));
-
-    input.addEventListener('keydown', e => {
-        if (e.key === 'Enter') {
-            const q = input.value.trim();
-            if (q) searchProducts(q);
-        }
-    });
-
-    // Button click handlers
     confirmAddBtn.addEventListener('click', addOrUpdateProductInCart);
     removeFromCartBtn.addEventListener('click', removeCurrentProductFromCart);
     document.getElementById('clearCart').addEventListener('click', clearCart);
@@ -1520,12 +1652,21 @@ document.addEventListener('DOMContentLoaded', function () {
                     ${product.thumbnail ? `<img src="${product.thumbnail}" width="50" class="rounded me-3">` : '<div class="bg-light rounded me-3 d-flex align-items-center justify-content-center" style="width:50px;height:50px;"><i class="bi bi-image"></i></div>'}
                     <div>
                         <strong>${product.title}</strong><br>
-                        <small class="text-muted">SKU: ${product.sku}</small>
+                        <small class="text-muted d-flex align-items-center flex-wrap gap-2">
+                            <span class="badge bg-secondary">
+                                <i class="bi bi-upc-scan me-1"></i>SKU: ${product.sku}
+                            </span>
+                            <span class="badge bg-info text-dark">
+                                <i class="bi bi-barcode me-1"></i>Barcode: ${product.barcode}
+                            </span>
+                        </small>
                     </div>
                 </div>
             </td>
             <td class="text-center">
-                <span class="badge bg-${product.stock > 10 ? 'success' : product.stock > 0 ? 'warning' : 'danger'}">${formatNumber(product.stock, 0)}</span>
+                <span class="badge bg-${product.stock > 10 ? 'success' : product.stock > 0 ? 'warning' : 'danger'}">
+                    ${formatNumber(product.stock, 0)}
+                </span>
             </td>
             <td class="text-center">
                 <button class="btn btn-sm ${btnClass} qty-btn"
@@ -1541,7 +1682,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 </button>
             </td>
             <td class="text-end fw-bold">${formatCurrency(price)}</td>
-            <td class="text-center"><span class="badge bg-info">${unit}${unitBadgeExtra}</span></td>
+            <td class="text-center">
+                <span class="badge bg-primary">
+                    ${unit}${unitBadgeExtra}
+                </span>
+            </td>
         `;
         resultsBody.appendChild(row);
 
@@ -1654,12 +1799,14 @@ document.addEventListener('DOMContentLoaded', function () {
             const cachedQty = productQuantityCache[productId] || 1;
             const previousQty = cartItem ? cartItem.qty : cachedQty;
 
-            // Update modal content
+            // Update modal content with barcode and SKU
             document.getElementById('modalProductLabel').textContent = product.title;
             const price = product.sale_price || product.price;
             document.getElementById('modalProductPrice').textContent = `${formatCurrency(price)}`;
             document.getElementById('modalProductStock').textContent = `Stock: ${formatNumber(product.stock, 0)}`;
             document.getElementById('modalProductUnit').textContent = product.primary_unit || 'Unit';
+            document.getElementById('modalProductSku').innerHTML = `<span class="badge bg-secondary"><i class="bi bi-upc-scan me-1"></i>SKU: ${product.sku}</span>`;
+            document.getElementById('modalProductBarcode').innerHTML = `<span class="badge bg-info text-dark"><i class="bi bi-barcode me-1"></i>Barcode: ${product.barcode}</span>`;
 
             // Check if product has unit data
             if (product.units && product.units.length > 0) {
@@ -1818,6 +1965,11 @@ document.addEventListener('DOMContentLoaded', function () {
             existing.unit_name = unitName;
             existing.unit_short_name = unitShortName;
             existing.unit_id = unitId;
+            existing.sku = p.sku;
+            existing.barcode = p.barcode; // Store barcode
+            existing.discount_type = 'percent';
+            existing.discount_value = 0;
+            existing.discounted_price = unitPrice;
             existing.is_unit_mode = isUnitMode;
             existing.original_unit = isUnitMode ? selectedUnit : null;
             existing.price_per_unit = unitPrice; // Store price per unit
@@ -1832,6 +1984,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 unit_short_name: unitShortName,
                 unit_id: parseInt(unitId),
                 sku: p.sku,
+                barcode: p.barcode, // Store barcode
                 thumbnail: p.thumbnail,
                 discount_type: 'percent',
                 discount_value: 0,
@@ -1928,7 +2081,14 @@ document.addEventListener('DOMContentLoaded', function () {
                         ${item.thumbnail ? `<img src="${item.thumbnail}" width="40" class="rounded me-2">` : '<div class="bg-light rounded me-2 d-flex align-items-center justify-content-center" style="width:40px;height:40px;"><i class="bi bi-image"></i></div>'}
                         <div>
                             <strong>${item.title}</strong><br>
-                            <small class="text-muted">${item.sku ? 'SKU: ' + item.sku : ''}</small>
+                            <small class="text-muted d-flex align-items-center flex-wrap gap-1">
+                                <span class="badge bg-secondary">
+                                    <i class="bi bi-upc-scan me-1"></i>${item.sku}
+                                </span>
+                                <span class="badge bg-info text-dark">
+                                    <i class="bi bi-barcode me-1"></i>${item.barcode || 'N/A'}
+                                </span>
+                            </small>
                             ${item.discount_value > 0 ? `<small class="text-warning d-block">-${formatNumber(item.discount_value, 2)}${item.discount_type === 'percent' ? '%' : '₦'} discount</small>` : ''}
                         </div>
                     </div>
@@ -1951,7 +2111,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         <i class="bi bi-percent"></i>
                     </button>
                 </td>
-                <td class="text-center align-middle">
+                <td class="text-center align-items-center">
                     <button class="btn btn-sm btn-danger rounded-circle remove-cart-item-btn p-0"
                             data-index="${i}"
                             title="Remove item"
@@ -2693,6 +2853,48 @@ document.addEventListener('DOMContentLoaded', function () {
     margin: 2px;
     padding: 0.25rem 0.5rem !important;
 }
+/* SKU and Barcode badge styles */
+.badge.bg-secondary, .badge.bg-info {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.badge .bi-upc-scan, .badge .bi-barcode {
+    font-size: 0.8rem;
+}
+
+/* Make badges responsive */
+.text-muted .badge {
+    margin: 0.1rem;
+}
+
+/* Cart item badges */
+#cartBody .badge {
+    font-size: 0.65rem;
+    padding: 0.2rem 0.4rem;
+}
+
+/* Table cell adjustments for badges */
+td .d-flex.gap-1, td .d-flex.gap-2 {
+    margin-top: 0.25rem;
+}
+
+/* Responsive adjustments for badges */
+@media (max-width: 768px) {
+    .badge.bg-secondary, .badge.bg-info {
+        font-size: 0.65rem;
+        padding: 0.15rem 0.35rem;
+    }
+
+    .badge .bi-upc-scan, .badge .bi-barcode {
+        font-size: 0.7rem;
+    }
+}
+
 /* Animations */
 @keyframes pulse {
     0% { transform: scale(1); }
