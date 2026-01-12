@@ -137,9 +137,9 @@
     </div>
 </div>
 
-<!-- Edit Store Settings Modal -->
+<!-- Edit Store Settings Modal - NOW SCROLLABLE -->
 <div class="modal fade" id="editStoreModal" tabindex="-1" aria-labelledby="editStoreModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <form action="{{ route('settings.store.update') }}" method="POST" enctype="multipart/form-data">
                 @csrf
@@ -150,12 +150,12 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
-                <div class="modal-body">
-                    <!-- Currency Dropdown -->
+                <!-- Scrollable Body -->
+                <div class="modal-body" style="max-height: 70vh; overflow-y: auto; padding-bottom: 2rem;">
                     <div class="row g-3 mb-4">
                         <div class="col-md-12">
                             <label class="form-label">Currency <span class="text-danger">*</span></label>
-                            <select name="currency_code" class="form-select" required>
+                            <select name="currency_code" class="form-select" required size="12">
                                 @php
                                     $currencies = [
                                         ['code' => 'USD', 'symbol' => '$', 'name' => 'United States Dollar'],
@@ -213,20 +213,20 @@
 
                                 @foreach($currencies as $currency)
                                     <option value="{{ $currency['code'] }}"
-                                        data-symbol="{{ $currency['symbol'] }}"
-                                        {{ old('currency_code', $setting?->currency_code) == $currency['code'] ? 'selected' : '' }}>
+                                            data-symbol="{{ $currency['symbol'] }}"
+                                            {{ old('currency_code', $setting?->currency_code) == $currency['code'] ? 'selected' : '' }}>
                                         {{ $currency['symbol'] }} {{ $currency['code'] }} - {{ $currency['name'] }}
                                     </option>
                                 @endforeach
                             </select>
-                            <small class="text-muted">Select your store's primary currency</small>
+                            <small class="text-muted d-block mt-1">Scroll inside the list to view all currencies</small>
                         </div>
                     </div>
 
-                    <!-- Hidden field to submit symbol (auto-filled by JS) -->
+                    <!-- Hidden currency symbol field -->
                     <input type="hidden" name="currency_symbol" id="currency_symbol" value="{{ old('currency_symbol', $setting?->currency_symbol) }}">
 
-                    <!-- Other Fields -->
+                    <!-- Other Form Fields -->
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label">Store Name <span class="text-danger">*</span></label>
@@ -237,33 +237,17 @@
                             <label class="form-label">Motto</label>
                             <input type="text" name="motto" class="form-control" value="{{ old('motto', $setting?->motto) }}">
                         </div>
-                    </div>
 
-                    <div class="row g-3 mt-3">
                         <div class="col-md-6">
                             <label class="form-label">Website</label>
                             <input type="url" name="website" class="form-control" value="{{ old('website', $setting?->website) }}" placeholder="https://example.com">
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label">Address</label>
-                            <textarea name="address" class="form-control" rows="3">{{ old('address', $setting?->address) }}</textarea>
-                        </div>
-                    </div>
-
-                    <div class="row g-3 mt-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Receipt Footer Note</label>
-                            <textarea name="footer_note" class="form-control" rows="3">{{ old('footer_note', $setting?->footer_note) }}</textarea>
-                        </div>
-
-                        <div class="col-md-6">
                             <label class="form-label">Phone</label>
                             <input type="text" name="phone" class="form-control" value="{{ old('phone', $setting?->phone) }}">
                         </div>
-                    </div>
 
-                    <div class="row g-3 mt-3">
                         <div class="col-md-6">
                             <label class="form-label">Email</label>
                             <input type="email" name="email" class="form-control" value="{{ old('email', $setting?->email) }}">
@@ -273,18 +257,28 @@
                             <label class="form-label">Tax ID / VAT</label>
                             <input type="text" name="tax_id" class="form-control" value="{{ old('tax_id', $setting?->tax_id) }}">
                         </div>
-                    </div>
 
-                    <div class="mt-4">
-                        <label class="form-label">Store Logo (Recommended: 300×100 px)</label>
-                        <input type="file" name="logo" class="form-control" accept="image/*">
+                        <div class="col-md-12">
+                            <label class="form-label">Address</label>
+                            <textarea name="address" class="form-control" rows="3">{{ old('address', $setting?->address) }}</textarea>
+                        </div>
 
-                        @if($setting?->logo)
-                            <div class="mt-3">
-                                <p class="mb-2"><strong>Current Logo:</strong></p>
-                                <img src="{{ $setting->getLogoUrlAttribute() }}" alt="Current Logo" class="img-thumbnail" style="max-height: 120px;">
-                            </div>
-                        @endif
+                        <div class="col-md-12">
+                            <label class="form-label">Receipt Footer Note</label>
+                            <textarea name="footer_note" class="form-control" rows="3">{{ old('footer_note', $setting?->footer_note) }}</textarea>
+                        </div>
+
+                        <div class="col-md-12 mt-4">
+                            <label class="form-label">Store Logo (Recommended: 300×100 px, max 2MB)</label>
+                            <input type="file" name="logo" class="form-control" accept="image/*">
+
+                            @if($setting?->logo)
+                                <div class="mt-3">
+                                    <p class="mb-2"><strong>Current Logo:</strong></p>
+                                    <img src="{{ $setting->getLogoUrlAttribute() }}" alt="Current Logo" class="img-thumbnail" style="max-height: 120px;">
+                                </div>
+                            @endif
+                        </div>
                     </div>
                 </div>
 
@@ -299,7 +293,7 @@
     </div>
 </div>
 
-<!-- JavaScript to sync selected currency symbol to hidden field -->
+<!-- JavaScript for currency symbol sync -->
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const currencySelect = document.querySelector('select[name="currency_code"]');
@@ -307,13 +301,13 @@
 
         function updateSymbol() {
             const selectedOption = currencySelect.options[currencySelect.selectedIndex];
-            symbolInput.value = selectedOption.dataset.symbol;
+            symbolInput.value = selectedOption.dataset.symbol || '';
         }
 
-        // On load
+        // Initial sync
         updateSymbol();
 
-        // On change
+        // Update on change
         currencySelect.addEventListener('change', updateSymbol);
     });
 </script>
