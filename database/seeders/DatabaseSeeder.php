@@ -50,6 +50,7 @@ class DatabaseSeeder extends Seeder
         StoreSettingPermissionSeeder::class,
         SalesPermissionTableSeeder::class,
         SalesPersonPermissionTableSeeder::class, // Add this line
+        UpdateOrdersCustomerIdSeeder::class,
 
         ]);
 
