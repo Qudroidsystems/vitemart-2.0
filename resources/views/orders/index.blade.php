@@ -270,8 +270,9 @@
     </div>
 </div>
 
-{{-- Scripts --}}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Chart.js JS -->
+<script src="{{ asset('theme/layouts/assets/libs/chart.js/chart.umd.min.js') }}"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     // Sales Chart

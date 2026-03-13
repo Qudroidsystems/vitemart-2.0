@@ -14,3 +14,8 @@
 <link href="{{ asset('theme/layouts/assets/css/app.min.css')}}" rel="stylesheet" type="text/css">
 <!-- custom Css-->
 <link href="{{ asset('theme/layouts/assets/css/custom.min.css')}}" rel="stylesheet" type="text/css">
+
+<!-- Chart.js CSS -->
+<link href="{{ asset('theme/layouts/assets/libs/chart.js/chart.min.css') }}" rel="stylesheet" type="text/css">
+
+

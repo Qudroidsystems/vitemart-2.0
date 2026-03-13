@@ -31,7 +31,7 @@ class UserTableSeeder extends Seeder
             'avatar' => 'unnamed.png',
             'password' => FacadesHash::make('12345678'),
             // 'wpassword' => '12345678',
-            'role'=>'staff'
+            // 'role'=>'staff'
         ]);
 
         BioModel::updateOrCreate(['user_id'=>$user->id],

@@ -4,7 +4,11 @@
 @section('title', $product->title . ' - Product Details')
 
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
+<!-- Swiper CSS -->
+<link href="{{ asset('theme/layouts/assets/libs/swiper/swiper-bundle.min.css') }}" rel="stylesheet" type="text/css">
+
+<!-- Swiper JS -->
+<script src="{{ asset('theme/layouts/assets/libs/swiper/swiper-bundle.min.js') }}"></script>
 <style>
     .sticky-side-div {
         position: sticky;

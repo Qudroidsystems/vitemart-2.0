@@ -207,8 +207,10 @@
     </div>
 </div>
 
-<!-- SweetAlert2 & Toastr (or use your own notification lib) -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- SweetAlert2 JS -->
+<script src="{{ asset('theme/layouts/assets/libs/sweetalert2/sweetalert2.min.js') }}"></script>
+<!-- Sweet Alert css-->
+<link href="{{ asset('theme/layouts/assets/libs/sweetalert2/sweetalert2.min.css') }}" rel="stylesheet" type="text/css">
 
 <script>
 // Profile Image Preview

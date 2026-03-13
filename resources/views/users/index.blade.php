@@ -120,14 +120,14 @@ use Spatie\Permission\Models\Role;
                                     <h5 class="card-title mb-0">Users <span class="badge bg-dark-subtle text-dark ms-1">{{ $data->total() }}</span></h5>
                                 </div>
                                 <div class="flex-shrink-0">
-                                   
+
                                         <div class="d-flex flex-wrap align-items-start gap-2">
                                                 <button class="btn btn-subtle-danger d-none" id="remove-actions" onclick="deleteMultiple()"><i class="ri-delete-bin-2-line"></i></button>
                                             @can('Create user')
                                                 <button type="button" class="btn btn-primary add-btn" data-bs-toggle="modal" data-bs-target="#showModal"><i class="bi bi-plus-circle align-baseline me-1"></i> Add User</button>
                                             @endcan
                                         </div>
-                                  
+
                                 </div>
                             </div>
                             <div class="card-body">
@@ -190,7 +190,7 @@ use Spatie\Permission\Models\Role;
                                                                    <a href="javascript:void(0);" class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn"><i class="ph-trash"></i></a>
                                                                 </li>
                                                            @endcan
-                                                           
+
                                                         </ul>
                                                     </td>
                                                 </tr>
@@ -198,9 +198,9 @@ use Spatie\Permission\Models\Role;
                                                       <tr>
                                                         <td colspan="7" class="noresult" style="display: block;">No results found</td>
                                                     </tr>
-                                            
+
                                             @endforelse
-                                          
+
                                         </tbody>
                                     </table>
                                 </div>
@@ -228,8 +228,8 @@ use Spatie\Permission\Models\Role;
                                         </div>
                                     </div>
                                 </div>
-                               
-                               
+
+
                             </div>
                         </div>
                     </div>
@@ -356,7 +356,10 @@ use Spatie\Permission\Models\Role;
         </div>
     </div>
     <!-- End Page-content -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Chart.js JS -->
+<script src="{{ asset('theme/layouts/assets/libs/chart.js/chart.umd.min.js') }}"></script>
+
+
     <!-- Scripts -->
     {{-- <script src="{{ asset('theme/layouts/assets/js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ asset('theme/layouts/assets/js/list.min.js') }}"></script>

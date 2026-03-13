@@ -197,9 +197,11 @@
         </div>
     </div>
 </div>
+<!-- Chart.js CSS (optional - only if you want default styling) -->
+<link href="{{ asset('theme/layouts/assets/libs/chart.js/chart.min.css') }}" rel="stylesheet" type="text/css">
 
-<!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Chart.js JS -->
+<script src="{{ asset('theme/layouts/assets/libs/chart.js/chart.umd.min.js') }}"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {

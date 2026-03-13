@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Receipt - {{ $order->id }}</title>
 
-    <!-- JsBarcode CDN for generating barcode -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.12.1/JsBarcode.all.min.js"></script>
+  <!-- JsBarcode JS -->
+<script src="{{ asset('theme/layouts/assets/libs/jsbarcode/JsBarcode.all.min.js') }}"></script>
 
     <style>
         body {

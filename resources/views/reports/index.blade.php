@@ -429,11 +429,58 @@
     </div>
 </div>
 
-<!-- JavaScript -->
+{{-- <!-- JavaScript -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> --}}
 
+
+<!-- CSS Files -->
+<!-- Sweet Alert css-->
+<link href="{{ asset('theme/layouts/assets/libs/sweetalert2/sweetalert2.min.css') }}" rel="stylesheet" type="text/css">
+
+<!-- dropzone css -->
+<link href="{{ asset('theme/layouts/assets/libs/dropzone/dropzone.css') }}" rel="stylesheet" type="text/css">
+
+<!-- Chart.js CSS -->
+<link href="{{ asset('theme/layouts/assets/libs/chart.js/chart.min.css') }}" rel="stylesheet" type="text/css">
+
+<!-- Choices.js CSS -->
+<link href="{{ asset('theme/layouts/assets/libs/choices.js/choices.min.css') }}" rel="stylesheet" type="text/css">
+
+<!-- Swiper CSS -->
+<link href="{{ asset('theme/layouts/assets/libs/swiper/swiper-bundle.min.css') }}" rel="stylesheet" type="text/css">
+
+<!-- Bootstrap Css -->
+<link href="{{ asset('theme/layouts/assets/css/bootstrap.min.css')}}" rel="stylesheet" type="text/css">
+<!-- Icons Css -->
+<link href="{{ asset('theme/layouts/assets/css/icons.min.css')}}" rel="stylesheet" type="text/css">
+<!-- App Css-->
+<link href="{{ asset('theme/layouts/assets/css/app.min.css')}}" rel="stylesheet" type="text/css">
+<!-- custom Css-->
+<link href="{{ asset('theme/layouts/assets/css/custom.min.css')}}" rel="stylesheet" type="text/css">
+
+<!-- JavaScript Files -->
+<!-- Layout config Js -->
+<script src="{{ asset('theme/layouts/assets/js/layout.js')}}"></script>
+
+<!-- Chart.js JS -->
+<script src="{{ asset('theme/layouts/assets/libs/chart.js/chart.umd.min.js') }}"></script>
+
+<!-- Axios JS -->
+<script src="{{ asset('theme/layouts/assets/libs/axios/axios.min.js') }}"></script>
+
+<!-- SweetAlert2 JS -->
+<script src="{{ asset('theme/layouts/assets/libs/sweetalert2/sweetalert2.min.js') }}"></script>
+
+<!-- Choices.js JS -->
+<script src="{{ asset('theme/layouts/assets/libs/choices.js/choices.min.js') }}"></script>
+
+<!-- JsBarcode JS -->
+<script src="{{ asset('theme/layouts/assets/libs/jsbarcode/JsBarcode.all.min.js') }}"></script>
+
+<!-- Swiper JS -->
+<script src="{{ asset('theme/layouts/assets/libs/swiper/swiper-bundle.min.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const csrfToken = document.querySelector('meta[name="csrf-token"]');
