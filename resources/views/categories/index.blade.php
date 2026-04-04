@@ -222,11 +222,17 @@
 </div>
 
 <!-- ALL SCRIPTS - CDN ONLY -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{{-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="https://cdn.jsdelivr.net/npm/list.js@2.3.1/dist/list.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/list.js@2.3.1/dist/list.min.js"></script> --}}
+
+<script src="{{ asset('theme/layouts/assets/libs/chart.js/chart.min.js') }}"></script>
+<script src="{{ asset('theme/layouts/assets/libs/axios/axios.min.js') }}"></script>
+<script src="{{ asset('theme/layouts/assets/libs/sweetalert2/sweetalert2.min.js') }}"></script>
+<script src="{{ asset('theme/layouts/assets/libs/list.js/list.min.js') }}"></script>
+<script src="{{ asset('theme/layouts/assets/libs/choices.js/choices.min.js') }}"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {

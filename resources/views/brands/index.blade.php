@@ -215,12 +215,20 @@
 
 
 <!-- Replace the entire script section with this -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{{-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.jsdelivr.net/npm/list.js@2.3.1/dist/list.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css"> --}}
+
+<script src="{{ asset('theme/layouts/assets/libs/chart.js/chart.min.js') }}"></script>
+<script src="{{ asset('theme/layouts/assets/libs/axios/axios.min.js') }}"></script>
+<script src="{{ asset('theme/layouts/assets/libs/sweetalert2/sweetalert2.min.js') }}"></script>
+<script src="{{ asset('theme/layouts/assets/libs/list.js/list.min.js') }}"></script>
+<script src="{{ asset('theme/layouts/assets/libs/choices.js/choices.min.js') }}"></script>
+
+<link rel="stylesheet" href="{{ asset('theme/layouts/assets/libs/choices.js/choices.min.css') }}">
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -296,10 +304,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (row) {
                     row.classList.toggle('table-active', this.checked);
                 }
-                
+
                 const allCheckboxes = document.querySelectorAll('input[name="chk_child"]');
                 const checkedCount = document.querySelectorAll('input[name="chk_child"]:checked').length;
-                
+
                 if (checkAllBtn) {
                     checkAllBtn.checked = checkedCount === allCheckboxes.length;
                 }
@@ -338,19 +346,19 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.edit-item-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 const id = this.dataset.id;
-                
+
                 console.log('Editing brand ID:', id);
                 console.log('Request URL:', `/brands/${id}/edit`);
-                
+
                 axios.get(`/brands/${id}/edit`)
                     .then(res => {
                         console.log('Edit response:', res.data);
                         const b = res.data;
-                        
+
                         document.getElementById('brand_id').value = b.id;
                         form.querySelector('[name="name"]').value = b.name;
                         document.getElementById('is_featured').checked = b.is_featured == 1;
-                        
+
                         if (b.logo) {
                             // Handle both full URL and storage path
                             const logoUrl = b.logo.startsWith('http') ? b.logo : `/storage/${b.logo}`;
@@ -359,14 +367,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         } else {
                             logoPreview.style.display = 'none';
                         }
-                        
+
                         // Set categories in Choices.js
                         choices.removeActiveItems();
                         if (b.categories && b.categories.length > 0) {
                             const categoryIds = b.categories.map(c => String(c.id));
                             choices.setChoiceByValue(categoryIds);
                         }
-                        
+
                         document.getElementById('modalTitle').textContent = 'Edit Brand';
                         document.getElementById('submitBtn').textContent = 'Update Brand';
                         modal.show();
@@ -376,7 +384,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         console.error('Error response:', err.response);
                         console.error('Error status:', err.response?.status);
                         console.error('Error data:', err.response?.data);
-                        
+
                         let errorMsg = 'Failed to load brand data';
                         if (err.response?.status === 404) {
                             errorMsg = 'Brand not found. It may have been deleted.';
@@ -385,7 +393,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         } else if (err.response?.data?.message) {
                             errorMsg = err.response.data.message;
                         }
-                        
+
                         Swal.fire({
                             icon: 'error',
                             title: 'Error!',
@@ -402,15 +410,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // Submit form (Add & Update)
     form.addEventListener('submit', function(e) {
         e.preventDefault();
-        
+
         const submitBtn = document.getElementById('submitBtn');
         submitBtn.disabled = true;
         submitBtn.textContent = 'Saving...';
-        
+
         const id = document.getElementById('brand_id').value;
         const url = id ? `/brands/${id}` : '/brands';
         const formData = new FormData(form);
-        
+
         if (id) {
             formData.append('_method', 'PUT');
         }
@@ -442,10 +450,10 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(err => {
             submitBtn.disabled = false;
             submitBtn.textContent = id ? 'Update Brand' : 'Save Brand';
-            
+
             console.error('Full error:', err);
             console.error('Error response:', err.response);
-            
+
             let msg = 'An error occurred';
             if (err.response?.status === 422) {
                 const errors = err.response.data.errors;
@@ -457,7 +465,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } else if (err.response?.status === 500) {
                 msg = 'Server error. Please check the browser console and server logs.';
             }
-            
+
             Swal.fire({
                 icon: 'error',
                 title: 'Error!',
@@ -485,10 +493,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (deleteRecordBtn) {
         deleteRecordBtn.addEventListener('click', function() {
             if (!deleteId) return;
-            
+
             this.disabled = true;
             this.textContent = 'Deleting...';
-            
+
             axios.delete(`/brands/${deleteId}`)
                 .then(() => {
                     Swal.fire({
@@ -514,12 +522,12 @@ document.addEventListener('DOMContentLoaded', function() {
     window.deleteMultiple = function() {
         const ids = Array.from(document.querySelectorAll('input[name="chk_child"]:checked'))
             .map(cb => cb.value);
-        
+
         if (ids.length === 0) {
             Swal.fire('Warning', 'Please select brands to delete', 'warning');
             return;
         }
-        
+
         Swal.fire({
             title: `Delete ${ids.length} brand(s)?`,
             text: 'This action cannot be undone',

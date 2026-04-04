@@ -520,6 +520,11 @@
 <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>
 {{-- <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> --}}
+
+<script src="{{ asset('theme/layouts/assets/libs/chart.js/chart.min.js') }}"></script>
+<script src="{{ asset('theme/layouts/assets/libs/axios/axios.min.js') }}"></script>
+<script src="{{ asset('theme/layouts/assets/libs/sweetalert2/sweetalert2.min.js') }}"></script>
+
 <script>
 // COMPLETE POS SCRIPT WITH UNIT SELECTION VALIDATION AND BARCODE SCANNING
 // COMPLETE POS SCRIPT WITH UNIT SELECTION VALIDATION AND BARCODE SCANNING

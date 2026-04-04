@@ -508,6 +508,8 @@
 <script src="{{ asset('theme/layouts/assets/libs/chart.js/chart.min.js') }}"></script>
 <script src="{{ asset('theme/layouts/assets/libs/axios/axios.min.js') }}"></script>
 <script src="{{ asset('theme/layouts/assets/libs/sweetalert2/sweetalert2.min.js') }}"></script>
+<script src="{{ asset('theme/layouts/assets/libs/list.js/list.min.js') }}"></script>
+<script src="{{ asset('theme/layouts/assets/libs/choices.js/choices.min.js') }}"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
