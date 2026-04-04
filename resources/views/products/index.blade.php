@@ -500,9 +500,14 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{{-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> --}}
+
+
+<script src="{{ asset('theme/layouts/assets/libs/chart.js/chart.min.js') }}"></script>
+<script src="{{ asset('theme/layouts/assets/libs/axios/axios.min.js') }}"></script>
+<script src="{{ asset('theme/layouts/assets/libs/sweetalert2/sweetalert2.min.js') }}"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
