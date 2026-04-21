@@ -1,4 +1,3 @@
-{{-- resources/views/brands/index.blade.php --}}
 @extends('layouts.master')
 
 @section('title', 'Brands Management')
@@ -7,7 +6,6 @@
 <div class="main-content">
     <div class="page-content">
         <div class="container-fluid">
-
             <!-- Page Title -->
             <div class="row">
                 <div class="col-12">
@@ -23,138 +21,73 @@
                 </div>
             </div>
 
-            <!-- Chart -->
-            <div class="row mb-4">
+            <!-- Add Brand Button -->
+            <div class="row mb-3">
                 <div class="col-lg-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">Products per Brand</h5>
-                        </div>
-                        <div class="card-body">
-                            <canvas id="brandChart" height="100px"></canvas>
-                        </div>
-                    </div>
+                    <button type="button" class="btn btn-primary add-btn" data-bs-toggle="modal" data-bs-target="#showModal">
+                        <i class="bi bi-plus-circle me-1"></i> Add Brand
+                    </button>
                 </div>
             </div>
 
             <!-- Brands Table -->
             <div class="row">
                 <div class="col-lg-12">
-                    <div class="card" id="brandList">
-                        <div class="card-header d-flex align-items-center">
-                            <h5 class="card-title mb-0 flex-grow-1">All Brands</h5>
-                            <div class="flex-shrink-0">
-                                <div class="d-flex flex-wrap gap-2">
-                                    <button class="btn btn-danger d-none" id="remove-actions" onclick="deleteMultiple()">
-                                        <i class="ri-delete-bin-2-line"></i>
-                                    </button>
-                                    @can('Create brand')
-                                        <button type="button" class="btn btn-primary add-btn" data-bs-toggle="modal" data-bs-target="#showModal">
-                                            <i class="bi bi-plus-circle me-1"></i> Add Brand
-                                        </button>
-                                    @endcan
-                                </div>
-                            </div>
-                        </div>
-
+                    <div class="card">
                         <div class="card-body">
-                            <div class="table-responsive table-card">
-                                <table class="table table-borderless table-centered align-middle table-nowrap mb-0">
-                                    <thead class="text-muted table-light">
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead>
                                         <tr>
-                                            <th>
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" id="checkAll">
-                                                    <label class="form-check-label" for="checkAll"></label>
-                                                </div>
-                                            </th>
-                                            <th class="sort" data-sort="id">#</th>
-                                            <th class="sort" data-sort="name">Brand Name</th>
-                                            <th class="sort" data-sort="logo">Logo</th>
-                                            <th class="sort" data-sort="categories">Categories</th>
-                                            <th class="sort" data-sort="products">Products</th>
-                                            <th class="sort" data-sort="featured">Featured</th>
-                                            <th>Action</th>
+                                            <th>ID</th>
+                                            <th>Name</th>
+                                            <th>Logo</th>
+                                            <th>Featured</th>
+                                            <th>Actions</th>
                                         </tr>
                                     </thead>
-                                    <tbody class="list form-check-all">
-                                        @forelse($data as $brand)
+                                    <tbody>
+                                        @forelse($brands as $brand)
                                         <tr>
+                                            <td>{{ $brand->id }}</td>
+                                            <td>{{ $brand->name }}</td>
                                             <td>
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="chk_child" value="{{ $brand->id }}">
-                                                </div>
-                                            </td>
-                                            <td class="id">{{ $brand->id }}</td>
-                                            <td class="name"><strong>{{ $brand->name }}</strong></td>
-                                            <td class="logo">
-                                                <img src="{{ $brand->logo ? asset('storage/'.$brand->logo) : 'https://via.placeholder.com/60' }}"
-                                                     class="avatar-sm rounded-circle" alt="{{ $brand->name }}">
-                                            </td>
-                                            <td class="categories">
-                                                @if($brand->categories->count())
-                                                    @foreach($brand->categories->take(3) as $c)
-                                                        <span class="badge bg-info-subtle text-info me-1">{{ $c->name }}</span>
-                                                    @endforeach
-                                                    @if($brand->categories->count() > 3)
-                                                        <small class="text-muted">+{{ $brand->categories->count()-3 }}</small>
-                                                    @endif
+                                                @if($brand->logo)
+                                                    <img src="{{ asset('storage/'.$brand->logo) }}" width="50" height="50" class="rounded">
                                                 @else
-                                                    <span class="text-muted">—</span>
+                                                    No Logo
                                                 @endif
                                             </td>
-                                            <td class="products">{{ $brand->products_count }}</td>
-                                            <td class="featured">
-                                                <span class="badge {{ $brand->is_featured ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary' }}">
+                                            <td>
+                                                <span class="badge {{ $brand->is_featured ? 'bg-success' : 'bg-secondary' }}">
                                                     {{ $brand->is_featured ? 'Yes' : 'No' }}
                                                 </span>
                                             </td>
                                             <td>
-                                                <ul class="list-inline hstack gap-2 mb-0">
-                                                    @can('Update brand')
-                                                        <li><button class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn" data-id="{{ $brand->id }}"><i class="ph-pencil"></i></button></li>
-                                                    @endcan
-                                                    @can('Delete brand')
-                                                        <li><button class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn" data-id="{{ $brand->id }}"><i class="ph-trash"></i></button></li>
-                                                    @endcan
-                                                </ul>
+                                                <button class="btn btn-sm btn-info edit-btn" data-id="{{ $brand->id }}">Edit</button>
+                                                <button class="btn btn-sm btn-danger delete-btn" data-id="{{ $brand->id }}">Delete</button>
                                             </td>
                                         </tr>
                                         @empty
                                         <tr>
-                                            <td colspan="8" class="text-center py-5 noresult" style="display:none">No brands found</td>
+                                            <td colspan="5" class="text-center">No brands found</td>
                                         </tr>
                                         @endforelse
                                     </tbody>
                                 </table>
-
-                                <div class="noresult" style="display:none">
-                                    <div class="text-center py-4">
-                                        <i class="ph-magnifying-glass fs-1 text-primary"></i>
-                                        <h5 class="mt-2">Sorry! No Result Found</h5>
-                                    </div>
-                                </div>
                             </div>
-
-                            <div class="d-flex justify-content-end mt-3">
-                                <div class="pagination-wrap hstack gap-2">
-                                    <a class="page-item pagination-prev disabled" href="javascript:void(0);"><i class="mdi mdi-chevron-left"></i></a>
-                                    <ul class="pagination listjs-pagination mb-0"></ul>
-                                    <a class="page-item pagination-next" href="javascript:void(0);"><i class="mdi mdi-chevron-right"></i></a>
-                                </div>
-                            </div>
+                            {{ $brands->links() }}
                         </div>
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 </div>
 
 <!-- Add/Edit Modal -->
 <div class="modal fade" id="showModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog">
         <div class="modal-content">
             <form id="brandForm" enctype="multipart/form-data">
                 @csrf
@@ -166,20 +99,12 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Brand Name <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="name" required>
+                        <input type="text" class="form-control" name="name" id="brand_name" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Logo</label>
-                        <input type="file" class="form-control" name="logo" accept="image/*">
-                        <img id="logo_preview" class="mt-2 rounded" style="max-height:120px; display:none;">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Categories</label>
-                        <select class="form-select" name="categories[]" id="categories_select" multiple>
-                            @foreach($categories as $id => $name)
-                                <option value="{{ $id }}">{{ $name }}</option>
-                            @endforeach
-                        </select>
+                        <input type="file" class="form-control" name="logo" id="brand_logo" accept="image/*">
+                        <div id="logoPreview" class="mt-2"></div>
                     </div>
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" name="is_featured" value="1" id="is_featured">
@@ -195,209 +120,108 @@
     </div>
 </div>
 
-<!-- Delete Modal -->
-<div class="modal fade" id="deleteRecordModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-body text-center py-5">
                 <i class="bi bi-trash text-danger display-4"></i>
                 <h4 class="mt-4">Delete Brand?</h4>
                 <p class="text-muted">This action cannot be undone.</p>
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="delete-record">Yes, Delete</button>
+                <button type="button" class="btn btn-danger" id="confirmDelete">Yes, Delete</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- ALL JAVASCRIPT (inline - no external files) -->
-
-
-
-<!-- Replace the entire script section with this -->
-{{-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="https://cdn.jsdelivr.net/npm/list.js@2.3.1/dist/list.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css"> --}}
-
-<script src="{{ asset('theme/layouts/assets/libs/chart.js/chart.min.js') }}"></script>
-<script src="{{ asset('theme/layouts/assets/libs/axios/axios.min.js') }}"></script>
-<script src="{{ asset('theme/layouts/assets/libs/sweetalert2/sweetalert2.min.js') }}"></script>
-<script src="{{ asset('theme/layouts/assets/libs/list.js/list.min.js') }}"></script>
-<script src="{{ asset('theme/layouts/assets/libs/choices.js/choices.min.js') }}"></script>
-
-<link rel="stylesheet" href="{{ asset('theme/layouts/assets/libs/choices.js/choices.min.css') }}">
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Setup axios defaults
+    // Set CSRF token for axios
     const token = document.querySelector('meta[name="csrf-token"]')?.content;
     if (token) {
         axios.defaults.headers.common['X-CSRF-TOKEN'] = token;
     }
-    axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
-    axios.defaults.headers.post['Content-Type'] = 'application/json';
 
-    // Pass PHP data to JS
-    const chartLabels = @json($chart_labels);
-    const chartData   = @json($chart_data);
-
-    // Chart
-    if (document.getElementById('brandChart')) {
-        new Chart(document.getElementById('brandChart'), {
-            type: 'bar',
-            data: {
-                labels: chartLabels,
-                datasets: [{
-                    label: 'Products',
-                    data: chartData,
-                    backgroundColor: '#405189'
-                }]
-            },
-            options: {
-                scales: { y: { beginAtZero: true } },
-                plugins: { legend: { display: false } }
-            }
-        });
-    }
-
-    // List.js
-    var options = {
-        valueNames: ['id', 'name', 'categories', 'products', 'featured'],
-        page: 10,
-        pagination: true
-    };
-    var brandList = new List('brandList', options);
-
-    // Choices.js
-    let choices = null;
-    const categoriesSelect = document.getElementById('categories_select');
-    if (categoriesSelect) {
-        choices = new Choices(categoriesSelect, {
-            removeItemButton: true,
-            searchEnabled: true,
-            placeholder: true,
-            placeholderValue: 'Select categories'
-        });
-    }
-
-    // Modal
-    const modalElement = document.getElementById('showModal');
-    const modal = modalElement ? new bootstrap.Modal(modalElement) : null;
-    const form = document.getElementById('brandForm');
-    const logoPreview = document.getElementById('logo_preview');
     let deleteId = null;
 
-    // Checkbox Select All
-    const checkAllBtn = document.getElementById('checkAll');
-    if (checkAllBtn) {
-        checkAllBtn.addEventListener('change', function() {
-            const checkboxes = document.querySelectorAll('input[name="chk_child"]');
-            checkboxes.forEach(cb => {
-                cb.checked = this.checked;
-                const row = cb.closest('tr');
-                if (row) {
-                    row.classList.toggle('table-active', this.checked);
-                }
-            });
-            updateRemoveButton();
-        });
-    }
-
-    function updateRemoveButton() {
-        const checkedCount = document.querySelectorAll('input[name="chk_child"]:checked').length;
-        const removeBtn = document.getElementById('remove-actions');
-        if (removeBtn) {
-            removeBtn.classList.toggle('d-none', checkedCount === 0);
-        }
-    }
-
-    // Reset form when Add button clicked
+    // Add Brand Button
     const addBtn = document.querySelector('.add-btn');
     if (addBtn) {
-        addBtn.addEventListener('click', () => {
-            if (form) {
-                form.reset();
-                document.getElementById('brand_id').value = '';
-                document.getElementById('modalTitle').textContent = 'Add Brand';
-                document.getElementById('submitBtn').textContent = 'Save Brand';
-                if (logoPreview) {
-                    logoPreview.style.display = 'none';
-                    logoPreview.src = '';
-                }
-                if (choices) {
-                    choices.removeActiveItems();
-                    choices.setChoiceByValue([]);
-                }
-            }
+        addBtn.addEventListener('click', function() {
+            document.getElementById('brandForm').reset();
+            document.getElementById('brand_id').value = '';
+            document.getElementById('modalTitle').textContent = 'Add Brand';
+            document.getElementById('submitBtn').textContent = 'Save Brand';
+            document.getElementById('logoPreview').innerHTML = '';
         });
     }
 
-    // Edit buttons
-    function attachEditListeners() {
-        document.querySelectorAll('.edit-item-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const id = this.dataset.id;
+    // Edit Buttons
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
 
-                axios.get(`/brands/${id}/edit`)
-                    .then(res => {
-                        const b = res.data;
+            axios.get(`/brands/${id}/edit`)
+                .then(response => {
+                    const brand = response.data;
+                    document.getElementById('brand_id').value = brand.id;
+                    document.getElementById('brand_name').value = brand.name;
+                    document.getElementById('is_featured').checked = brand.is_featured == 1;
 
-                        document.getElementById('brand_id').value = b.id;
-                        form.querySelector('[name="name"]').value = b.name;
-                        document.getElementById('is_featured').checked = b.is_featured == 1;
+                    if (brand.logo) {
+                        document.getElementById('logoPreview').innerHTML = `<img src="${brand.logo}" width="100" class="rounded">`;
+                    }
 
-                        if (b.logo && logoPreview) {
-                            logoPreview.src = b.logo;
-                            logoPreview.style.display = 'block';
-                        } else if (logoPreview) {
-                            logoPreview.style.display = 'none';
-                        }
+                    document.getElementById('modalTitle').textContent = 'Edit Brand';
+                    document.getElementById('submitBtn').textContent = 'Update Brand';
 
-                        // Set categories in Choices.js
-                        if (choices && b.categories && b.categories.length > 0) {
-                            choices.removeActiveItems();
-                            const categoryIds = b.categories.map(c => String(c.id));
-                            choices.setChoiceByValue(categoryIds);
-                        } else if (choices) {
-                            choices.removeActiveItems();
-                        }
+                    const modal = new bootstrap.Modal(document.getElementById('showModal'));
+                    modal.show();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire('Error!', 'Failed to load brand data', 'error');
+                });
+        });
+    });
 
-                        document.getElementById('modalTitle').textContent = 'Edit Brand';
-                        document.getElementById('submitBtn').textContent = 'Update Brand';
-                        if (modal) modal.show();
-                    })
-                    .catch(err => {
-                        console.error('Edit error:', err);
-                        let errorMsg = 'Failed to load brand data';
-                        if (err.response?.status === 404) {
-                            errorMsg = 'Brand not found. It may have been deleted.';
-                        } else if (err.response?.status === 403) {
-                            errorMsg = 'You do not have permission to edit this brand.';
-                        } else if (err.response?.data?.message) {
-                            errorMsg = err.response.data.message;
-                        }
+    // Delete Buttons
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            deleteId = this.dataset.id;
+            const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+            deleteModal.show();
+        });
+    });
 
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error!',
-                            text: errorMsg
-                        });
-                    });
+    // Confirm Delete
+    document.getElementById('confirmDelete').addEventListener('click', function() {
+        if (!deleteId) return;
+
+        axios.delete(`/brands/${deleteId}`)
+            .then(() => {
+                Swal.fire('Deleted!', 'Brand has been deleted.', 'success');
+                setTimeout(() => location.reload(), 1500);
+            })
+            .catch(error => {
+                Swal.fire('Error!', 'Failed to delete brand', 'error');
+                console.error(error);
             });
-        });
-    }
+    });
 
-    // Submit form (Add & Update)
+    // Form Submit (Create/Update)
+    const form = document.getElementById('brandForm');
     if (form) {
         form.addEventListener('submit', function(e) {
             e.preventDefault();
 
             const submitBtn = document.getElementById('submitBtn');
-            submitBtn.disabled = true;
             const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
             submitBtn.textContent = 'Saving...';
 
             const id = document.getElementById('brand_id').value;
@@ -408,167 +232,47 @@ document.addEventListener('DOMContentLoaded', function() {
                 formData.append('_method', 'PUT');
             }
 
-            // Log the submission for debugging
-            console.log('Submitting to:', url);
-            console.log('Method:', id ? 'PUT' : 'POST');
-            console.log('ID:', id);
-
             axios.post(url, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }
             })
             .then(response => {
-                console.log('Success response:', response);
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success!',
-                    text: id ? 'Brand updated successfully' : 'Brand added successfully',
-                    timer: 1500,
-                    showConfirmButton: false
-                }).then(() => {
-                    location.reload();
-                });
+                Swal.fire('Success!', response.data.message, 'success');
+                setTimeout(() => location.reload(), 1500);
             })
-            .catch(err => {
+            .catch(error => {
                 submitBtn.disabled = false;
                 submitBtn.textContent = originalText;
 
-                console.error('Error:', err);
-                console.error('Response:', err.response);
-
-                let msg = 'An error occurred';
-                if (err.response?.status === 422) {
-                    const errors = err.response.data.errors;
-                    msg = Object.values(errors).flat().join('<br>');
-                } else if (err.response?.data?.message) {
-                    msg = err.response.data.message;
-                } else if (err.response?.status === 404) {
-                    msg = 'Route not found. Please check your routes configuration.';
-                } else if (err.response?.status === 500) {
-                    msg = 'Server error. Please check the browser console and server logs.';
-                } else if (err.response?.status === 405) {
-                    msg = 'Method not allowed. Check your routes and form method.';
+                let errorMessage = 'An error occurred';
+                if (error.response?.status === 422) {
+                    const errors = error.response.data.errors;
+                    errorMessage = Object.values(errors).flat().join('\n');
+                } else if (error.response?.data?.message) {
+                    errorMessage = error.response.data.message;
                 }
 
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error!',
-                    html: msg,
-                    footer: err.response?.status ? `Status: ${err.response.status}` : ''
-                });
+                Swal.fire('Error!', errorMessage, 'error');
+                console.error('Error:', error);
             });
         });
     }
 
-    // Delete functionality
-    function attachDeleteListeners() {
-        document.querySelectorAll('.remove-item-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                deleteId = this.dataset.id;
-                const deleteModal = new bootstrap.Modal('#deleteRecordModal');
-                deleteModal.show();
-            });
-        });
-    }
-
-    // Confirm delete
-    const deleteRecordBtn = document.getElementById('delete-record');
-    if (deleteRecordBtn) {
-        deleteRecordBtn.addEventListener('click', function() {
-            if (!deleteId) return;
-
-            this.disabled = true;
-            this.textContent = 'Deleting...';
-
-            axios.delete(`/brands/${deleteId}`)
-                .then(() => {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Deleted!',
-                        text: 'Brand has been deleted',
-                        timer: 1500,
-                        showConfirmButton: false
-                    }).then(() => {
-                        location.reload();
-                    });
-                })
-                .catch(err => {
-                    this.disabled = false;
-                    this.textContent = 'Yes, Delete';
-                    Swal.fire('Error!', 'Failed to delete brand', 'error');
-                    console.error('Delete error:', err);
-                });
-        });
-    }
-
-    // Multiple Delete
-    window.deleteMultiple = function() {
-        const ids = Array.from(document.querySelectorAll('input[name="chk_child"]:checked'))
-            .map(cb => cb.value);
-
-        if (ids.length === 0) {
-            Swal.fire('Warning', 'Please select brands to delete', 'warning');
-            return;
-        }
-
-        Swal.fire({
-            title: `Delete ${ids.length} brand(s)?`,
-            text: 'This action cannot be undone',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Yes, delete them',
-            cancelButtonText: 'Cancel',
-            confirmButtonColor: '#d33'
-        }).then(result => {
-            if (result.isConfirmed) {
-                Promise.all(ids.map(id => axios.delete(`/brands/${id}`)))
-                    .then(() => {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Deleted!',
-                            text: 'Selected brands have been deleted',
-                            timer: 1500,
-                            showConfirmButton: false
-                        }).then(() => {
-                            location.reload();
-                        });
-                    })
-                    .catch(err => {
-                        Swal.fire('Error!', 'Failed to delete some brands', 'error');
-                        console.error('Multiple delete error:', err);
-                    });
-            }
-        });
-    };
-
-    // Logo preview on file select
-    const logoInput = form ? form.querySelector('[name="logo"]') : null;
-    if (logoInput && logoPreview) {
+    // Logo Preview
+    const logoInput = document.getElementById('brand_logo');
+    if (logoInput) {
         logoInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    logoPreview.src = e.target.result;
-                    logoPreview.style.display = 'block';
+                    document.getElementById('logoPreview').innerHTML = `<img src="${e.target.result}" width="100" class="rounded">`;
                 };
                 reader.readAsDataURL(file);
             }
         });
     }
-
-    // Initial attachment of listeners
-    attachEditListeners();
-    attachDeleteListeners();
-
-    // Re-attach listeners after any dynamic updates (if needed)
-    const observer = new MutationObserver(function(mutations) {
-        attachEditListeners();
-        attachDeleteListeners();
-    });
-
-    observer.observe(document.getElementById('brandList'), { childList: true, subtree: true });
 });
 </script>
 @endsection
