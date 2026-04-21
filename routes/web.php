@@ -78,9 +78,12 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('banners', BannerController::class)->except(['show']);
     Route::get('banners/{banner}/edit', [BannerController::class, 'edit'])->name('banners.edit');
 
-    // Brand Management
-    Route::resource('brands', BrandController::class)->except(['show']);
-    // Route::get('brands/{brand}/edit', [BrandController::class, 'edit'])->name('brands.edit');
+   // Brand Management - Define explicitly
+    Route::get('/brands', [BrandController::class, 'index'])->name('brands.index');
+    Route::post('/brands', [BrandController::class, 'store'])->name('brands.store');
+    Route::get('/brands/{brand}/edit', [BrandController::class, 'edit'])->name('brands.edit');
+    Route::put('/brands/{brand}', [BrandController::class, 'update'])->name('brands.update');
+    Route::delete('/brands/{brand}', [BrandController::class, 'destroy'])->name('brands.destroy');
 
     // Category Management
     Route::resource('categories', CategoryController::class)->except(['show']);
