@@ -115,10 +115,6 @@
             background: #f8d7da;
             color: #721c24;
         }
-        .status-pending {
-            background: #fff3cd;
-            color: #856404;
-        }
         .amount {
             font-weight: bold;
             color: #28a745;
@@ -134,22 +130,30 @@
                 padding: 0;
                 margin: 0;
             }
-            .no-print {
-                display: none;
-            }
         }
     </style>
 </head>
 <body>
     <div class="invoice-container">
         <div class="header">
-            @if(file_exists(public_path('img/logo.png')))
-                <img src="{{ public_path('img/logo.png') }}" class="logo" alt="Logo">
+            @php
+                $storeSettings = \App\Models\StoreSetting::getSettings();
+                $storeName = $storeSettings->store_name ?? config('app.name', 'Store Name');
+                $storeAddress = $storeSettings->address ?? '';
+                $storePhone = $storeSettings->phone ?? '';
+                $storeEmail = $storeSettings->email ?? '';
+                $storeWebsite = $storeSettings->website ?? '';
+                $currencySymbol = $storeSettings->currency_symbol ?? '₦';
+            @endphp
+
+            @if($storeSettings && $storeSettings->logo)
+                <img src="{{ public_path('storage/' . $storeSettings->logo) }}" class="logo" alt="Logo" style="max-height:80px;">
             @else
-                <h1>{{ config('app.name', 'Store Name') }}</h1>
+                <h1>{{ $storeName }}</h1>
             @endif
             <div class="company-info">
-                {{ config('app.url') }} | support@yourstore.com | +1 234 567 890
+                {{ $storeAddress }}<br>
+                {{ $storePhone ? "Tel: $storePhone | " : '' }}{{ $storeEmail ? "Email: $storeEmail | " : '' }}{{ $storeWebsite ? "Web: $storeWebsite" : '' }}
             </div>
         </div>
 
@@ -157,7 +161,7 @@
             <div class="info-row">
                 <div class="info-cell">
                     <strong>Invoice #:</strong> {{ $order->invoice_number ?? substr($order->id, 0, 10) }}<br>
-                    <strong>Order Date:</strong> {{ $order->created_at ? $order->created_at->format('d M Y') : 'N/A' }}<br>
+                    <strong>Order Date:</strong> {{ $order->created_at ? $order->created_at->format('d M Y h:i A') : 'N/A' }}<br>
                     <strong>Payment Method:</strong> {{ ucfirst(str_replace('_', ' ', $order->payment_method ?? 'N/A')) }}
                 </div>
                 <div class="info-cell text-right">
@@ -179,30 +183,48 @@
                     <strong>Bill To:</strong>
                     <div class="address-box">
                         @php
-                            $billingName = $order->billingAddress ? ($order->billingAddress->name ?? 'N/A') : ($order->customer ? $order->customer->first_name . ' ' . $order->customer->last_name : ($order->user ? $order->user->first_name . ' ' . $order->user->last_name : 'N/A'));
-                            $billingStreet = $order->billingAddress ? ($order->billingAddress->street ?? $order->billingAddress->address ?? 'N/A') : 'N/A';
-                            $billingCity = $order->billingAddress ? ($order->billingAddress->city ?? 'N/A') : 'N/A';
-                            $billingCountry = $order->billingAddress ? ($order->billingAddress->country ?? 'N/A') : 'N/A';
+                            // Get customer information - prioritize Customer model over User
+                            if ($order->customer) {
+                                $customerName = $order->customer->first_name . ' ' . $order->customer->last_name;
+                                $customerEmail = $order->customer->email ?? 'N/A';
+                                $customerPhone = $order->customer->phone_number ?? 'N/A';
+                                $customerAddress = $order->customer->home_address ?? $order->customer->office_address ?? '';
+                            } else {
+                                // Fallback to user (but this is likely the salesperson)
+                                $customerName = $order->user ? ($order->user->first_name . ' ' . $order->user->last_name) : 'Walk-in Customer';
+                                $customerEmail = $order->user->email ?? 'N/A';
+                                $customerPhone = $order->user->phone_number ?? 'N/A';
+                                $customerAddress = '';
+                            }
                         @endphp
-                        {{ $billingName }}<br>
-                        {{ $billingStreet }}<br>
-                        {{ $billingCity }}, {{ $billingCountry }}<br>
-                        <strong>Phone:</strong> {{ $order->billingAddress->phone_number ?? ($order->customer->phone_number ?? 'N/A') }}
+                        <strong>{{ $customerName }}</strong><br>
+                        @if($customerAddress)
+                            {{ $customerAddress }}<br>
+                        @endif
+                        @if($customerEmail && $customerEmail != 'N/A')
+                            Email: {{ $customerEmail }}<br>
+                        @endif
+                        @if($customerPhone && $customerPhone != 'N/A')
+                            Phone: {{ $customerPhone }}
+                        @endif
+                        @if(!$customerAddress && $customerEmail == 'N/A' && $customerPhone == 'N/A')
+                            Walk-in Customer
+                        @endif
                     </div>
                 </div>
                 <div class="info-cell">
                     <strong>Ship To:</strong>
                     <div class="address-box">
-                        @php
-                            $shippingName = $order->shippingAddress ? ($order->shippingAddress->name ?? 'N/A') : ($order->customer ? $order->customer->first_name . ' ' . $order->customer->last_name : ($order->user ? $order->user->first_name . ' ' . $order->user->last_name : 'N/A'));
-                            $shippingStreet = $order->shippingAddress ? ($order->shippingAddress->street ?? $order->shippingAddress->address ?? 'N/A') : 'N/A';
-                            $shippingCity = $order->shippingAddress ? ($order->shippingAddress->city ?? 'N/A') : 'N/A';
-                            $shippingCountry = $order->shippingAddress ? ($order->shippingAddress->country ?? 'N/A') : 'N/A';
-                        @endphp
-                        {{ $shippingName }}<br>
-                        {{ $shippingStreet }}<br>
-                        {{ $shippingCity }}, {{ $shippingCountry }}<br>
-                        <strong>Phone:</strong> {{ $order->shippingAddress->phone_number ?? ($order->customer->phone_number ?? 'N/A') }}
+                        @if($order->shippingAddress)
+                            {{ $order->shippingAddress->name ?? $customerName }}<br>
+                            {{ $order->shippingAddress->address ?? $order->shippingAddress->street ?? 'N/A' }}<br>
+                            @if($order->shippingAddress->city){{ $order->shippingAddress->city }}, @endif
+                            @if($order->shippingAddress->state){{ $order->shippingAddress->state }}, @endif
+                            @if($order->shippingAddress->country){{ $order->shippingAddress->country }} @endif
+                            @if($order->shippingAddress->phone_number)<br>Phone: {{ $order->shippingAddress->phone_number }}@endif
+                        @else
+                            Same as billing address
+                        @endif
                     </div>
                 </div>
             </div>
@@ -213,7 +235,7 @@
                 <tr>
                     <th>#</th>
                     <th>Product</th>
-                    <th>Variation</th>
+                    <th>Unit</th>
                     <th class="text-right">Qty</th>
                     <th class="text-right">Unit Price</th>
                     <th class="text-right">Total</th>
@@ -225,24 +247,17 @@
                     <td>{{ $index + 1 }}</td>
                     <td>{{ $item->title ?? 'N/A' }}</td>
                     <td>
-                        @if($item->selected_variation)
-                            @php
-                                $attrs = is_string($item->selected_variation) ? json_decode($item->selected_variation, true) : $item->selected_variation;
-                            @endphp
-                            @if(is_array($attrs))
-                                @foreach($attrs as $key => $val)
-                                    <strong>{{ ucfirst($key) }}:</strong> {{ $val }}<br>
-                                @endforeach
-                            @else
-                                {{ $item->selected_variation }}
-                            @endif
+                        @if($item->unit_name)
+                            {{ $item->unit_name }}
+                        @elseif($item->unit)
+                            {{ $item->unit->name }}
                         @else
                             -
                         @endif
                     </td>
-                    <td class="text-right">{{ number_format($item->quantity ?? 0) }}</td>
-                    <td class="text-right">${{ number_format($item->unit_price ?? 0, 2) }}</td>
-                    <td class="text-right">${{ number_format($item->total_price ?? ($item->unit_price * $item->quantity), 2) }}</td>
+                    <td class="text-right">{{ number_format($item->quantity ?? 0, $item->is_unit_mode ? 3 : 0) }}</td>
+                    <td class="text-right">{{ $currencySymbol }}{{ number_format($item->unit_price ?? 0, 2) }}</td>
+                    <td class="text-right">{{ $currencySymbol }}{{ number_format($item->total_price ?? ($item->unit_price * $item->quantity), 2) }}</td>
                 </tr>
                 @endforeach
             </tbody>
@@ -251,30 +266,36 @@
         <table style="width: 50%; margin-left: auto;">
             <tr>
                 <td style="border: none;"><strong>Subtotal</strong></td>
-                <td style="border: none;" class="text-right">${{ number_format($order->items->sum('total_price'), 2) }}</td>
+                <td style="border: none;" class="text-right">{{ $currencySymbol }}{{ number_format($order->items->sum('total_price'), 2) }}</td>
             </tr>
+            @if($order->discount_amount > 0)
+            <tr>
+                <td style="border: none;"><strong>Discount</strong></td>
+                <td style="border: none;" class="text-right text-danger">-{{ $currencySymbol }}{{ number_format($order->discount_amount, 2) }}</td>
+            </tr>
+            @endif
             <tr>
                 <td style="border: none;"><strong>Shipping</strong></td>
-                <td style="border: none;" class="text-right">${{ number_format($order->shipping_cost ?? 0, 2) }}</td>
+                <td style="border: none;" class="text-right">{{ $currencySymbol }}{{ number_format($order->shipping_cost ?? 0, 2) }}</td>
             </tr>
             <tr>
                 <td style="border: none;"><strong>Tax</strong></td>
-                <td style="border: none;" class="text-right">${{ number_format($order->tax_cost ?? 0, 2) }}</td>
+                <td style="border: none;" class="text-right">{{ $currencySymbol }}{{ number_format($order->tax_cost ?? 0, 2) }}</td>
             </tr>
             @if($order->totalRefunded() > 0)
             <tr>
                 <td style="border: none;"><strong class="text-danger">Refunded</strong></td>
-                <td style="border: none;" class="text-right text-danger">-${{ number_format($order->totalRefunded(), 2) }}</td>
+                <td style="border: none;" class="text-right text-danger">-{{ $currencySymbol }}{{ number_format($order->totalRefunded(), 2) }}</td>
             </tr>
             @endif
             <tr class="total-row">
                 <td style="border: none;"><strong>Grand Total</strong></td>
-                <td style="border: none;" class="text-right"><strong class="amount">${{ number_format($order->total_amount - $order->totalRefunded(), 2) }}</strong></td>
+                <td style="border: none;" class="text-right"><strong class="amount">{{ $currencySymbol }}{{ number_format($order->total_amount - $order->totalRefunded(), 2) }}</strong></td>
             </tr>
         </table>
 
         <div class="footer">
-            <p>Thank you for your business!</p>
+            <p>{{ $storeSettings->footer_note ?? 'Thank you for your business!' }}</p>
             <p>For any inquiries, please contact our support team.</p>
         </div>
     </div>
