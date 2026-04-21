@@ -55,31 +55,31 @@ class PosController extends Controller
         }
 
         // If no exact barcode match, do regular search
-        $products = Product::where(function($q) use ($query) {
-                $q->where('title', 'like', "%{$query}%")
-                  ->orWhere('sku', 'like', "%{$query}%")
-                  ->orWhere('barcode', 'like', "%{$query}%");
-            })
+        $products = Product::where(function ($q) use ($query) {
+            $q->where('title', 'like', "%{$query}%")
+                ->orWhere('sku', 'like', "%{$query}%")
+                ->orWhere('barcode', 'like', "%{$query}%");
+        })
             ->where('is_active', true)
             ->with(['units'])
             ->limit(20)
             ->get()
-            ->map(function($product) {
+            ->map(function ($product) {
                 return $this->formatProductData($product);
             });
 
         // Also search in product variations
-        $variations = ProductVariation::where(function($q) use ($query) {
-                $q->where('sku', 'like', "%{$query}%")
-                  ->orWhere('barcode', 'like', "%{$query}%");
-            })
+        $variations = ProductVariation::where(function ($q) use ($query) {
+            $q->where('sku', 'like', "%{$query}%")
+                ->orWhere('barcode', 'like', "%{$query}%");
+        })
             ->with(['product.units', 'product'])
-            ->whereHas('product', function($q) {
+            ->whereHas('product', function ($q) {
                 $q->where('is_active', true);
             })
             ->limit(20)
             ->get()
-            ->map(function($variation) {
+            ->map(function ($variation) {
                 return $this->formatVariationData($variation);
             });
 
@@ -94,65 +94,65 @@ class PosController extends Controller
         $primaryUnit = $product->units->first();
         return response()->json([
             [
-                'id' => $product->id,
-                'title' => $product->title,
-                'sku' => $product->sku,
-                'barcode' => $product->barcode,
-                'price' => $product->price,
-                'sale_price' => $product->sale_price ?? $product->price,
-                'stock' => $product->current_stock,
-                'thumbnail' => $product->thumbnail ? asset('storage/' . $product->thumbnail) : null,
-                'primary_unit' => $primaryUnit ? $primaryUnit->name : 'Unit',
-                'primary_unit_id' => $primaryUnit ? $primaryUnit->id : null,
-                'units' => $product->units->map(function($unit) {
+                'id'                  => $product->id,
+                'title'               => $product->title,
+                'sku'                 => $product->sku,
+                'barcode'             => $product->barcode,
+                'price'               => $product->price,
+                'sale_price'          => $product->sale_price ?? $product->price,
+                'stock'               => $product->current_stock,
+                'thumbnail'           => $product->thumbnail ? asset('storage/' . $product->thumbnail) : null,
+                'primary_unit'        => $primaryUnit ? $primaryUnit->name : 'Unit',
+                'primary_unit_id'     => $primaryUnit ? $primaryUnit->id : null,
+                'units'               => $product->units->map(function ($unit) {
                     return [
-                        'id' => $unit->id,
-                        'name' => $unit->name,
-                        'short_name' => $unit->short_name,
-                        'description' => $unit->description,
-                        'is_default' => $unit->is_default ?? false,
+                        'id'                => $unit->id,
+                        'name'              => $unit->name,
+                        'short_name'        => $unit->short_name,
+                        'description'       => $unit->description,
+                        'is_default'        => $unit->is_default ?? false,
                         'quantity_per_unit' => $unit->pivot->quantity_per_unit ?? 1,
                     ];
                 }),
-                'is_variation' => false,
-                'variation_id' => null,
-                'variation_attributes' => null
-            ]
+                'is_variation'        => false,
+                'variation_id'        => null,
+                'variation_attributes' => null,
+            ],
         ]);
     }
 
     private function formatVariationResponse($variation)
     {
-        $product = $variation->product;
+        $product     = $variation->product;
         $primaryUnit = $product->units->first();
 
         return response()->json([
             [
-                'id' => $product->id,
-                'variation_id' => $variation->id,
-                'title' => $product->title . ($variation->attributes ? ' - ' . implode(', ', $variation->attributes) : ''),
-                'sku' => $variation->sku,
-                'barcode' => $variation->barcode,
-                'price' => $variation->price,
-                'sale_price' => $variation->sale_price ?? $variation->price,
-                'stock' => $variation->stock,
-                'thumbnail' => $variation->image ? asset('storage/' . $variation->image) :
-                             ($product->thumbnail ? asset('storage/' . $product->thumbnail) : null),
-                'primary_unit' => $primaryUnit ? $primaryUnit->name : 'Unit',
-                'primary_unit_id' => $primaryUnit ? $primaryUnit->id : null,
-                'units' => $product->units->map(function($unit) {
+                'id'                  => $product->id,
+                'variation_id'        => $variation->id,
+                'title'               => $product->title . ($variation->attributes ? ' - ' . implode(', ', $variation->attributes) : ''),
+                'sku'                 => $variation->sku,
+                'barcode'             => $variation->barcode,
+                'price'               => $variation->price,
+                'sale_price'          => $variation->sale_price ?? $variation->price,
+                'stock'               => $variation->stock,
+                'thumbnail'           => $variation->image ? asset('storage/' . $variation->image)
+                    : ($product->thumbnail ? asset('storage/' . $product->thumbnail) : null),
+                'primary_unit'        => $primaryUnit ? $primaryUnit->name : 'Unit',
+                'primary_unit_id'     => $primaryUnit ? $primaryUnit->id : null,
+                'units'               => $product->units->map(function ($unit) {
                     return [
-                        'id' => $unit->id,
-                        'name' => $unit->name,
-                        'short_name' => $unit->short_name,
-                        'description' => $unit->description,
-                        'is_default' => $unit->is_default ?? false,
+                        'id'                => $unit->id,
+                        'name'              => $unit->name,
+                        'short_name'        => $unit->short_name,
+                        'description'       => $unit->description,
+                        'is_default'        => $unit->is_default ?? false,
                         'quantity_per_unit' => $unit->pivot->quantity_per_unit ?? 1,
                     ];
                 }),
-                'is_variation' => true,
-                'variation_attributes' => $variation->attributes
-            ]
+                'is_variation'        => true,
+                'variation_attributes' => $variation->attributes,
+            ],
         ]);
     }
 
@@ -160,62 +160,62 @@ class PosController extends Controller
     {
         $primaryUnit = $product->units->first();
         return [
-            'id' => $product->id,
-            'title' => $product->title,
-            'sku' => $product->sku,
-            'barcode' => $product->barcode,
-            'price' => $product->price,
-            'sale_price' => $product->sale_price ?? $product->price,
-            'stock' => $product->current_stock,
-            'thumbnail' => $product->thumbnail ? asset('storage/' . $product->thumbnail) : null,
-            'primary_unit' => $primaryUnit ? $primaryUnit->name : 'Unit',
-            'primary_unit_id' => $primaryUnit ? $primaryUnit->id : null,
-            'units' => $product->units->map(function($unit) {
+            'id'                  => $product->id,
+            'title'               => $product->title,
+            'sku'                 => $product->sku,
+            'barcode'             => $product->barcode,
+            'price'               => $product->price,
+            'sale_price'          => $product->sale_price ?? $product->price,
+            'stock'               => $product->current_stock,
+            'thumbnail'           => $product->thumbnail ? asset('storage/' . $product->thumbnail) : null,
+            'primary_unit'        => $primaryUnit ? $primaryUnit->name : 'Unit',
+            'primary_unit_id'     => $primaryUnit ? $primaryUnit->id : null,
+            'units'               => $product->units->map(function ($unit) {
                 return [
-                    'id' => $unit->id,
-                    'name' => $unit->name,
-                    'short_name' => $unit->short_name,
-                    'description' => $unit->description,
-                    'is_default' => $unit->is_default ?? false,
+                    'id'                => $unit->id,
+                    'name'              => $unit->name,
+                    'short_name'        => $unit->short_name,
+                    'description'       => $unit->description,
+                    'is_default'        => $unit->is_default ?? false,
                     'quantity_per_unit' => $unit->pivot->quantity_per_unit ?? 1,
                 ];
             }),
-            'is_variation' => false,
-            'variation_id' => null,
-            'variation_attributes' => null
+            'is_variation'        => false,
+            'variation_id'        => null,
+            'variation_attributes' => null,
         ];
     }
 
     private function formatVariationData($variation)
     {
-        $product = $variation->product;
+        $product     = $variation->product;
         $primaryUnit = $product->units->first();
 
         return [
-            'id' => $product->id,
-            'variation_id' => $variation->id,
-            'title' => $product->title . ($variation->attributes ? ' - ' . implode(', ', $variation->attributes) : ''),
-            'sku' => $variation->sku,
-            'barcode' => $variation->barcode,
-            'price' => $variation->price,
-            'sale_price' => $variation->sale_price ?? $variation->price,
-            'stock' => $variation->stock,
-            'thumbnail' => $variation->image ? asset('storage/' . $variation->image) :
-                         ($product->thumbnail ? asset('storage/' . $product->thumbnail) : null),
-            'primary_unit' => $primaryUnit ? $primaryUnit->name : 'Unit',
-            'primary_unit_id' => $primaryUnit ? $primaryUnit->id : null,
-            'units' => $product->units->map(function($unit) {
+            'id'                  => $product->id,
+            'variation_id'        => $variation->id,
+            'title'               => $product->title . ($variation->attributes ? ' - ' . implode(', ', $variation->attributes) : ''),
+            'sku'                 => $variation->sku,
+            'barcode'             => $variation->barcode,
+            'price'               => $variation->price,
+            'sale_price'          => $variation->sale_price ?? $variation->price,
+            'stock'               => $variation->stock,
+            'thumbnail'           => $variation->image ? asset('storage/' . $variation->image)
+                : ($product->thumbnail ? asset('storage/' . $product->thumbnail) : null),
+            'primary_unit'        => $primaryUnit ? $primaryUnit->name : 'Unit',
+            'primary_unit_id'     => $primaryUnit ? $primaryUnit->id : null,
+            'units'               => $product->units->map(function ($unit) {
                 return [
-                    'id' => $unit->id,
-                    'name' => $unit->name,
-                    'short_name' => $unit->short_name,
-                    'description' => $unit->description,
-                    'is_default' => $unit->is_default ?? false,
+                    'id'                => $unit->id,
+                    'name'              => $unit->name,
+                    'short_name'        => $unit->short_name,
+                    'description'       => $unit->description,
+                    'is_default'        => $unit->is_default ?? false,
                     'quantity_per_unit' => $unit->pivot->quantity_per_unit ?? 1,
                 ];
             }),
-            'is_variation' => true,
-            'variation_attributes' => $variation->attributes
+            'is_variation'        => true,
+            'variation_attributes' => $variation->attributes,
         ];
     }
 
@@ -225,44 +225,52 @@ class PosController extends Controller
 
         return response()->json([
             'success' => true,
-            'points' => $points ? $points->points : 0
+            'points'  => $points ? $points->points : 0,
         ]);
     }
 
     public function savePosOrder(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required',
-            'items.*.variation_id' => 'nullable|exists:product_variations,id',
-            'items.*.is_variation' => 'nullable|boolean',
-            'items.*.qty' => 'required|numeric|min:0.001',
-            'items.*.unit_id' => 'required|exists:units,id',
-            'items.*.sale_price' => 'required|numeric|min:0',
-            'items.*.discount_type' => 'nullable|in:percent,fixed',
-            'items.*.discount_value' => 'nullable|numeric|min:0',
-            'items.*.is_unit_mode' => 'nullable|boolean',
-            'items.*.unit_name' => 'nullable|string',
-            'payment_method' => 'required|in:cash,card,transfer',
-            'customer_id' => 'nullable|exists:customers,id',
-            'discount_type' => 'nullable|in:percent,fixed',
-            'discount_value' => 'nullable|numeric|min:0',
-            'discount_amount' => 'nullable|numeric|min:0',
-            'redeem_points' => 'nullable|integer|min:0',
+            'items'                    => 'required|array|min:1',
+            'items.*.product_id'       => 'required',
+            'items.*.variation_id'     => 'nullable|exists:product_variations,id',
+            'items.*.is_variation'     => 'nullable|boolean',
+            'items.*.qty'              => 'required|numeric|min:0.001',
+            'items.*.unit_id'          => 'required|exists:units,id',
+            'items.*.sale_price'       => 'required|numeric|min:0',
+            'items.*.discount_type'    => 'nullable|in:percent,fixed',
+            'items.*.discount_value'   => 'nullable|numeric|min:0',
+            'items.*.is_unit_mode'     => 'nullable|boolean',
+            'items.*.unit_name'        => 'nullable|string',
+            'payment_method'           => 'required|in:cash,card,transfer',
+            'customer_id'              => 'nullable|exists:customers,id',
+            'discount_type'            => 'nullable|in:percent,fixed',
+            'discount_value'           => 'nullable|numeric|min:0',
+            'discount_amount'          => 'nullable|numeric|min:0',
+            'redeem_points'            => 'nullable|integer|min:0',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'errors' => $validator->errors()
+                'errors'  => $validator->errors(),
             ], 422);
         }
 
         try {
             return DB::transaction(function () use ($request) {
-                $subtotal = 0;
-                $orderItems = [];
-                $orderId = 'POS-' . now()->format('Ymd-His') . '-' . Str::random(4);
+                $subtotal    = 0;
+                $orderItems  = [];
+
+                // -------------------------------------------------------
+                // FIX 1: Generate a unique order ID using microseconds +
+                // random suffix to prevent duplicate-entry errors when the
+                // user clicks the button twice within the same second.
+                // -------------------------------------------------------
+                $orderId = 'POS-' . now()->format('Ymd-His') . '-'
+                    . substr(str_replace('.', '', microtime(true)), -4)
+                    . '-' . strtoupper(Str::random(4));
 
                 // Fetch default location
                 $defaultLocation = StockLocation::where('is_default', true)
@@ -273,55 +281,52 @@ class PosController extends Controller
                     $isVariation = isset($item['is_variation']) ? (bool) $item['is_variation'] : false;
 
                     if ($isVariation && isset($item['variation_id'])) {
-                        // Handle product variation
-                        $variation = ProductVariation::with('product.units')->findOrFail($item['variation_id']);
-                        $product = $variation->product;
+                        $variation    = ProductVariation::with('product.units')->findOrFail($item['variation_id']);
+                        $product      = $variation->product;
                         $selectedUnit = Unit::findOrFail($item['unit_id']);
-                        $price = $variation->sale_price ?? $variation->price;
-                        $stock = $variation->stock;
-                        $sku = $variation->sku;
-                        $barcode = $variation->barcode;
-                        $title = $product->title . ($variation->attributes ? ' - ' . implode(', ', $variation->attributes) : '');
+                        $price        = $variation->sale_price ?? $variation->price;
+                        $stock        = $variation->stock;
+                        $sku          = $variation->sku;
+                        $barcode      = $variation->barcode;
+                        $title        = $product->title . ($variation->attributes ? ' - ' . implode(', ', $variation->attributes) : '');
                     } else {
-                        // Handle regular product
-                        $product = Product::with('units')->findOrFail($item['product_id']);
+                        $product      = Product::with('units')->findOrFail($item['product_id']);
                         $selectedUnit = Unit::findOrFail($item['unit_id']);
-                        $price = $product->sale_price ?? $product->price;
-                        $stock = $product->current_stock;
-                        $sku = $product->sku;
-                        $barcode = $product->barcode;
-                        $title = $product->title;
-                        $variation = null;
+                        $price        = $product->sale_price ?? $product->price;
+                        $stock        = $product->current_stock;
+                        $sku          = $product->sku;
+                        $barcode      = $product->barcode;
+                        $title        = $product->title;
+                        $variation    = null;
                     }
 
-                    // Convert quantity to float
-                    $quantity = (float) $item['qty'];
-
-                    // Check if this is unit mode (weight-based) or quantity mode (pieces)
+                    $quantity   = (float) $item['qty'];
                     $isUnitMode = isset($item['is_unit_mode']) ? (bool) $item['is_unit_mode'] : false;
 
                     // Calculate pieces to deduct from stock
                     $piecesToDeduct = $quantity;
 
                     if (!$isUnitMode) {
-                        // Quantity mode: multiply by quantity_per_unit if set
                         $productUnitPivot = $product->units->where('id', $selectedUnit->id)->first();
-                        if ($productUnitPivot && isset($productUnitPivot->pivot->quantity_per_unit) && $productUnitPivot->pivot->quantity_per_unit > 0) {
+                        if (
+                            $productUnitPivot &&
+                            isset($productUnitPivot->pivot->quantity_per_unit) &&
+                            $productUnitPivot->pivot->quantity_per_unit > 0
+                        ) {
                             $piecesToDeduct = $quantity * $productUnitPivot->pivot->quantity_per_unit;
                         }
-                    } else {
-                        // Unit mode: For weight-based products, stock is in base unit (pieces)
-                        $piecesToDeduct = $quantity;
                     }
 
-                    // Check stock availability
+                    // Stock check
                     if ($stock < $piecesToDeduct) {
-                        throw new \Exception("Insufficient stock for {$title}. Available: {$stock}, Requested: {$piecesToDeduct}");
+                        throw new \Exception(
+                            "Insufficient stock for {$title}. Available: {$stock}, Requested: {$piecesToDeduct}"
+                        );
                     }
 
-                    // Calculate price
-                    $salePrice = (float) $item['sale_price'];
-                    $discountedPrice = $salePrice;
+                    // Price calculation
+                    $salePrice             = (float) $item['sale_price'];
+                    $discountedPrice       = $salePrice;
                     $perItemDiscountAmount = 0;
 
                     if (isset($item['discount_value']) && $item['discount_value'] > 0) {
@@ -333,9 +338,8 @@ class PosController extends Controller
                         $discountedPrice = max(0, $salePrice - $perItemDiscountAmount);
                     }
 
-                    // Calculate line total - for unit mode, price is per unit (e.g., per kg)
-                    $lineTotal = $discountedPrice * $quantity;
-                    $subtotal += $lineTotal;
+                    $lineTotal  = $discountedPrice * $quantity;
+                    $subtotal  += $lineTotal;
 
                     $orderItems[] = [
                         'product_id'       => $product->id,
@@ -354,47 +358,59 @@ class PosController extends Controller
                         'is_unit_mode'     => $isUnitMode,
                     ];
 
-                    // Stock movement
-                    $previous = $isVariation ? $variation->stock : $product->stock;
-                    $new = max(0, $previous - $piecesToDeduct);
+                    // -------------------------------------------------------
+                    // FIX 2: Guard against duplicate stock entries.
+                    // Only insert a stock movement if one for this exact
+                    // (reference_number + product_id) combo doesn't exist yet.
+                    // This prevents the SQLSTATE[23000] duplicate-entry error
+                    // when the user submits the same order more than once.
+                    // -------------------------------------------------------
+                    $stockAlreadyRecorded = Stock::where('reference_number', $orderId)
+                        ->where('product_id', $product->id)
+                        ->when($isVariation && $variation, function ($q) use ($variation) {
+                            $q->where('variation_id', $variation->id);
+                        })
+                        ->exists();
 
-                    Stock::create([
-                        'product_id'        => $product->id,
-                        'variation_id'      => $isVariation ? $variation->id : null,
-                        'stock_location_id' => $defaultLocation->id,
-                        'user_id'           => auth()->id(),
-                        'type'              => Stock::TYPE_OUT,
-                        'quantity'          => $piecesToDeduct,
-                        'previous_quantity' => $previous,
-                        'new_quantity'      => $new,
-                        'reference_type'    => Stock::REFERENCE_SALE,
-                        'reference_number'  => $orderId,
-                        'notes'             => "POS Sale - " . ($isUnitMode ? "Unit Mode" : "Quantity Mode") .
-                                              ($isVariation ? " - Variation" : ""),
-                        'transaction_date'  => now(),
-                    ]);
+                    if (!$stockAlreadyRecorded) {
+                        $previous = $isVariation ? $variation->stock : $product->stock;
+                        $new      = max(0, $previous - $piecesToDeduct);
 
-                    // Update stock
-                    if ($isVariation) {
-                        $variation->decrement('stock', $piecesToDeduct);
-                    } else {
-                        $product->decrement('stock', $piecesToDeduct);
+                        Stock::create([
+                            'product_id'        => $product->id,
+                            'variation_id'      => $isVariation ? $variation->id : null,
+                            'stock_location_id' => $defaultLocation->id,
+                            'user_id'           => auth()->id(),
+                            'type'              => Stock::TYPE_OUT,
+                            'quantity'          => $piecesToDeduct,
+                            'previous_quantity' => $previous,
+                            'new_quantity'      => $new,
+                            'reference_type'    => Stock::REFERENCE_SALE,
+                            'reference_number'  => $orderId,
+                            'notes'             => 'POS Sale - ' . ($isUnitMode ? 'Unit Mode' : 'Quantity Mode') .
+                                ($isVariation ? ' - Variation' : ''),
+                            'transaction_date'  => now(),
+                        ]);
+
+                        if ($isVariation) {
+                            $variation->decrement('stock', $piecesToDeduct);
+                        } else {
+                            $product->decrement('stock', $piecesToDeduct);
+                        }
                     }
                 }
 
                 // Order-level discount
                 $orderDiscountAmount = 0;
-                $orderDiscountType = null;
-                $orderDiscountValue = 0;
+                $orderDiscountType   = null;
+                $orderDiscountValue  = 0;
 
                 if ($request->filled('discount_amount') && $request->discount_amount > 0) {
-                    // Use provided discount amount
                     $orderDiscountAmount = (float) $request->discount_amount;
-                    $orderDiscountType = $request->discount_type;
-                    $orderDiscountValue = $request->discount_value;
+                    $orderDiscountType   = $request->discount_type;
+                    $orderDiscountValue  = $request->discount_value;
                 } elseif ($request->filled('discount_value') && $request->filled('discount_type')) {
-                    // Calculate discount from value
-                    $orderDiscountType = $request->discount_type;
+                    $orderDiscountType  = $request->discount_type;
                     $orderDiscountValue = $request->discount_value;
                     if ($orderDiscountType === 'percent') {
                         $orderDiscountAmount = ($subtotal * $orderDiscountValue) / 100;
@@ -403,18 +419,17 @@ class PosController extends Controller
                     }
                 }
 
-                // Ensure discount doesn't exceed subtotal
                 $orderDiscountAmount = min($orderDiscountAmount, $subtotal);
 
                 // Points redemption discount
                 $pointsRedeemedDiscount = 0;
-                $pointsRedeemed = 0;
+                $pointsRedeemed         = 0;
                 if ($request->filled('redeem_points') && $request->customer_id) {
-                    $redeemRate = config('loyalty.redeem_rate', 100);
+                    $redeemRate     = config('loyalty.redeem_rate', 100);
                     $pointsRedeemed = $request->redeem_points;
                     if ($pointsRedeemed > 0) {
                         $pointsRedeemedDiscount = $pointsRedeemed / $redeemRate;
-                        $orderDiscountAmount += $pointsRedeemedDiscount;
+                        $orderDiscountAmount    += $pointsRedeemedDiscount;
                     }
                 }
 
@@ -438,7 +453,7 @@ class PosController extends Controller
                 }
 
                 if (\Schema::hasColumn('orders', 'discount_type')) {
-                    $orderData['discount_type'] = $orderDiscountType;
+                    $orderData['discount_type']  = $orderDiscountType;
                     $orderData['discount_value'] = $orderDiscountValue;
                 }
 
@@ -447,7 +462,7 @@ class PosController extends Controller
 
                 // Loyalty Points Earned
                 if ($order->customer_id) {
-                    $earnRate = config('loyalty.earn_rate', 1);
+                    $earnRate     = config('loyalty.earn_rate', 1);
                     $pointsEarned = floor($order->total_amount * $earnRate);
 
                     if ($pointsEarned > 0) {
@@ -455,16 +470,15 @@ class PosController extends Controller
                             ['customer_id' => $order->customer_id],
                             ['points' => 0]
                         );
-
                         $customerPoints->increment('points', $pointsEarned);
 
                         CustomerPointTransaction::create([
-                            'customer_id' => $order->customer_id,
-                            'order_id' => $order->id,
+                            'customer_id'  => $order->customer_id,
+                            'order_id'     => $order->id,
                             'points_earned' => $pointsEarned,
                             'amount_spent' => $order->total_amount,
-                            'description' => "Earned from order #{$order->id}",
-                            'created_by' => auth()->id(),
+                            'description'  => "Earned from order #{$order->id}",
+                            'created_by'   => auth()->id(),
                         ]);
                     }
 
@@ -474,19 +488,19 @@ class PosController extends Controller
                             ['customer_id' => $order->customer_id],
                             ['points' => 0]
                         );
-
                         $customerPoints->decrement('points', $pointsRedeemed);
 
                         CustomerPointTransaction::create([
-                            'customer_id' => $order->customer_id,
-                            'order_id' => $order->id,
-                            'points_redeemed' => $pointsRedeemed,
+                            'customer_id'      => $order->customer_id,
+                            'order_id'         => $order->id,
+                            'points_redeemed'  => $pointsRedeemed,
                             'discount_applied' => $pointsRedeemedDiscount,
-                            'description' => "Redeemed {$pointsRedeemed} points for ₦{$pointsRedeemedDiscount} discount",
-                            'created_by' => auth()->id(),
+                            'description'      => "Redeemed {$pointsRedeemed} points for ₦{$pointsRedeemedDiscount} discount",
+                            'created_by'       => auth()->id(),
                         ]);
                     }
                 }
+
                 $order->calculateAndSaveCommission();
 
                 return response()->json([
@@ -499,7 +513,7 @@ class PosController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error processing order: ' . $e->getMessage()
+                'message' => 'Error processing order: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -509,56 +523,56 @@ class PosController extends Controller
         try {
             $product = Product::with('units')->findOrFail($productId);
 
-            $units = $product->units->map(function($unit) {
+            $units = $product->units->map(function ($unit) {
                 return [
-                    'id' => $unit->id,
-                    'name' => $unit->name,
-                    'short_name' => $unit->short_name,
-                    'description' => $unit->description,
-                    'is_default' => $unit->is_default ?? false,
+                    'id'                => $unit->id,
+                    'name'              => $unit->name,
+                    'short_name'        => $unit->short_name,
+                    'description'       => $unit->description,
+                    'is_default'        => $unit->is_default ?? false,
                     'quantity_per_unit' => $unit->pivot->quantity_per_unit ?? 1,
                 ];
             });
 
-            // If product has no units, return default units
+            // Fallback default units when product has none configured
             if ($units->isEmpty()) {
                 $units = collect([
                     [
-                        'id' => 1,
-                        'name' => 'Kilogram',
-                        'short_name' => 'kg',
-                        'description' => 'Kilogram',
-                        'is_default' => true,
-                        'quantity_per_unit' => 1
+                        'id'                => 1,
+                        'name'              => 'Kilogram',
+                        'short_name'        => 'kg',
+                        'description'       => 'Kilogram',
+                        'is_default'        => true,
+                        'quantity_per_unit' => 1,
                     ],
                     [
-                        'id' => 2,
-                        'name' => 'Gram',
-                        'short_name' => 'g',
-                        'description' => 'Gram - 1000g = 1kg',
-                        'is_default' => false,
-                        'quantity_per_unit' => 0.001
+                        'id'                => 2,
+                        'name'              => 'Gram',
+                        'short_name'        => 'g',
+                        'description'       => 'Gram - 1000g = 1kg',
+                        'is_default'        => false,
+                        'quantity_per_unit' => 0.001,
                     ],
                     [
-                        'id' => 3,
-                        'name' => 'Pound',
-                        'short_name' => 'lb',
-                        'description' => 'Pound - 1lb ≈ 0.453kg',
-                        'is_default' => false,
-                        'quantity_per_unit' => 0.453592
-                    ]
+                        'id'                => 3,
+                        'name'              => 'Pound',
+                        'short_name'        => 'lb',
+                        'description'       => 'Pound - 1lb ≈ 0.453kg',
+                        'is_default'        => false,
+                        'quantity_per_unit' => 0.453592,
+                    ],
                 ]);
             }
 
             return response()->json([
                 'success' => true,
-                'units' => $units
+                'units'   => $units,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to load units',
-                'error' => $e->getMessage()
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -581,29 +595,29 @@ class PosController extends Controller
         $today = now()->format('Y-m-d');
 
         $sales = Order::whereDate('order_date', $today)
-            ->when(\Schema::hasColumn('orders', 'status'), function($query) {
+            ->when(\Schema::hasColumn('orders', 'status'), function ($query) {
                 return $query->where('status', 'completed');
             })
             ->select([
                 DB::raw('COUNT(*) as total_orders'),
                 DB::raw('SUM(total_amount) as total_sales'),
                 DB::raw('AVG(total_amount) as average_sale'),
-                'payment_method'
+                'payment_method',
             ])
             ->groupBy('payment_method')
             ->get();
 
-        $totalSales = $sales->sum('total_sales');
+        $totalSales  = $sales->sum('total_sales');
         $totalOrders = $sales->sum('total_orders');
 
         return response()->json([
             'success' => true,
-            'data' => [
-                'total_orders' => $totalOrders,
-                'total_sales' => $totalSales,
-                'average_sale' => $totalOrders > 0 ? round($totalSales / $totalOrders, 2) : 0,
-                'by_payment_method' => $sales,
-            ]
+            'data'    => [
+                'total_orders'       => $totalOrders,
+                'total_sales'        => $totalSales,
+                'average_sale'       => $totalOrders > 0 ? round($totalSales / $totalOrders, 2) : 0,
+                'by_payment_method'  => $sales,
+            ],
         ]);
     }
 
@@ -612,9 +626,9 @@ class PosController extends Controller
         $product = Product::findOrFail($productId);
 
         return response()->json([
-            'success' => true,
-            'stock' => $product->current_stock,
-            'product_name' => $product->title
+            'success'      => true,
+            'stock'        => $product->current_stock,
+            'product_name' => $product->title,
         ]);
     }
 
@@ -632,26 +646,25 @@ class PosController extends Controller
                     $product = $item->product;
                     if (!$product) continue;
 
-                    // Check if this item has a variation
                     $isVariation = !is_null($item->variation_id);
-                    $variation = $isVariation ? ProductVariation::find($item->variation_id) : null;
+                    $variation   = $isVariation ? ProductVariation::find($item->variation_id) : null;
 
-                    // Calculate pieces to restore
                     $piecesToRestore = $item->quantity;
-
-                    // Check if this was a unit mode purchase
-                    $isUnitMode = isset($item->is_unit_mode) ? (bool) $item->is_unit_mode : false;
+                    $isUnitMode      = isset($item->is_unit_mode) ? (bool) $item->is_unit_mode : false;
 
                     if (!$isUnitMode && $item->unit_id) {
-                        // Quantity mode: multiply by quantity_per_unit
                         $unitPivot = $product->units->where('id', $item->unit_id)->first();
-                        if ($unitPivot && isset($unitPivot->pivot->quantity_per_unit) && $unitPivot->pivot->quantity_per_unit > 0) {
+                        if (
+                            $unitPivot &&
+                            isset($unitPivot->pivot->quantity_per_unit) &&
+                            $unitPivot->pivot->quantity_per_unit > 0
+                        ) {
                             $piecesToRestore = $item->quantity * $unitPivot->pivot->quantity_per_unit;
                         }
                     }
 
                     $previousQuantity = $isVariation ? $variation->stock : $product->stock;
-                    $newQuantity = $previousQuantity + $piecesToRestore;
+                    $newQuantity      = $previousQuantity + $piecesToRestore;
 
                     Stock::create([
                         'product_id'        => $product->id,
@@ -665,7 +678,7 @@ class PosController extends Controller
                         'reference_type'    => Stock::REFERENCE_RETURN,
                         'reference_number'  => $orderId,
                         'notes'             => "Order #{$orderId} voided - stock restored" .
-                                              ($isVariation ? " - Variation" : ""),
+                            ($isVariation ? ' - Variation' : ''),
                         'transaction_date'  => now(),
                     ]);
 
@@ -685,19 +698,18 @@ class PosController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Order voided successfully'
+                'message' => 'Order voided successfully',
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error voiding order: ' . $e->getMessage()
+                'message' => 'Error voiding order: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     public function getProductByBarcode($barcode)
     {
-        // First try products
         $product = Product::with('units')
             ->where('barcode', $barcode)
             ->where('is_active', true)
@@ -708,76 +720,121 @@ class PosController extends Controller
             return response()->json([
                 'success' => true,
                 'product' => [
-                    'id' => $product->id,
-                    'title' => $product->title,
-                    'sku' => $product->sku,
-                    'barcode' => $product->barcode,
-                    'price' => $product->price,
-                    'sale_price' => $product->sale_price ?? $product->price,
-                    'stock' => $product->current_stock,
-                    'thumbnail' => $product->thumbnail ? asset('storage/' . $product->thumbnail) : null,
-                    'primary_unit' => $primaryUnit ? $primaryUnit->name : 'Unit',
-                    'primary_unit_id' => $primaryUnit ? $primaryUnit->id : null,
-                    'units' => $product->units->map(function($unit) {
+                    'id'                  => $product->id,
+                    'title'               => $product->title,
+                    'sku'                 => $product->sku,
+                    'barcode'             => $product->barcode,
+                    'price'               => $product->price,
+                    'sale_price'          => $product->sale_price ?? $product->price,
+                    'stock'               => $product->current_stock,
+                    'thumbnail'           => $product->thumbnail ? asset('storage/' . $product->thumbnail) : null,
+                    'primary_unit'        => $primaryUnit ? $primaryUnit->name : 'Unit',
+                    'primary_unit_id'     => $primaryUnit ? $primaryUnit->id : null,
+                    'units'               => $product->units->map(function ($unit) {
                         return [
-                            'id' => $unit->id,
-                            'name' => $unit->name,
-                            'short_name' => $unit->short_name,
-                            'description' => $unit->description,
-                            'is_default' => $unit->is_default ?? false,
+                            'id'                => $unit->id,
+                            'name'              => $unit->name,
+                            'short_name'        => $unit->short_name,
+                            'description'       => $unit->description,
+                            'is_default'        => $unit->is_default ?? false,
                             'quantity_per_unit' => $unit->pivot->quantity_per_unit ?? 1,
                         ];
                     }),
-                    'is_variation' => false,
-                    'variation_id' => null,
-                    'variation_attributes' => null
-                ]
+                    'is_variation'        => false,
+                    'variation_id'        => null,
+                    'variation_attributes' => null,
+                ],
             ]);
         }
 
-        // Then try variations
         $variation = ProductVariation::where('barcode', $barcode)
             ->with(['product.units', 'product'])
             ->first();
 
         if ($variation && $variation->product->is_active) {
-            $product = $variation->product;
+            $product     = $variation->product;
             $primaryUnit = $product->units->first();
 
             return response()->json([
                 'success' => true,
                 'product' => [
-                    'id' => $product->id,
-                    'variation_id' => $variation->id,
-                    'title' => $product->title . ($variation->attributes ? ' - ' . implode(', ', $variation->attributes) : ''),
-                    'sku' => $variation->sku,
-                    'barcode' => $variation->barcode,
-                    'price' => $variation->price,
-                    'sale_price' => $variation->sale_price ?? $variation->price,
-                    'stock' => $variation->stock,
-                    'thumbnail' => $variation->image ? asset('storage/' . $variation->image) :
-                                 ($product->thumbnail ? asset('storage/' . $product->thumbnail) : null),
-                    'primary_unit' => $primaryUnit ? $primaryUnit->name : 'Unit',
-                    'primary_unit_id' => $primaryUnit ? $primaryUnit->id : null,
-                    'units' => $product->units->map(function($unit) {
+                    'id'                  => $product->id,
+                    'variation_id'        => $variation->id,
+                    'title'               => $product->title . ($variation->attributes ? ' - ' . implode(', ', $variation->attributes) : ''),
+                    'sku'                 => $variation->sku,
+                    'barcode'             => $variation->barcode,
+                    'price'               => $variation->price,
+                    'sale_price'          => $variation->sale_price ?? $variation->price,
+                    'stock'               => $variation->stock,
+                    'thumbnail'           => $variation->image ? asset('storage/' . $variation->image)
+                        : ($product->thumbnail ? asset('storage/' . $product->thumbnail) : null),
+                    'primary_unit'        => $primaryUnit ? $primaryUnit->name : 'Unit',
+                    'primary_unit_id'     => $primaryUnit ? $primaryUnit->id : null,
+                    'units'               => $product->units->map(function ($unit) {
                         return [
-                            'id' => $unit->id,
-                            'name' => $unit->name,
-                            'short_name' => $unit->short_name,
-                            'description' => $unit->description,
-                            'is_default' => $unit->is_default ?? false,
+                            'id'                => $unit->id,
+                            'name'              => $unit->name,
+                            'short_name'        => $unit->short_name,
+                            'description'       => $unit->description,
+                            'is_default'        => $unit->is_default ?? false,
                             'quantity_per_unit' => $unit->pivot->quantity_per_unit ?? 1,
                         ];
                     }),
-                    'is_variation' => true,
-                    'variation_attributes' => $variation->attributes
-                ]
+                    'is_variation'        => true,
+                    'variation_attributes' => $variation->attributes,
+                ],
             ]);
         }
 
         return response()->json([
             'success' => false,
-            'message' => 'Product not found'
+            'message' => 'Product not found',
         ], 404);
+    }
+
+    /**
+     * Quick-add a customer from the POS screen.
+     */
+    public function quickAddCustomer(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'first_name'   => 'required|string|max:100',
+            'last_name'    => 'required|string|max:100',
+            'phone_number' => 'nullable|string|max:20',
+            'email'        => 'nullable|email|max:150',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors'  => $validator->errors(),
+                'message' => $validator->errors()->first(),
+            ], 422);
+        }
+
+        try {
+            $customer = Customer::create([
+                'first_name'   => $request->first_name,
+                'last_name'    => $request->last_name,
+                'phone_number' => $request->phone_number,
+                'email'        => $request->email,
+            ]);
+
+            return response()->json([
+                'success'  => true,
+                'message'  => 'Customer added successfully',
+                'customer' => [
+                    'id'           => $customer->id,
+                    'first_name'   => $customer->first_name,
+                    'last_name'    => $customer->last_name,
+                    'phone_number' => $customer->phone_number,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to add customer: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 }
