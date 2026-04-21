@@ -46,7 +46,7 @@ return new class extends Migration
             $table->unique(
                 ['reference_number',
                  'product_id',
-                 
+                  'product_variation_id'
                 ],
                 'stocks_ref_product_variation_unique'
             );
