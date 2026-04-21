@@ -233,31 +233,37 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Setup axios defaults
-    axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}';
+    const token = document.querySelector('meta[name="csrf-token"]')?.content;
+    if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token;
+    }
     axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+    axios.defaults.headers.post['Content-Type'] = 'application/json';
 
     // Pass PHP data to JS
     const chartLabels = @json($chart_labels);
     const chartData   = @json($chart_data);
 
     // Chart
-    new Chart(document.getElementById('brandChart'), {
-        type: 'bar',
-        data: {
-            labels: chartLabels,
-            datasets: [{
-                label: 'Products',
-                data: chartData,
-                backgroundColor: '#405189'
-            }]
-        },
-        options: {
-            scales: { y: { beginAtZero: true } },
-            plugins: { legend: { display: false } }
-        }
-    });
+    if (document.getElementById('brandChart')) {
+        new Chart(document.getElementById('brandChart'), {
+            type: 'bar',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    label: 'Products',
+                    data: chartData,
+                    backgroundColor: '#405189'
+                }]
+            },
+            options: {
+                scales: { y: { beginAtZero: true } },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
 
-    // List.js - Fixed pagination plugin
+    // List.js
     var options = {
         valueNames: ['id', 'name', 'categories', 'products', 'featured'],
         page: 10,
@@ -266,16 +272,20 @@ document.addEventListener('DOMContentLoaded', function() {
     var brandList = new List('brandList', options);
 
     // Choices.js
-    let choices = new Choices('#categories_select', {
-        removeItemButton: true,
-        searchEnabled: true,
-        placeholder: true,
-        placeholderValue: 'Select categories'
-    });
+    let choices = null;
+    const categoriesSelect = document.getElementById('categories_select');
+    if (categoriesSelect) {
+        choices = new Choices(categoriesSelect, {
+            removeItemButton: true,
+            searchEnabled: true,
+            placeholder: true,
+            placeholderValue: 'Select categories'
+        });
+    }
 
     // Modal
     const modalElement = document.getElementById('showModal');
-    const modal = new bootstrap.Modal(modalElement);
+    const modal = modalElement ? new bootstrap.Modal(modalElement) : null;
     const form = document.getElementById('brandForm');
     const logoPreview = document.getElementById('logo_preview');
     let deleteId = null;
@@ -296,26 +306,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Individual checkboxes
-    function attachCheckboxListeners() {
-        document.querySelectorAll('input[name="chk_child"]').forEach(cb => {
-            cb.addEventListener('change', function() {
-                const row = this.closest('tr');
-                if (row) {
-                    row.classList.toggle('table-active', this.checked);
-                }
-
-                const allCheckboxes = document.querySelectorAll('input[name="chk_child"]');
-                const checkedCount = document.querySelectorAll('input[name="chk_child"]:checked').length;
-
-                if (checkAllBtn) {
-                    checkAllBtn.checked = checkedCount === allCheckboxes.length;
-                }
-                updateRemoveButton();
-            });
-        });
-    }
-
     function updateRemoveButton() {
         const checkedCount = document.querySelectorAll('input[name="chk_child"]:checked').length;
         const removeBtn = document.getElementById('remove-actions');
@@ -324,20 +314,24 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    attachCheckboxListeners();
-
     // Reset form when Add button clicked
     const addBtn = document.querySelector('.add-btn');
     if (addBtn) {
         addBtn.addEventListener('click', () => {
-            form.reset();
-            document.getElementById('brand_id').value = '';
-            document.getElementById('modalTitle').textContent = 'Add Brand';
-            document.getElementById('submitBtn').textContent = 'Save Brand';
-            logoPreview.style.display = 'none';
-            logoPreview.src = '';
-            choices.removeActiveItems();
-            choices.setChoiceByValue([]);
+            if (form) {
+                form.reset();
+                document.getElementById('brand_id').value = '';
+                document.getElementById('modalTitle').textContent = 'Add Brand';
+                document.getElementById('submitBtn').textContent = 'Save Brand';
+                if (logoPreview) {
+                    logoPreview.style.display = 'none';
+                    logoPreview.src = '';
+                }
+                if (choices) {
+                    choices.removeActiveItems();
+                    choices.setChoiceByValue([]);
+                }
+            }
         });
     }
 
@@ -347,44 +341,36 @@ document.addEventListener('DOMContentLoaded', function() {
             btn.addEventListener('click', function() {
                 const id = this.dataset.id;
 
-                console.log('Editing brand ID:', id);
-                console.log('Request URL:', `/brands/${id}/edit`);
-
                 axios.get(`/brands/${id}/edit`)
                     .then(res => {
-                        console.log('Edit response:', res.data);
                         const b = res.data;
 
                         document.getElementById('brand_id').value = b.id;
                         form.querySelector('[name="name"]').value = b.name;
                         document.getElementById('is_featured').checked = b.is_featured == 1;
 
-                        if (b.logo) {
-                            // Handle both full URL and storage path
-                            const logoUrl = b.logo.startsWith('http') ? b.logo : `/storage/${b.logo}`;
-                            logoPreview.src = logoUrl;
+                        if (b.logo && logoPreview) {
+                            logoPreview.src = b.logo;
                             logoPreview.style.display = 'block';
-                        } else {
+                        } else if (logoPreview) {
                             logoPreview.style.display = 'none';
                         }
 
                         // Set categories in Choices.js
-                        choices.removeActiveItems();
-                        if (b.categories && b.categories.length > 0) {
+                        if (choices && b.categories && b.categories.length > 0) {
+                            choices.removeActiveItems();
                             const categoryIds = b.categories.map(c => String(c.id));
                             choices.setChoiceByValue(categoryIds);
+                        } else if (choices) {
+                            choices.removeActiveItems();
                         }
 
                         document.getElementById('modalTitle').textContent = 'Edit Brand';
                         document.getElementById('submitBtn').textContent = 'Update Brand';
-                        modal.show();
+                        if (modal) modal.show();
                     })
                     .catch(err => {
                         console.error('Edit error:', err);
-                        console.error('Error response:', err.response);
-                        console.error('Error status:', err.response?.status);
-                        console.error('Error data:', err.response?.data);
-
                         let errorMsg = 'Failed to load brand data';
                         if (err.response?.status === 404) {
                             errorMsg = 'Brand not found. It may have been deleted.';
@@ -397,85 +383,85 @@ document.addEventListener('DOMContentLoaded', function() {
                         Swal.fire({
                             icon: 'error',
                             title: 'Error!',
-                            text: errorMsg,
-                            footer: err.response?.status ? `Status: ${err.response.status}` : 'Check console for details'
+                            text: errorMsg
                         });
                     });
             });
         });
     }
 
-    attachEditListeners();
-
     // Submit form (Add & Update)
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
 
-        const submitBtn = document.getElementById('submitBtn');
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Saving...';
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Saving...';
 
-        const id = document.getElementById('brand_id').value;
-        const url = id ? `/brands/${id}` : '/brands';
-        const formData = new FormData(form);
+            const id = document.getElementById('brand_id').value;
+            const url = id ? `/brands/${id}` : '/brands';
+            const formData = new FormData(form);
 
-        if (id) {
-            formData.append('_method', 'PUT');
-        }
-
-        // Debug: Log what we're sending
-        console.log('Submitting to:', url);
-        console.log('Form data:');
-        for (let pair of formData.entries()) {
-            console.log(pair[0] + ': ' + pair[1]);
-        }
-
-        axios.post(url, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            }
-        })
-        .then(response => {
-            console.log('Success response:', response);
-            Swal.fire({
-                icon: 'success',
-                title: 'Success!',
-                text: id ? 'Brand updated successfully' : 'Brand added successfully',
-                timer: 1500,
-                showConfirmButton: false
-            }).then(() => {
-                location.reload();
-            });
-        })
-        .catch(err => {
-            submitBtn.disabled = false;
-            submitBtn.textContent = id ? 'Update Brand' : 'Save Brand';
-
-            console.error('Full error:', err);
-            console.error('Error response:', err.response);
-
-            let msg = 'An error occurred';
-            if (err.response?.status === 422) {
-                const errors = err.response.data.errors;
-                msg = Object.values(errors).flat().join('<br>');
-            } else if (err.response?.data?.message) {
-                msg = err.response.data.message;
-            } else if (err.response?.status === 404) {
-                msg = 'Route not found. Please check your routes configuration.';
-            } else if (err.response?.status === 500) {
-                msg = 'Server error. Please check the browser console and server logs.';
+            if (id) {
+                formData.append('_method', 'PUT');
             }
 
-            Swal.fire({
-                icon: 'error',
-                title: 'Error!',
-                html: msg,
-                footer: err.response?.status ? `Status: ${err.response.status}` : ''
+            // Log the submission for debugging
+            console.log('Submitting to:', url);
+            console.log('Method:', id ? 'PUT' : 'POST');
+            console.log('ID:', id);
+
+            axios.post(url, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            })
+            .then(response => {
+                console.log('Success response:', response);
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success!',
+                    text: id ? 'Brand updated successfully' : 'Brand added successfully',
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => {
+                    location.reload();
+                });
+            })
+            .catch(err => {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+
+                console.error('Error:', err);
+                console.error('Response:', err.response);
+
+                let msg = 'An error occurred';
+                if (err.response?.status === 422) {
+                    const errors = err.response.data.errors;
+                    msg = Object.values(errors).flat().join('<br>');
+                } else if (err.response?.data?.message) {
+                    msg = err.response.data.message;
+                } else if (err.response?.status === 404) {
+                    msg = 'Route not found. Please check your routes configuration.';
+                } else if (err.response?.status === 500) {
+                    msg = 'Server error. Please check the browser console and server logs.';
+                } else if (err.response?.status === 405) {
+                    msg = 'Method not allowed. Check your routes and form method.';
+                }
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    html: msg,
+                    footer: err.response?.status ? `Status: ${err.response.status}` : ''
+                });
             });
         });
-    });
+    }
 
-    // Delete buttons
+    // Delete functionality
     function attachDeleteListeners() {
         document.querySelectorAll('.remove-item-btn').forEach(btn => {
             btn.addEventListener('click', function() {
@@ -485,8 +471,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
-
-    attachDeleteListeners();
 
     // Confirm delete
     const deleteRecordBtn = document.getElementById('delete-record');
@@ -559,8 +543,8 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // Logo preview on file select
-    const logoInput = form.querySelector('[name="logo"]');
-    if (logoInput) {
+    const logoInput = form ? form.querySelector('[name="logo"]') : null;
+    if (logoInput && logoPreview) {
         logoInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
@@ -573,6 +557,18 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // Initial attachment of listeners
+    attachEditListeners();
+    attachDeleteListeners();
+
+    // Re-attach listeners after any dynamic updates (if needed)
+    const observer = new MutationObserver(function(mutations) {
+        attachEditListeners();
+        attachDeleteListeners();
+    });
+
+    observer.observe(document.getElementById('brandList'), { childList: true, subtree: true });
 });
 </script>
 @endsection

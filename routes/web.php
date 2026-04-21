@@ -80,7 +80,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Brand Management
     Route::resource('brands', BrandController::class)->except(['show']);
-    Route::get('brands/{brand}/edit', [BrandController::class, 'edit'])->name('brands.edit');
+    // Route::get('brands/{brand}/edit', [BrandController::class, 'edit'])->name('brands.edit');
 
     // Category Management
     Route::resource('categories', CategoryController::class)->except(['show']);
