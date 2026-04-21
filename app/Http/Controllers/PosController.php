@@ -343,7 +343,7 @@ class PosController extends Controller
 
                         Stock::create([
                             'product_id'        => $product->id,
-                            'variation_id'      => $isVariation ? $variation->id : null,
+                            'product_variation_id'      => $isVariation ? $variation->id : null,
                             'stock_location_id' => $defaultLocation->id,
                             'user_id'           => auth()->id(),
                             'type'              => Stock::TYPE_OUT,
@@ -691,7 +691,7 @@ class PosController extends Controller
 
                     Stock::create([
                         'product_id'        => $product->id,
-                        'variation_id'      => $isVariation ? $variation->id : null,
+                        'product_variation_id'      => $isVariation ? $variation->id : null,
                         'stock_location_id' => $defaultLocation->id,
                         'user_id'           => auth()->id(),
                         'type'              => Stock::TYPE_RETURN,
