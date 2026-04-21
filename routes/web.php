@@ -225,8 +225,10 @@ Route::middleware(['auth'])->group(function () {
 
 
 
+
     Route::prefix('orders')->name('orders.')->group(function () {
         Route::get('/', [OrderController::class, 'index'])->name('index');
+        Route::get('/export', [OrderController::class, 'export'])->name('export'); // Move this before {order}
         Route::get('{order}', [OrderController::class, 'show'])->name('show');
         Route::post('{order}/status', [OrderController::class, 'updateStatus'])->name('status');
         Route::get('{order}/invoice', [OrderController::class, 'invoice'])->name('invoice');
@@ -234,13 +236,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('{order}/note', [OrderController::class, 'addNote'])->name('note');
         Route::post('{order}/refund', [OrderController::class, 'refund'])->name('refund');
         Route::get('{order}/packing-slip', [OrderController::class, 'packingSlip'])->name('packing-slip');
-        // routes/web.php
-        Route::get('/export', [OrderController::class, 'export'])->name('orders.export');
+        Route::post('/save-pos', [OrderController::class, 'savePosOrder'])->name('saveorders');
     });
 
-
-    // routes/web.php
-    Route::post('/orders/save-pos', [OrderController::class, 'savePosOrder'])->name('orders.saveorders');
 
     // Sales Analytics & Management
     Route::get('/sales', [SalesController::class, 'index'])->name('sales.index');

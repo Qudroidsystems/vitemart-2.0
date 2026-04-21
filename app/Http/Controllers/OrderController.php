@@ -2,55 +2,73 @@
 
 namespace App\Http\Controllers;
 
-use Carbon\Carbon;
 use App\Models\Order;
-use App\Mail\InvoiceMail;
+use App\Models\OrderItem;
+use App\Models\OrderNote;
+use App\Models\Refund;
+use App\Models\Transaction;
+use App\Models\Customer;
+use App\Models\User;
+use App\Models\Address;
 use Illuminate\Http\Request;
-use App\Exports\OrdersExport;
-use App\Models\InvoiceNumber;
-use App\Models\InvoiceSetting;
-use Barryvdh\DomPDF\Facade\Pdf;
-use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Mail;
-use Maatwebsite\Excel\Facades\Excel;
-use App\Models\Stock;
 use Illuminate\Support\Facades\DB;
-
-use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\OrdersExport;
 
 class OrderController extends Controller
 {
-    public function __construct()
+    /**
+     * Display a listing of orders.
+     */
+    public function index(Request $request)
     {
-        $this->middleware('permission:View order|Manage order', ['only' => ['index', 'show']]);
-        $this->middleware('permission:Manage order', ['only' => ['updateStatus']]);
-    }
+        $query = Order::with(['customer', 'user', 'items']);
 
-   public function index(Request $request)
-    {
-        $pagetitle = "Order Management";
-
-        $query = Order::with(['user:id,first_name,last_name,email', 'items.product', 'shippingAddress'])
-            ->withCount('items')
-            ->latest();
-
-        // Filters
-        if ($request->filled('status')) $query->where('status', $request->status);
-        if ($request->filled('payment_status')) $query->where('payment_status', $request->payment_status);
+        // Apply filters
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('invoice_number', 'like', "%{$search}%")
-                  ->orWhere('id', 'like', "%{$search}%")
-                  ->orWhereHas('user', fn($q) => $q->whereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$search}%"]));
+            $query->where(function($q) use ($search) {
+                $q->where('id', 'like', "%{$search}%")
+                  ->orWhereHas('customer', function($cq) use ($search) {
+                      $cq->where('first_name', 'like', "%{$search}%")
+                         ->orWhere('last_name', 'like', "%{$search}%")
+                         ->orWhere('email', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('user', function($uq) use ($search) {
+                      $uq->where('first_name', 'like', "%{$search}%")
+                         ->orWhere('last_name', 'like', "%{$search}%")
+                         ->orWhere('email', 'like', "%{$search}%");
+                  });
             });
         }
-        if ($request->filled('from')) $query->whereDate('created_at', '>=', $request->from);
-        if ($request->filled('to')) $query->whereDate('created_at', '<=', $request->to);
 
-        $orders = $query->paginate(15)->appends($request->all());
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
 
-        // Stats & Analytics
+        if ($request->filled('payment_status')) {
+            $query->where('payment_status', $request->payment_status);
+        }
+
+        if ($request->filled('from')) {
+            $query->whereDate('created_at', '>=', $request->from);
+        }
+
+        if ($request->filled('to')) {
+            $query->whereDate('created_at', '<=', $request->to);
+        }
+
+        $orders = $query->latest()->paginate(15);
+
+        // Add items_count to each order
+        foreach ($orders as $order) {
+            $order->items_count = $order->items->count();
+        }
+
+        // Calculate statistics
         $stats = [
             'total' => Order::count(),
             'pending' => Order::where('status', 'pending')->count(),
@@ -58,162 +76,413 @@ class OrderController extends Controller
             'shipped' => Order::where('status', 'shipped')->count(),
             'delivered' => Order::where('status', 'delivered')->count(),
             'cancelled' => Order::where('status', 'cancelled')->count(),
-            'paid' => Order::where('payment_status', 'paid')->count(),
             'unpaid' => Order::where('payment_status', 'unpaid')->count(),
         ];
 
-        $startDate = Carbon::now()->subDays(29);
-        $dailySales = Order::where('created_at', '>=', $startDate)
-            ->where('payment_status', 'paid')
-            ->selectRaw('DATE(created_at) as date, SUM(total_amount) as total')
-            ->groupBy('date')
-            ->orderBy('date')
-            ->pluck('total', 'date');
+        // Calculate analytics
+        $analytics = $this->getAnalytics();
 
-        $labels = $data = [];
+        return view('orders.index', compact('orders', 'stats', 'analytics'));
+    }
+
+    /**
+     * Get analytics data for dashboard.
+     */
+    private function getAnalytics()
+    {
+        // Last 30 days sales
+        $salesData = [];
+        $labels = [];
+
         for ($i = 29; $i >= 0; $i--) {
-            $date = Carbon::now()->subDays($i);
-            $labels[] = $date->format('d M');
-            $data[] = $dailySales->get($date->format('Y-m-d'), 0);
+            $date = now()->subDays($i);
+            $labels[] = $date->format('M d');
+            $dailyTotal = Order::whereDate('created_at', $date->toDateString())
+                ->where('payment_status', 'paid')
+                ->sum('total_amount');
+            $salesData[] = $dailyTotal;
         }
 
-        $analytics = [
-            'total_revenue' => Order::where('payment_status', 'paid')->sum('total_amount'),
-            'sales_chart' => ['labels' => $labels, 'data' => $data],
+        $totalRevenue = Order::where('payment_status', 'paid')->sum('total_amount');
+
+        return [
+            'total_revenue' => $totalRevenue,
+            'sales_chart' => [
+                'labels' => $labels,
+                'data' => $salesData,
+            ]
         ];
-
-        return view('orders.index', compact('orders', 'pagetitle', 'stats', 'analytics'));
     }
 
-    public function export(Request $request)
-    {
-        $format = $request->get('format', 'xlsx');
-        $filename = 'orders_' . now()->format('Y-m-d_His');
-
-        return Excel::download(new OrdersExport, "{$filename}.{$format}",
-            $format === 'csv' ? \Maatwebsite\Excel\Excel::CSV : \Maatwebsite\Excel\Excel::XLSX
-        );
-    }
-
-
+    /**
+     * Display the specified order.
+     */
     public function show($id)
     {
         $order = Order::with([
-            'user:id,first_name,last_name,email,phone_number',
-            'items.product',
+            'customer',      // The actual customer who placed the order
+            'user',          // The salesperson who processed the order
+            'items',         // Order items
             'shippingAddress',
             'billingAddress',
-            'transactions'
+            'transactions',
+            'refunds',
+            'notes'          // Order notes
         ])->findOrFail($id);
 
-        $invoiceDisplay = $order->invoice_number ?? substr($order->id, 0, 8);
+        // Calculate items count
+        $order->items_count = $order->items->count();
+
+        $invoiceDisplay = $order->invoice_number ?? $order->id;
         $pagetitle = "Order #{$invoiceDisplay}";
 
         return view('orders.show', compact('order', 'pagetitle'));
     }
+
+    /**
+     * Update order status.
+     */
     public function updateStatus(Request $request, $id)
     {
-        $request->validate(['status' => 'required|in:pending,processing,shipped,delivered,cancelled']);
+        $request->validate([
+            'status' => 'required|in:pending,processing,shipped,delivered,cancelled'
+        ]);
+
         $order = Order::findOrFail($id);
         $order->update(['status' => $request->status]);
 
+        // Calculate commission if status is delivered
+        if ($request->status == 'delivered') {
+            $order->calculateAndSaveCommission();
+        }
+
         return response()->json([
             'success' => true,
-            'message' => 'Status updated',
-            'badge_class' => $this->getStatusBadgeClass($request->status)
+            'message' => 'Status updated successfully'
         ]);
     }
 
+    /**
+     * Generate PDF invoice.
+     */
     public function invoice($id)
     {
-        $order = Order::with(['user', 'items', 'shippingAddress', 'billingAddress'])->findOrFail($id);
+        $order = Order::with([
+            'customer',
+            'user',
+            'items',
+            'shippingAddress',
+            'billingAddress'
+        ])->findOrFail($id);
 
-        if (!$order->invoice_number) {
-            $order->invoice_number = InvoiceNumber::generate();
-            $order->invoiced_at = now();
-            $order->save();
-        }
-
-        $settings = InvoiceSetting::getSettings();
-        app()->setLocale($settings->language);
-
-        $pdf = Pdf::loadView('orders.invoice', compact('order', 'settings'))
-                  ->setPaper('a4', 'portrait');
-
-        return $pdf->stream("invoice-{$order->invoice_number}.pdf");
+        $pdf = Pdf::loadView('orders.invoice', compact('order'));
+        return $pdf->download("invoice-{$order->id}.pdf");
     }
 
+    /**
+     * Email invoice to customer.
+     */
     public function emailInvoice($id)
     {
-        $order = Order::findOrFail($id);
+        $order = Order::with(['customer', 'items'])->findOrFail($id);
 
-        if (!$order->invoice_number) {
-            $order->invoice_number = InvoiceNumber::generate();
-            $order->invoiced_at = now();
-            $order->save();
+        // Get customer email (prefer customer over user)
+        $customerEmail = null;
+        if ($order->customer) {
+            $customerEmail = $order->customer->email;
+        } elseif ($order->user) {
+            $customerEmail = $order->user->email;
         }
 
-        Mail::to($order->user->email)->send(new InvoiceMail($order));
+        if (!$customerEmail) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No customer email found'
+            ], 400);
+        }
 
-        return response()->json(['success' => true, 'message' => 'Invoice sent!']);
+        $pdf = Pdf::loadView('orders.invoice', compact('order'));
+
+        try {
+            Mail::send('emails.invoice', ['order' => $order], function($message) use ($customerEmail, $pdf, $order) {
+                $message->to($customerEmail)
+                        ->subject('Invoice for Order #' . ($order->invoice_number ?? $order->id))
+                        ->attachData($pdf->output(), "invoice-{$order->id}.pdf");
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Invoice emailed successfully'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Email invoice failed: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to send email: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
-    private function getStatusBadgeClass($status)
-    {
-        return match ($status) {
-            'pending' => 'bg-warning-subtle text-warning',
-            'processing' => 'bg-info-subtle text-info',
-            'shipped' => 'bg-primary-subtle text-primary',
-            'delivered' => 'bg-success-subtle text-success',
-            'cancelled' => 'bg-danger-subtle text-danger',
-            default => 'bg-secondary-subtle text-secondary',
-        };
-    }
-
-
-
+    /**
+     * Add note to order.
+     */
     public function addNote(Request $request, $id)
     {
+        $request->validate([
+            'note' => 'required|string',
+            'is_customer_visible' => 'boolean'
+        ]);
+
         $order = Order::findOrFail($id);
-        OrderNote::create([
+
+        $note = OrderNote::create([
             'order_id' => $order->id,
             'user_id' => auth()->id(),
             'note' => $request->note,
-            'is_customer_visible' => $request->boolean('is_customer_visible'),
+            'is_customer_visible' => $request->has('is_customer_visible')
         ]);
 
-        return back()->with('success', 'Note added');
-    }
-
-    public function refund(Request $request, $id)
-    {
-        $order = Order::findOrFail($id);
-        $amount = $request->amount;
-
-        if ($amount > $order->refundableAmount()) {
-            return back()->with('error', 'Refund amount too high');
+        if ($request->ajax()) {
+            return response()->json(['success' => true, 'message' => 'Note added successfully']);
         }
 
-        Refund::create([
+        return redirect()->back()->with('success', 'Note added successfully');
+    }
+
+    /**
+     * Process refund.
+     */
+    public function refund(Request $request, $id)
+    {
+        $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'reason' => 'required|string'
+        ]);
+
+        $order = Order::findOrFail($id);
+
+        if ($request->amount > $order->refundableAmount()) {
+            return redirect()->back()->with('error', 'Refund amount exceeds refundable amount');
+        }
+
+        $refund = Refund::create([
             'order_id' => $order->id,
             'user_id' => auth()->id(),
-            'amount' => $amount,
+            'amount' => $request->amount,
             'reason' => $request->reason,
             'status' => 'processed',
             'processed_at' => now(),
         ]);
 
-        return back()->with('success', 'Refund processed');
+        return redirect()->back()->with('success', 'Refund processed successfully');
     }
 
+    /**
+     * Generate packing slip.
+     */
     public function packingSlip($id)
     {
-        $order = Order::with('items', 'shippingAddress')->findOrFail($id);
+        $order = Order::with([
+            'customer',
+            'items',
+            'shippingAddress'
+        ])->findOrFail($id);
+
         $pdf = Pdf::loadView('orders.packing-slip', compact('order'));
-        return $pdf->stream("packing-slip-{$order->invoice_number}.pdf");
+        return $pdf->download("packing-slip-{$order->id}.pdf");
     }
 
+    /**
+     * Export orders to Excel/CSV.
+     */
+    public function export(Request $request)
+    {
+        $format = $request->get('format', 'xlsx');
 
+        // Apply filters to export
+        $query = Order::with(['customer', 'user', 'items']);
 
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('id', 'like', "%{$search}%")
+                  ->orWhereHas('customer', function($cq) use ($search) {
+                      $cq->where('first_name', 'like', "%{$search}%")
+                         ->orWhere('last_name', 'like', "%{$search}%");
+                  });
+            });
+        }
 
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('payment_status')) {
+            $query->where('payment_status', $request->payment_status);
+        }
+
+        if ($request->filled('from')) {
+            $query->whereDate('created_at', '>=', $request->from);
+        }
+
+        if ($request->filled('to')) {
+            $query->whereDate('created_at', '<=', $request->to);
+        }
+
+        $orders = $query->latest()->get();
+
+        // Add items_count to each order
+        foreach ($orders as $order) {
+            $order->items_count = $order->items->count();
+        }
+
+        $filename = 'orders_export_' . now()->format('Y-m-d_His');
+
+        if ($format === 'csv') {
+            return $this->exportCsv($orders, $filename);
+        }
+
+        return Excel::download(new OrdersExport($orders), $filename . '.xlsx');
+    }
+
+    /**
+     * Export to CSV.
+     */
+    private function exportCsv($orders, $filename)
+    {
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '.csv"',
+        ];
+
+        $callback = function() use ($orders) {
+            $handle = fopen('php://output', 'w');
+
+            // Add UTF-8 BOM for Excel compatibility
+            fputs($handle, "\xEF\xBB\xBF");
+
+            // Add headers
+            fputcsv($handle, [
+                'Order ID',
+                'Customer Name',
+                'Customer Email',
+                'Customer Phone',
+                'Total Amount',
+                'Status',
+                'Payment Status',
+                'Payment Method',
+                'Items Count',
+                'Order Date'
+            ]);
+
+            // Add data
+            foreach ($orders as $order) {
+                $customerName = 'N/A';
+                $customerEmail = 'N/A';
+                $customerPhone = 'N/A';
+
+                if ($order->customer) {
+                    $customerName = $order->customer->first_name . ' ' . $order->customer->last_name;
+                    $customerEmail = $order->customer->email ?? 'N/A';
+                    $customerPhone = $order->customer->phone_number ?? 'N/A';
+                } elseif ($order->user) {
+                    $customerName = $order->user->first_name . ' ' . $order->user->last_name;
+                    $customerEmail = $order->user->email ?? 'N/A';
+                }
+
+                fputcsv($handle, [
+                    $order->invoice_number ?? substr($order->id, 0, 8),
+                    $customerName,
+                    $customerEmail,
+                    $customerPhone,
+                    $order->total_amount,
+                    $order->status,
+                    $order->payment_status,
+                    $order->payment_method ?? 'N/A',
+                    $order->items_count,
+                    $order->created_at ? $order->created_at->format('Y-m-d H:i:s') : 'N/A',
+                ]);
+            }
+
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Save POS order.
+     */
+    public function savePosOrder(Request $request)
+    {
+        $request->validate([
+            'customer_id' => 'nullable|exists:customers,id',
+            'items' => 'required|array',
+            'items.*.product_id' => 'required',
+            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.unit_price' => 'required|numeric|min:0',
+            'total_amount' => 'required|numeric|min:0',
+            'payment_method' => 'required|string',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            $order = Order::create([
+                'id' => 'POS-' . now()->format('Ymd-His') . '-' . uniqid(),
+                'customer_id' => $request->customer_id,
+                'user_id' => auth()->id(),
+                'status' => 'pending',
+                'payment_status' => $request->payment_method === 'cash' ? 'paid' : 'unpaid',
+                'total_amount' => $request->total_amount,
+                'shipping_cost' => $request->shipping_cost ?? 0,
+                'tax_cost' => $request->tax_cost ?? 0,
+                'payment_method' => $request->payment_method,
+                'order_date' => now(),
+            ]);
+
+            // Create order items
+            foreach ($request->items as $item) {
+                OrderItem::create([
+                    'order_id' => $order->id,
+                    'product_id' => $item['product_id'],
+                    'title' => $item['title'],
+                    'unit_price' => $item['unit_price'],
+                    'quantity' => $item['quantity'],
+                    'total_price' => $item['unit_price'] * $item['quantity'],
+                    'image' => $item['image'] ?? null,
+                    'selected_variation' => $item['selected_variation'] ?? null,
+                ]);
+            }
+
+            // If paid by cash, create transaction
+            if ($request->payment_method === 'cash') {
+                Transaction::create([
+                    'order_id' => $order->id,
+                    'user_id' => auth()->id(),
+                    'amount' => $request->total_amount,
+                    'payment_method' => 'cash',
+                    'status' => 'success',
+                    'transaction_id' => 'TXN-' . uniqid(),
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Order saved successfully',
+                'order_id' => $order->id
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('POS Order save failed: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to save order: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
