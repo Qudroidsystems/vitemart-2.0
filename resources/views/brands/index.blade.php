@@ -1,3 +1,4 @@
+{{-- resources/views/brands/index.blade.php --}}
 @extends('layouts.master')
 
 @section('title', 'Brands Management')
@@ -30,7 +31,7 @@
                             <h5 class="card-title mb-0">Products per Brand</h5>
                         </div>
                         <div class="card-body">
-                            <canvas id="brandChart" height="100px"></canvas>
+                            <canvas id="brandChart" height="100"></canvas>
                         </div>
                     </div>
                 </div>
@@ -45,11 +46,11 @@
                             <div class="flex-shrink-0">
                                 <div class="d-flex flex-wrap gap-2">
                                     <button class="btn btn-danger d-none" id="remove-actions" onclick="deleteMultiple()">
-                                        <i class="ri-delete-bin-2-line"></i>
+                                        Delete Selected
                                     </button>
                                     @can('Create brand')
                                         <button type="button" class="btn btn-primary add-btn" data-bs-toggle="modal" data-bs-target="#showModal">
-                                            <i class="bi bi-plus-circle me-1"></i> Add Brand
+                                            Add Brand
                                         </button>
                                     @endcan
                                 </div>
@@ -57,78 +58,95 @@
                         </div>
 
                         <div class="card-body">
-                            <div class="table-responsive table-card">
-                                <table class="table table-borderless table-centered align-middle table-nowrap mb-0">
-                                    <thead class="text-muted table-light">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light">
                                         <tr>
-                                            <th>
+                                            <th width="50">
                                                 <div class="form-check">
                                                     <input class="form-check-input" type="checkbox" id="checkAll">
-                                                    <label class="form-check-label" for="checkAll"></label>
                                                 </div>
                                             </th>
-                                            <th class="sort" data-sort="id">#</th>
-                                            <th class="sort" data-sort="name">Brand Name</th>
-                                            <th class="sort" data-sort="logo">Logo</th>
-                                            <th class="sort" data-sort="categories">Categories</th>
-                                            <th class="sort" data-sort="products">Products</th>
-                                            <th class="sort" data-sort="featured">Featured</th>
-                                            <th>Action</th>
+                                            <th>#</th>
+                                            <th>Logo</th>
+                                            <th>Brand Name</th>
+                                            <th>Categories</th>
+                                            <th>Products</th>
+                                            <th>Featured</th>
+                                            <th width="100">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody class="list form-check-all">
                                         @forelse($data as $brand)
-                                        <tr>
+                                        <tr class="border-bottom border-light-subtle">
                                             <td>
                                                 <div class="form-check">
                                                     <input class="form-check-input" type="checkbox" name="chk_child" value="{{ $brand->id }}">
                                                 </div>
                                             </td>
-                                            <td class="id">{{ $brand->id }}</td>
-                                            <td class="name"><strong>{{ $brand->name }}</strong></td>
-                                            <td class="logo">
-                                                <img src="{{ $brand->logo ? asset('storage/'.$brand->logo) : 'https://via.placeholder.com/60' }}"
-                                                     class="avatar-sm rounded-circle" alt="{{ $brand->name }}" width="50" height="50">
+                                            <td class="fw-medium">{{ $loop->iteration }}</td>
+                                            <td>
+                                                @if($brand->logo && \Storage::disk('public')->exists($brand->logo))
+                                                    <img src="{{ asset('storage/' . $brand->logo) }}"
+                                                         class="avatar-lg rounded object-fit-cover"
+                                                         alt="{{ $brand->name }}"
+                                                         width="50" height="50">
+                                                @else
+                                                    <div class="avatar-lg bg-light rounded d-flex align-items-center justify-content-center">
+                                                        <i class="bi bi-building text-muted fs-3"></i>
+                                                    </div>
+                                                @endif
                                             </td>
-                                            <td class="categories">
+                                            <td><strong>{{ $brand->name }}</strong></td>
+                                            <td>
                                                 @if($brand->categories->count())
-                                                    @foreach($brand->categories->take(3) as $c)
+                                                    @foreach($brand->categories->take(2) as $c)
                                                         <span class="badge bg-info-subtle text-info me-1">{{ $c->name }}</span>
                                                     @endforeach
-                                                    @if($brand->categories->count() > 3)
-                                                        <small class="text-muted">+{{ $brand->categories->count()-3 }}</small>
+                                                    @if($brand->categories->count() > 2)
+                                                        <small class="text-muted">+{{ $brand->categories->count()-2 }}</small>
                                                     @endif
                                                 @else
                                                     <span class="text-muted">—</span>
                                                 @endif
                                             </td>
-                                            <td class="products">{{ $brand->products_count }}</td>
-                                            <td class="featured">
-                                                <span class="badge {{ $brand->is_featured ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary' }}">
+                                            <td>
+                                                <span class="badge bg-info fs-6">{{ $brand->products_count ?? 0 }}</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge {{ $brand->is_featured ? 'bg-success' : 'bg-secondary' }}">
                                                     {{ $brand->is_featured ? 'Yes' : 'No' }}
                                                 </span>
                                             </td>
                                             <td>
                                                 <ul class="list-inline hstack gap-2 mb-0">
                                                     @can('Update brand')
-                                                        <li><button class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn" data-id="{{ $brand->id }}"><i class="ph-pencil"></i> Edit</button></li>
+                                                        <li>
+                                                            <button class="btn btn-subtle-secondary btn-icon btn-sm edit-item-btn" data-id="{{ $brand->id }}">
+                                                                <i class="ph-pencil"></i>
+                                                            </button>
+                                                        </li>
                                                     @endcan
                                                     @can('Delete brand')
-                                                        <li><button class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn" data-id="{{ $brand->id }}"><i class="ph-trash"></i> Delete</button></li>
+                                                        <li>
+                                                            <button class="btn btn-subtle-danger btn-icon btn-sm remove-item-btn" data-id="{{ $brand->id }}">
+                                                                <i class="ph-trash"></i>
+                                                            </button>
+                                                        </li>
                                                     @endcan
                                                 </ul>
                                             </td>
                                         </tr>
                                         @empty
                                         <tr>
-                                            <td colspan="8" class="text-center py-5">No brands found</td>
+                                            <td colspan="8" class="text-center py-5 text-muted">No brands found</td>
                                         </tr>
                                         @endforelse
                                     </tbody>
                                 </table>
                             </div>
 
-                            <div class="d-flex justify-content-end mt-3">
+                            <div class="d-flex justify-content-end mt-4">
                                 {{ $data->links() }}
                             </div>
                         </div>
@@ -153,13 +171,15 @@
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Brand Name <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="name" id="brand_name" required>
+                        <label class="form-label">Brand Name *</label>
+                        <input type="text" class="form-control" name="name" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Logo</label>
-                        <input type="file" class="form-control" name="logo" id="brand_logo" accept="image/*">
-                        <img id="logo_preview" class="mt-2 rounded" style="max-height:120px; display:none;">
+                        <input type="file" class="form-control" name="logo" accept="image/*">
+                        <div class="mt-2">
+                            <img id="logo_preview" class="rounded shadow-sm" style="max-height:120px; display:none;">
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Categories</label>
@@ -168,6 +188,7 @@
                                 <option value="{{ $id }}">{{ $name }}</option>
                             @endforeach
                         </select>
+                        <small class="text-muted">Hold Ctrl/Cmd to select multiple categories</small>
                     </div>
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" name="is_featured" value="1" id="is_featured">
@@ -198,28 +219,23 @@
     </div>
 </div>
 
-<!-- Use CDN links that definitely work -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- SCRIPTS -->
+<script src="{{ asset('theme/layouts/assets/libs/chart.js/chart.min.js') }}"></script>
+<script src="{{ asset('theme/layouts/assets/libs/axios/axios.min.js') }}"></script>
+<script src="{{ asset('theme/layouts/assets/libs/sweetalert2/sweetalert2.min.js') }}"></script>
+<script src="{{ asset('theme/layouts/assets/libs/list.js/list.min.js') }}"></script>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Set CSRF token for all axios requests
-    const token = document.querySelector('meta[name="csrf-token"]')?.content;
-    if (token) {
-        axios.defaults.headers.common['X-CSRF-TOKEN'] = token;
-    }
-    axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+document.addEventListener('DOMContentLoaded', function () {
+    // Set CSRF token for axios
+    axios.defaults.headers.common['X-CSRF-TOKEN'] = '{{ csrf_token() }}';
 
-    // Chart data from PHP
+    // Chart
     const chartLabels = @json($chart_labels);
     const chartData = @json($chart_data);
 
-    // Initialize chart
-    const ctx = document.getElementById('brandChart');
-    if (ctx && chartLabels.length > 0) {
-        new Chart(ctx, {
+    if (document.getElementById('brandChart') && chartLabels.length > 0) {
+        new Chart(document.getElementById('brandChart'), {
             type: 'bar',
             data: {
                 labels: chartLabels,
@@ -237,192 +253,224 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Modal handling
-    const modalElement = document.getElementById('showModal');
-    const modal = new bootstrap.Modal(modalElement);
-    const form = document.getElementById('brandForm');
-    const logoPreview = document.getElementById('logo_preview');
-    let deleteId = null;
+    // List.js for pagination (optional, you can remove if using Laravel pagination)
+    try {
+        new List('brandList', {
+            valueNames: ['id', 'name', 'categories', 'products', 'featured'],
+            page: 10,
+            pagination: true
+        });
+    } catch(e) {
+        console.log('List.js not configured');
+    }
 
-    // Reset form when Add button clicked
-    document.querySelectorAll('.add-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            form.reset();
-            document.getElementById('brand_id').value = '';
-            document.getElementById('modalTitle').textContent = 'Add Brand';
-            document.getElementById('submitBtn').textContent = 'Save Brand';
-            if (logoPreview) {
-                logoPreview.style.display = 'none';
-                logoPreview.src = '';
-            }
-            // Reset categories select
-            const categoriesSelect = document.getElementById('categories_select');
-            if (categoriesSelect) {
-                Array.from(categoriesSelect.options).forEach(option => {
-                    option.selected = false;
-                });
-            }
+    // Checkbox logic
+    const checkAll = document.getElementById('checkAll');
+    if (checkAll) {
+        checkAll.addEventListener('change', function () {
+            document.querySelectorAll('input[name="chk_child"]').forEach(cb => {
+                cb.checked = this.checked;
+                const row = cb.closest('tr');
+                if (row) row.classList.toggle('table-active', this.checked);
+            });
+            toggleRemoveBtn();
+        });
+    }
+
+    document.querySelectorAll('input[name="chk_child"]').forEach(cb => {
+        cb.addEventListener('change', () => {
+            const row = cb.closest('tr');
+            if (row) row.classList.toggle('table-active', cb.checked);
+            toggleRemoveBtn();
         });
     });
 
-    // Edit buttons
-    function attachEditListeners() {
-        document.querySelectorAll('.edit-item-btn').forEach(btn => {
-            btn.removeEventListener('click', handleEdit);
-            btn.addEventListener('click', handleEdit);
-        });
+    function toggleRemoveBtn() {
+        const count = document.querySelectorAll('input[name="chk_child"]:checked').length;
+        const removeBtn = document.getElementById('remove-actions');
+        if (removeBtn) {
+            removeBtn.classList.toggle('d-none', count === 0);
+        }
     }
 
-    function handleEdit(e) {
-        const id = this.dataset.id;
+    const modal = new bootstrap.Modal('#showModal');
+    const form = document.getElementById('brandForm');
+    const logoPreview = document.getElementById('logo_preview');
 
-        axios.get(`/brands/${id}/edit`)
-            .then(res => {
-                const b = res.data;
-                document.getElementById('brand_id').value = b.id;
-                document.getElementById('brand_name').value = b.name;
-                document.getElementById('is_featured').checked = b.is_featured == 1;
-
-                if (b.logo && logoPreview) {
-                    logoPreview.src = b.logo;
-                    logoPreview.style.display = 'block';
-                } else if (logoPreview) {
-                    logoPreview.style.display = 'none';
-                }
-
-                // Set categories
-                if (b.categories && b.categories.length > 0) {
-                    const categoriesSelect = document.getElementById('categories_select');
-                    Array.from(categoriesSelect.options).forEach(option => {
-                        option.selected = b.categories.some(cat => cat.id == option.value);
-                    });
-                }
-
-                document.getElementById('modalTitle').textContent = 'Edit Brand';
-                document.getElementById('submitBtn').textContent = 'Update Brand';
-                modal.show();
-            })
-            .catch(err => {
-                console.error('Edit error:', err);
-                Swal.fire('Error!', 'Failed to load brand data', 'error');
+    // Add button
+    document.querySelector('.add-btn')?.addEventListener('click', () => {
+        form.reset();
+        document.getElementById('brand_id').value = '';
+        document.getElementById('modalTitle').textContent = 'Add Brand';
+        document.getElementById('submitBtn').textContent = 'Save Brand';
+        if (logoPreview) {
+            logoPreview.style.display = 'none';
+            logoPreview.src = '';
+        }
+        // Reset categories select
+        const categoriesSelect = document.getElementById('categories_select');
+        if (categoriesSelect) {
+            Array.from(categoriesSelect.options).forEach(option => {
+                option.selected = false;
             });
-    }
+        }
+    });
 
-    // Form submission
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
+    // Edit button
+    document.querySelectorAll('.edit-item-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const id = this.dataset.id;
+            axios.get(`/brands/${id}/edit`)
+                .then(res => {
+                    const b = res.data;
+                    document.getElementById('brand_id').value = b.id;
+                    form.name.value = b.name;
+                    document.getElementById('is_featured').checked = b.is_featured == 1;
 
-            const submitBtn = document.getElementById('submitBtn');
-            const originalText = submitBtn.textContent;
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Saving...';
+                    if (b.logo && logoPreview) {
+                        logoPreview.src = b.logo;
+                        logoPreview.style.display = 'block';
+                    } else if (logoPreview) {
+                        logoPreview.style.display = 'none';
+                    }
 
-            const id = document.getElementById('brand_id').value;
-            const url = id ? `/brands/${id}` : '/brands';
-            const formData = new FormData(form);
+                    // Set categories
+                    if (b.categories && b.categories.length > 0) {
+                        const categoriesSelect = document.getElementById('categories_select');
+                        Array.from(categoriesSelect.options).forEach(option => {
+                            option.selected = b.categories.some(cat => cat.id == option.value);
+                        });
+                    }
 
-            if (id) {
-                formData.append('_method', 'PUT');
+                    document.getElementById('modalTitle').textContent = 'Edit Brand';
+                    document.getElementById('submitBtn').textContent = 'Update Brand';
+                    modal.show();
+                })
+                .catch(err => {
+                    console.error('Edit error:', err);
+                    Swal.fire('Error!', 'Failed to load brand data', 'error');
+                });
+        });
+    });
+
+    // Submit form (Create/Update)
+    form.addEventListener('submit', e => {
+        e.preventDefault();
+
+        const submitBtn = document.getElementById('submitBtn');
+        const originalText = submitBtn.textContent;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving...';
+
+        const id = document.getElementById('brand_id').value;
+        const url = id ? `/brands/${id}` : '/brands';
+        const formData = new FormData(form);
+
+        if (id) {
+            formData.append('_method', 'PUT');
+        }
+
+        axios.post(url, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        })
+        .then(response => {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: response.data.message,
+                timer: 1500,
+                showConfirmButton: false
+            }).then(() => {
+                location.reload();
+            });
+        })
+        .catch(err => {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+
+            let msg = 'An error occurred';
+            if (err.response?.status === 422) {
+                const errors = err.response.data.errors;
+                msg = Object.values(errors).flat().join('<br>');
+            } else if (err.response?.data?.message) {
+                msg = err.response.data.message;
+            } else if (err.response?.status === 404) {
+                msg = 'Route not found. Please check your routes.';
+            } else if (err.response?.status === 500) {
+                msg = 'Server error. Check Laravel log for details.';
             }
 
-            // Log for debugging
-            console.log('Submitting to:', url);
-            console.log('Form data:', Object.fromEntries(formData));
-
-            axios.post(url, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
-            })
-            .then(response => {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success!',
-                    text: response.data.message,
-                    timer: 1500,
-                    showConfirmButton: false
-                }).then(() => {
-                    location.reload();
-                });
-            })
-            .catch(err => {
-                submitBtn.disabled = false;
-                submitBtn.textContent = originalText;
-
-                console.error('Full error:', err);
-                console.error('Response:', err.response);
-
-                let msg = 'An error occurred';
-                if (err.response?.status === 422) {
-                    const errors = err.response.data.errors;
-                    msg = Object.values(errors).flat().join('<br>');
-                } else if (err.response?.data?.message) {
-                    msg = err.response.data.message;
-                }
-
-                Swal.fire('Error!', msg, 'error');
-            });
+            Swal.fire('Error!', msg, 'error');
+            console.error('Submit error:', err);
         });
-    }
+    });
 
-    // Delete handlers
-    function attachDeleteListeners() {
-        document.querySelectorAll('.remove-item-btn').forEach(btn => {
-            btn.removeEventListener('click', handleDelete);
-            btn.addEventListener('click', handleDelete);
+    // Delete single
+    let deleteId = null;
+    document.querySelectorAll('.remove-item-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            deleteId = btn.dataset.id;
+            new bootstrap.Modal('#deleteRecordModal').show();
         });
-    }
+    });
 
-    function handleDelete() {
-        deleteId = this.dataset.id;
-        const deleteModal = new bootstrap.Modal('#deleteRecordModal');
-        deleteModal.show();
-    }
-
-    // Confirm delete
-    document.getElementById('delete-record')?.addEventListener('click', function() {
+    document.getElementById('delete-record')?.addEventListener('click', () => {
         if (!deleteId) return;
-
-        this.disabled = true;
-        this.textContent = 'Deleting...';
 
         axios.delete(`/brands/${deleteId}`)
             .then(() => {
                 Swal.fire('Deleted!', 'Brand has been deleted', 'success');
                 setTimeout(() => location.reload(), 1500);
             })
-            .catch(err => {
-                this.disabled = false;
-                this.textContent = 'Yes, Delete';
-                Swal.fire('Error!', 'Failed to delete brand', 'error');
-                console.error(err);
-            });
+            .catch(() => Swal.fire('Error', 'Cannot delete brand', 'error'));
     });
+
+    // Multiple Delete
+    window.deleteMultiple = function () {
+        const ids = Array.from(document.querySelectorAll('input[name="chk_child"]:checked'))
+            .map(cb => cb.value);
+
+        if (!ids.length) {
+            Swal.fire('Warning', 'Please select brands to delete', 'warning');
+            return;
+        }
+
+        Swal.fire({
+            title: `Delete ${ids.length} brand(s)?`,
+            text: 'This action cannot be undone',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, delete them',
+            cancelButtonText: 'Cancel'
+        }).then(result => {
+            if (result.isConfirmed) {
+                Promise.all(ids.map(id => axios.delete(`/brands/${id}`)))
+                    .then(() => {
+                        Swal.fire('Deleted!', 'Selected brands have been deleted', 'success');
+                        setTimeout(() => location.reload(), 1500);
+                    })
+                    .catch(() => Swal.fire('Error', 'Failed to delete some brands', 'error'));
+            }
+        });
+    };
 
     // Logo preview
-    document.getElementById('brand_logo')?.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file && logoPreview) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                logoPreview.src = e.target.result;
-                logoPreview.style.display = 'block';
-            };
-            reader.readAsDataURL(file);
-        }
-    });
-
-    // Checkbox Select All
-    document.getElementById('checkAll')?.addEventListener('change', function() {
-        document.querySelectorAll('input[name="chk_child"]').forEach(cb => {
-            cb.checked = this.checked;
+    const logoInput = form.querySelector('[name="logo"]');
+    if (logoInput && logoPreview) {
+        logoInput.addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    logoPreview.src = e.target.result;
+                    logoPreview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
         });
-    });
-
-    // Initialize listeners
-    attachEditListeners();
-    attachDeleteListeners();
+    }
 });
 </script>
 @endsection
