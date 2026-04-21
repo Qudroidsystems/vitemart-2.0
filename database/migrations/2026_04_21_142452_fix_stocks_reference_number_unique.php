@@ -3,10 +3,11 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
-class FixStocksReferenceNumberUniqueConstraint extends Migration
+return new class extends Migration
 {
-    public function up()
+   public function up()
     {
         Schema::table('stocks', function (Blueprint $table) {
             // Drop the unique constraint (the exact name might vary)
@@ -33,4 +34,4 @@ class FixStocksReferenceNumberUniqueConstraint extends Migration
             $table->unique('reference_number');
         });
     }
-}
+};
