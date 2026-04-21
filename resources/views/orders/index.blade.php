@@ -171,10 +171,10 @@
                             </h5>
                             <div class="d-flex gap-2">
                                 <button type="button" class="btn btn-success" onclick="exportOrders('xlsx')">
-                                    Export Excel
+                                    <i class="bi bi-file-excel"></i> Export Excel
                                 </button>
                                 <button type="button" class="btn btn-info" onclick="exportOrders('csv')">
-                                    Export CSV
+                                    <i class="bi bi-file-text"></i> Export CSV
                                 </button>
                             </div>
                         </div>
@@ -205,16 +205,35 @@
                                                 <div class="d-flex align-items-center">
                                                     <div class="avatar-xs me-3">
                                                         <div class="avatar-title bg-secondary-subtle rounded-circle text-uppercase">
-                                                            {{ Str::substr($order->user->first_name, 0, 1) }}
+                                                            @php
+                                                                $customerName = $order->customer ? ($order->customer->first_name ?? 'C') : ($order->user->first_name ?? 'U');
+                                                            @endphp
+                                                            {{ Str::substr($customerName, 0, 1) }}
                                                         </div>
                                                     </div>
                                                     <div>
-                                                        <h6 class="mb-0">{{ $order->user->first_name }} {{ $order->user->last_name }}</h6>
-                                                        <small class="text-muted">{{ $order->user->email }}</small>
+                                                        <h6 class="mb-0">
+                                                            @if($order->customer)
+                                                                {{ $order->customer->first_name ?? 'N/A' }} {{ $order->customer->last_name ?? '' }}
+                                                            @elseif($order->user)
+                                                                {{ $order->user->first_name ?? 'N/A' }} {{ $order->user->last_name ?? '' }}
+                                                            @else
+                                                                N/A
+                                                            @endif
+                                                        </h6>
+                                                        <small class="text-muted">
+                                                            @if($order->customer)
+                                                                {{ $order->customer->email ?? 'N/A' }}
+                                                            @elseif($order->user)
+                                                                {{ $order->user->email ?? 'N/A' }}
+                                                            @else
+                                                                N/A
+                                                            @endif
+                                                        </small>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td>{{ $order->created_at->format('d M, Y') }}</td>
+                                            <td>{{ $order->created_at ? $order->created_at->format('d M, Y') : 'N/A' }}</td>
                                             <td class="fw-bold text-success">${{ number_format($order->total_amount, 2) }}</td>
                                             <td>
                                                 <span class="badge {{ $order->payment_status == 'paid' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' }}">
@@ -228,23 +247,26 @@
                                                     @endforeach
                                                 </select>
                                             </td>
-                                            <td class="text-center">{{ $order->items_count }}</td>
+                                            <td class="text-center">{{ $order->items_count ?? $order->items->count() }}</td>
                                             <td>
                                                 <div class="dropdown">
                                                     <button class="btn btn-subtle-secondary btn-sm btn-icon" data-bs-toggle="dropdown">
                                                         <i class="bi bi-three-dots-vertical"></i>
                                                     </button>
                                                     <ul class="dropdown-menu dropdown-menu-end">
-                                                        <li><a class="dropdown-item" href="{{ route('orders.show', $order->id) }}">View Details</a></li>
-                                                        <li><a class="dropdown-item" href="{{ route('orders.invoice', $order->id) }}" target="_blank">PDF Invoice</a></li>
-                                                        <li><a class="dropdown-item" href="javascript:void(0)" onclick="emailInvoice('{{ $order->id }}')">Email Invoice</a></li>
+                                                        <li><a class="dropdown-item" href="{{ route('orders.show', $order->id) }}"><i class="bi bi-eye"></i> View Details</a></li>
+                                                        <li><a class="dropdown-item" href="{{ route('orders.invoice', $order->id) }}" target="_blank"><i class="bi bi-file-pdf"></i> PDF Invoice</a></li>
+                                                        <li><a class="dropdown-item" href="javascript:void(0)" onclick="emailInvoice('{{ $order->id }}')"><i class="bi bi-envelope"></i> Email Invoice</a></li>
                                                     </ul>
                                                 </div>
                                             </td>
                                         </tr>
                                         @empty
                                         <tr>
-                                            <td colspan="8" class="text-center py-5 text-muted">No orders found.</td>
+                                            <td colspan="8" class="text-center py-5 text-muted">
+                                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                                No orders found.
+                                            </td>
                                         </tr>
                                         @endforelse
                                     </tbody>
@@ -272,62 +294,150 @@
 
 <!-- Chart.js JS -->
 <script src="{{ asset('theme/layouts/assets/libs/chart.js/chart.umd.min.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     // Sales Chart
-    new Chart(document.getElementById('salesChart'), {
-        type: 'line',
-        data: {
-            labels: @json($analytics['sales_chart']['labels']),
-            datasets: [{
-                label: 'Daily Sales ($)',
-                data: @json($analytics['sales_chart']['data']),
-                borderColor: '#0d6efd',
-                backgroundColor: 'rgba(13,110,253,0.1)',
-                tension: 0.4,
-                fill: true
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { position: 'top' } },
-            scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + v } } }
-        }
-    });
+    var salesCtx = document.getElementById('salesChart');
+    if (salesCtx) {
+        new Chart(salesCtx, {
+            type: 'line',
+            data: {
+                labels: @json($analytics['sales_chart']['labels'] ?? []),
+                datasets: [{
+                    label: 'Daily Sales ($)',
+                    data: @json($analytics['sales_chart']['data'] ?? []),
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13,110,253,0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { position: 'top' }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: function(v) { return '$' + v; } }
+                    }
+                }
+            }
+        });
+    }
 
     // Status Chart
-    new Chart(document.getElementById('statusChart'), {
-        type: 'doughnut',
-        data: {
-            labels: ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'],
-            datasets: [{
-                data: [{{ $stats['pending'] }}, {{ $stats['processing'] }}, {{ $stats['shipped'] }}, {{ $stats['delivered'] }}, {{ $stats['cancelled'] }}],
-                backgroundColor: ['#ffc107', '#0dcaf0', '#0d6efd', '#198754', '#dc3545']
-            }]
-        },
-        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
-    });
+    var statusCtx = document.getElementById('statusChart');
+    if (statusCtx) {
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'],
+                datasets: [{
+                    data: [
+                        {{ $stats['pending'] ?? 0 }},
+                        {{ $stats['processing'] ?? 0 }},
+                        {{ $stats['shipped'] ?? 0 }},
+                        {{ $stats['delivered'] ?? 0 }},
+                        {{ $stats['cancelled'] ?? 0 }}
+                    ],
+                    backgroundColor: ['#ffc107', '#0dcaf0', '#0d6efd', '#198754', '#dc3545']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    }
 
     // Status Update
     document.querySelectorAll('.status-select').forEach(el => {
         el.addEventListener('change', function () {
-            axios.post(`/orders/${this.dataset.id}/status`, { status: this.value })
-                .then(() => Swal.fire('Success', 'Status updated', 'success'))
-                .catch(() => this.value = this.dataset.previousValue || 'pending');
+            var originalValue = this.value;
+            var orderId = this.dataset.id;
+
+            Swal.fire({
+                title: 'Update Status?',
+                text: 'Are you sure you want to change this order status?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#0d6efd',
+                confirmButtonText: 'Yes, update it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch('/orders/' + orderId + '/status', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({ status: this.value })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire('Updated!', 'Order status has been updated.', 'success');
+                            setTimeout(function() { location.reload(); }, 1500);
+                        } else {
+                            Swal.fire('Error!', data.message || 'Failed to update status.', 'error');
+                            this.value = originalValue;
+                        }
+                    })
+                    .catch((error) => {
+                        console.error('Error:', error);
+                        Swal.fire('Error!', 'Something went wrong.', 'error');
+                        this.value = originalValue;
+                    });
+                } else {
+                    this.value = originalValue;
+                }
+            }.bind(this));
         });
     });
 
-    window.exportOrders = (format) => {
-        const url = new URL('/orders/export', window.location.origin);
-        url.search = new URLSearchParams({ ...Object.fromEntries(new URLSearchParams(location.search)), format }).toString();
-        window.location = url;
+    window.exportOrders = function(format) {
+        var url = new URL('/orders/export', window.location.origin);
+        var params = new URLSearchParams(window.location.search);
+        params.append('format', format);
+        url.search = params.toString();
+        window.location.href = url.toString();
     };
 
-    window.emailInvoice = (id) => {
-        axios.post(`/orders/${id}/email-invoice`)
-            .then(() => Swal.fire('Sent!', 'Invoice emailed', 'success'))
-            .catch(() => Swal.fire('Error', 'Failed to send', 'error'));
+    window.emailInvoice = function(id) {
+        Swal.fire({
+            title: 'Sending Invoice...',
+            text: 'Please wait while we send the invoice',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+                fetch('/orders/' + id + '/email-invoice', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire('Sent!', 'Invoice has been emailed to the customer.', 'success');
+                    } else {
+                        Swal.fire('Error!', data.message || 'Failed to send email.', 'error');
+                    }
+                })
+                .catch(() => {
+                    Swal.fire('Error!', 'Something went wrong.', 'error');
+                });
+            }
+        });
     };
 });
 </script>
