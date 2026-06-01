@@ -813,4 +813,13 @@ class PosController extends Controller
 
     return response()->json(['products' => $products]);
 }
+
+
+public function grid()
+{
+    $pagetitle = "POS Grid";
+    $customers = Customer::orderBy('first_name')
+        ->get(['id', 'first_name', 'last_name', 'phone_number']);
+    return view('pos.grid', compact('customers', 'pagetitle'));
+}
 }

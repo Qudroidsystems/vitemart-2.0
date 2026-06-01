@@ -106,6 +106,7 @@ Route::middleware(['auth'])->group(function () {
     // Add this route for product units
     Route::get('/api/products/{product}/units', [PosController::class, 'getProductUnits'])->name('api.product.units');
     Route::get('/pos/initial-products', [PosController::class, 'getInitialProducts'])->name('pos.initial-products');
+    Route::get('/pos/grid', [PosController::class, 'grid'])->name('pos.grid');
 
 
 

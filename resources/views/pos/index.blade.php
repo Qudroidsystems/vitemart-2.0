@@ -54,6 +54,10 @@
                                     <label class="btn btn-outline-secondary btn-sm" for="viewModeGrid" title="Grid view">
                                         <i class="bi bi-grid-3x3-gap me-1"></i> Grid
                                     </label>
+                                    <a href="{{ route('pos.grid') }}" class="btn btn-outline-secondary btn-sm">
+                                        <i class="bi bi-grid-3x3-gap me-1"></i> Grid Mode
+                                    </a>
+
                                 </div>
                                 <div>
                                     <span id="connectionStatus" class="badge bg-success">
