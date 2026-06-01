@@ -104,9 +104,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/pos/save-order', [PosController::class, 'savePosOrder'])->name('pos.order.save');
     Route::get('/pos/receipt/{orderId}', [PosController::class, 'receipt'])->name('pos.receipt');
     // Add this route for product units
-    Route::get('/api/products/{product}/units', [PosController::class, 'getProductUnits'])
-    ->name('api.product.units')
-    ->middleware('auth');
+    Route::get('/api/products/{product}/units', [PosController::class, 'getProductUnits'])->name('api.product.units');
 
 
 
