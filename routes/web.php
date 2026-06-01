@@ -105,6 +105,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/pos/receipt/{orderId}', [PosController::class, 'receipt'])->name('pos.receipt');
     // Add this route for product units
     Route::get('/api/products/{product}/units', [PosController::class, 'getProductUnits'])->name('api.product.units');
+    Route::get('/pos/initial-products', [PosController::class, 'getInitialProducts'])->name('pos.initial-products');
 
 
 

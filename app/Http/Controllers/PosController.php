@@ -780,4 +780,37 @@ class PosController extends Controller
             'message' => 'Product not found'
         ], 404);
     }
+
+    public function getInitialProducts()
+{
+    $products = Product::where('is_active', true)
+        ->with(['units'])
+        ->limit(50)
+        ->orderBy('title')
+        ->get()
+        ->map(function($product) {
+            $primaryUnit = $product->units->first();
+            return [
+                'id' => $product->id,
+                'title' => $product->title,
+                'sku' => $product->sku,
+                'barcode' => $product->barcode,
+                'price' => $product->price,
+                'sale_price' => $product->sale_price ?? $product->price,
+                'stock' => $product->current_stock,
+                'thumbnail' => $product->thumbnail ? asset('storage/' . $product->thumbnail) : null,
+                'primary_unit' => $primaryUnit ? $primaryUnit->name : 'Unit',
+                'category' => $product->category,
+                'units' => $product->units->map(function($unit) {
+                    return [
+                        'id' => $unit->id,
+                        'name' => $unit->name,
+                        'short_name' => $unit->short_name,
+                    ];
+                })
+            ];
+        });
+
+    return response()->json(['products' => $products]);
+}
 }
