@@ -781,39 +781,54 @@ class PosController extends Controller
         ], 404);
     }
 
+
     public function getInitialProducts()
 {
-    $products = Product::where('is_active', true)
-        ->with(['units'])
-        ->limit(50)
-        ->orderBy('title')
-        ->get()
-        ->map(function($product) {
-            $primaryUnit = $product->units->first();
-            return [
-                'id' => $product->id,
-                'title' => $product->title,
-                'sku' => $product->sku,
-                'barcode' => $product->barcode,
-                'price' => $product->price,
-                'sale_price' => $product->sale_price ?? $product->price,
-                'stock' => $product->current_stock,
-                'thumbnail' => $product->thumbnail ? asset('storage/' . $product->thumbnail) : null,
-                'primary_unit' => $primaryUnit ? $primaryUnit->name : 'Unit',
-                'category' => $product->category,
-                'units' => $product->units->map(function($unit) {
-                    return [
-                        'id' => $unit->id,
-                        'name' => $unit->name,
-                        'short_name' => $unit->short_name,
-                    ];
-                })
-            ];
-        });
+    try {
+        $products = Product::where('is_active', true)
+            ->with(['units', 'category']) // eager-load category relation if it's a relation
+            ->limit(100)
+            ->orderBy('title')
+            ->get()
+            ->map(function($product) {
+                $primaryUnit = $product->units->first();
+                return [
+                    'id'              => $product->id,
+                    'title'           => $product->title,
+                    'sku'             => $product->sku ?? '',
+                    'barcode'         => $product->barcode ?? '',
+                    'price'           => $product->price,
+                    'sale_price'      => $product->sale_price ?? $product->price,
+                    'stock'           => $product->current_stock ?? $product->stock ?? 0,
+                    'thumbnail'       => $product->thumbnail ? asset('storage/' . $product->thumbnail) : null,
+                    'primary_unit'    => $primaryUnit ? $primaryUnit->name : 'Unit',
+                    'primary_unit_id' => $primaryUnit ? $primaryUnit->id : null,
+                    // Handle category whether it's a string column or a relation
+                    'category'        => is_object($product->category)
+                                            ? ($product->category->name ?? '')
+                                            : ($product->category ?? ''),
+                    'units'           => $product->units->map(function($unit) {
+                        return [
+                            'id'                => $unit->id,
+                            'name'              => $unit->name,
+                            'short_name'        => $unit->short_name,
+                            'description'       => $unit->description ?? '',
+                            'is_default'        => $unit->is_default ?? false,
+                            'quantity_per_unit' => $unit->pivot->quantity_per_unit ?? 1,
+                        ];
+                    }),
+                    'is_variation'         => false,
+                    'variation_id'         => null,
+                    'variation_attributes' => null,
+                ];
+            });
 
-    return response()->json(['products' => $products]);
+        return response()->json(['products' => $products]);
+    } catch (\Exception $e) {
+        \Log::error('getInitialProducts error: ' . $e->getMessage());
+        return response()->json(['products' => [], 'error' => $e->getMessage()], 200);
+    }
 }
-
 
 public function grid()
 {
