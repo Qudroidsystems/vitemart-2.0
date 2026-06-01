@@ -1,66 +1,6 @@
 @extends('layouts.master')
 @section('title', $pagetitle ?? 'POS Grid')
 @section('content')
-
-<style>
-    /* Force hide master layout navbar when on grid POS page */
-    .pos-grid-page {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        width: 100vw;
-        height: 100vh;
-        z-index: 9999;
-        background: #f0f2f5;
-        overflow: hidden;
-    }
-
-    /* Hide all master layout elements */
-    .pos-grid-page ~ .navbar,
-    .pos-grid-page ~ header,
-    .pos-grid-page ~ .topbar,
-    body > .navbar,
-    body > header,
-    body > .topbar,
-    .navbar:not(.pos-topbar),
-    header:not(.pos-topbar) {
-        display: none !important;
-        visibility: hidden !important;
-        opacity: 0 !important;
-        pointer-events: none !important;
-    }
-
-    /* Reset body styles for this page */
-    body {
-        margin: 0 !important;
-        padding: 0 !important;
-        overflow: hidden !important;
-    }
-
-    /* Reset master layout containers */
-    .pos-grid-page .main-content,
-    .pos-grid-page .page-content,
-    .pos-grid-page .container-fluid,
-    .pos-grid-page .row,
-    .pos-grid-page .col-12 {
-        padding: 0 !important;
-        margin: 0 !important;
-        max-width: 100% !important;
-    }
-
-    /* Full layout styles */
-    .pos-grid-layout {
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
-        width: 100vw;
-        overflow: hidden;
-        background: #f0f2f5;
-    }
-</style>
-
 <div class="main-content pos-grid-page">
     <div class="page-content p-0">
         <div class="pos-grid-layout">
@@ -428,54 +368,6 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    // Hide master layout navbar on page load
-    function hideMasterNavbar() {
-        const selectors = [
-            'body > .navbar',
-            'body > header',
-            'body > .topbar',
-            '.navbar:not(.pos-topbar)',
-            'header:not(.pos-topbar)',
-            '.main-content > .navbar',
-            '.page-content > .navbar'
-        ];
-
-        selectors.forEach(selector => {
-            const elements = document.querySelectorAll(selector);
-            elements.forEach(el => {
-                if (el && !el.classList.contains('pos-topbar')) {
-                    el.style.display = 'none';
-                    el.style.visibility = 'hidden';
-                }
-            });
-        });
-
-        // Also try to find any navbar by common classes
-        const possibleNavbars = document.querySelectorAll('.navbar, .header, .topbar, .navigation');
-        possibleNavbars.forEach(el => {
-            if (!el.classList.contains('pos-topbar') && !el.closest('.pos-grid-page')) {
-                el.style.display = 'none';
-            }
-        });
-
-        // Reset body styles
-        document.body.style.margin = '0';
-        document.body.style.padding = '0';
-        document.body.style.overflow = 'hidden';
-
-        // Remove any padding from html/body that master layout might have added
-        document.documentElement.style.margin = '0';
-        document.documentElement.style.padding = '0';
-        document.documentElement.style.overflow = 'hidden';
-    }
-
-    // Call immediately
-    hideMasterNavbar();
-
-    // Also call after a short delay to ensure all elements are loaded
-    setTimeout(hideMasterNavbar, 100);
-
-    // Your existing initialization code continues below...
 
     // ══════════════════════════════════════════════════════
     // PRODUCT REGISTRY
@@ -548,7 +440,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let originalPricePerUnit   = 0;
     let isPriceInputActive     = false;
     let productQuantityCache   = {};
-    let lastLimitToIds         = null;
+    let lastLimitToIds         = null; // track current search filter
 
     input.focus();
 
@@ -1588,19 +1480,6 @@ document.addEventListener('DOMContentLoaded', function () {
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 
-/* Full page reset */
-* {
-    box-sizing: border-box;
-}
-
-html, body {
-    margin: 0 !important;
-    padding: 0 !important;
-    overflow: hidden !important;
-    height: 100vh !important;
-    width: 100vw !important;
-}
-
 .pos-grid-page {
     font-family: 'DM Sans', sans-serif;
     --pg-bg:          #f0f2f5;
@@ -1616,34 +1495,13 @@ html, body {
     --pg-radius:      14px;
     --pg-radius-sm:   8px;
     background: var(--pg-bg);
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100vw;
     height: 100vh;
-    z-index: 9999;
     overflow: hidden;
-}
-
-/* Hide master navbar */
-.navbar:not(.pos-topbar),
-header:not(.pos-topbar),
-body > .navbar,
-body > header,
-.main-content > .navbar {
-    display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
 }
 
 .pos-grid-layout {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    overflow: hidden;
+    display: flex; flex-direction: column;
+    height: 100vh; overflow: hidden;
 }
 
 /* ─── TOPBAR ─── */
@@ -1736,7 +1594,7 @@ body > header,
     z-index:10; border-radius:12px;
 }
 
-/* ─── PRODUCT GRID ─── */
+/* ─── PRODUCT GRID — big tiles like reference screenshot ─── */
 .pos-product-grid {
     flex:1; overflow-y:auto;
     display:grid;
@@ -1746,7 +1604,7 @@ body > header,
 .pos-product-grid::-webkit-scrollbar { width:6px; }
 .pos-product-grid::-webkit-scrollbar-thumb { background:#d1d5db; border-radius:3px; }
 
-/* ─── PRODUCT CARD ─── */
+/* ─── PRODUCT CARD — large tile matching reference ─── */
 .pos-prod-card {
     background: var(--pg-surface);
     border: 1.5px solid var(--pg-border);
@@ -1788,7 +1646,7 @@ body > header,
 .prod-stock-pip.low  { background:#f59e0b; }
 .prod-stock-pip.out  { background:#ef4444; }
 
-/* Product image */
+/* Product image — big square like reference */
 .prod-img-wrap {
     width:110px; height:110px; border-radius:14px;
     background:#f3f4f6; display:flex; align-items:center; justify-content:center;
@@ -1814,7 +1672,7 @@ body > header,
 .prod-meta  { font-size:10.5px; color:#9ca3af; margin-top:3px; }
 .prod-saved-unit { font-size:10px; color:#6b7280; margin-top:2px; }
 
-/* In-cart bar */
+/* In-cart bar at bottom */
 .prod-in-cart-bar {
     width:calc(100% + 32px); margin:auto -16px -0px;
     background:var(--pg-green); color:#fff;
@@ -1940,7 +1798,7 @@ body > header,
 .unit-quick-btn { border-color:#dcfce7; color:var(--pg-green); }
 .unit-quick-btn:hover { background:var(--pg-green); border-color:var(--pg-green); color:#fff; }
 
-/* Responsive */
+/* ─── RESPONSIVE ─── */
 @media (max-width:1400px) {
     .pos-product-grid { grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); }
 }
