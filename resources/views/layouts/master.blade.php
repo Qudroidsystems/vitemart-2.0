@@ -3,7 +3,6 @@
 
 <head>
     <meta charset="utf-8">
-    <!-- Dynamic Title -->
     @php
         $store = \App\Models\StoreSetting::getSettings();
         $pageTitle = $pagetitle ?? 'Dashboard';
@@ -43,6 +42,9 @@
     <!-- NProgress -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.css"/>
     <script src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js"></script>
+
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
     <style>
         /* =====================================================
@@ -111,9 +113,7 @@
             overflow-y: auto;
             scrollbar-width: thin;
         }
-        #scrollbar::-webkit-scrollbar {
-            width: 4px;
-        }
+        #scrollbar::-webkit-scrollbar { width: 4px; }
         #scrollbar::-webkit-scrollbar-track {
             background: rgba(255, 255, 255, 0.05);
             border-radius: 4px;
@@ -132,8 +132,6 @@
            SIDEBAR: SMOOTH ACCORDION
            ===================================================== */
         #navbar-nav .menu-dropdown { overflow: hidden; }
-
-        /* Chevron rotation */
         #navbar-nav .nav-link.menu-link .ri-arrow-down-s-line {
             transition: transform 0.25s ease;
             display: inline-block;
@@ -151,17 +149,12 @@
             border-left: 3px solid #4f8ef7;
             padding-left: calc(1.3rem - 3px);
         }
-        #navbar-nav .nav-link.menu-link.nav-active-parent i {
-            color: #4f8ef7 !important;
-        }
+        #navbar-nav .nav-link.menu-link.nav-active-parent i { color: #4f8ef7 !important; }
 
         /* =====================================================
            SIDEBAR: ACTIVE CHILD LINK
            ===================================================== */
-        #navbar-nav .nav-sm .nav-link.nav-active-child {
-            color: #7eb8fb !important;
-            font-weight: 500;
-        }
+        #navbar-nav .nav-sm .nav-link.nav-active-child { color: #7eb8fb !important; font-weight: 500; }
         #navbar-nav .nav-sm .nav-link.nav-active-child::before {
             content: '';
             display: inline-block;
@@ -197,9 +190,7 @@
             pointer-events: none;
             z-index: 0;
         }
-        @keyframes ripple-anim {
-            to { transform: scale(5); opacity: 0; }
-        }
+        @keyframes ripple-anim { to { transform: scale(5); opacity: 0; } }
 
         /* =====================================================
            BACK TO TOP BUTTON
@@ -210,11 +201,7 @@
             transform: translateY(12px);
             transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease;
         }
-        #back-to-top.show {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(0);
-        }
+        #back-to-top.show { opacity: 1; visibility: visible; transform: translateY(0); }
         #back-to-top:hover { transform: translateY(-3px) !important; }
 
         /* =====================================================
@@ -279,7 +266,6 @@
             from { opacity: 0; transform: translateY(-15px) scale(0.96); }
             to { opacity: 1; transform: translateY(0) scale(1); }
         }
-
         .topbar-user .dropdown-menu {
             animation: userDropdownSlideIn 0.4s cubic-bezier(0.34, 1.2, 0.64, 1);
         }
@@ -308,25 +294,24 @@
             to { background: rgba(0, 0, 0, 0.2); backdrop-filter: blur(0px); }
         }
         @keyframes spotlightModalBounceIn {
-            0% { opacity: 0; transform: translateY(-40px) scale(0.9); }
-            40% { opacity: 0.8; transform: translateY(8px) scale(1.02); }
-            70% { opacity: 0.95; transform: translateY(-3px) scale(0.99); }
+            0%   { opacity: 0; transform: translateY(-40px) scale(0.9); }
+            40%  { opacity: 0.8; transform: translateY(8px) scale(1.02); }
+            70%  { opacity: 0.95; transform: translateY(-3px) scale(0.99); }
             100% { opacity: 1; transform: translateY(0) scale(1); }
         }
         @keyframes resultBounceIn {
-            0% { opacity: 0; transform: translateX(-20px) scale(0.95); }
-            60% { opacity: 0.8; transform: translateX(4px) scale(1.02); }
+            0%   { opacity: 0; transform: translateX(-20px) scale(0.95); }
+            60%  { opacity: 0.8; transform: translateX(4px) scale(1.02); }
             100% { opacity: 1; transform: translateX(0) scale(1); }
         }
         @keyframes loadingSpin {
-            0% { transform: rotate(0deg); }
+            0%   { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
         @keyframes typingDot {
             0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
             30% { transform: translateY(-4px); opacity: 1; }
         }
-
         .spotlight-result-item {
             animation: resultBounceIn 0.35s cubic-bezier(0.34, 1.3, 0.64, 1) forwards;
             opacity: 0;
@@ -339,7 +324,6 @@
             border-left: 3px solid #4f8ef7;
             background: linear-gradient(90deg, rgba(79, 142, 247, 0.08) 0%, transparent 100%);
         }
-
         .typing-dot {
             display: inline-block;
             animation: typingDot 1.4s infinite ease-in-out;
@@ -347,9 +331,6 @@
         .typing-dot:nth-child(2) { animation-delay: 0.2s; }
         .typing-dot:nth-child(3) { animation-delay: 0.4s; }
     </style>
-
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
     <!-- Route-specific CSS includes -->
     @if (Route::is('dashboard'))
@@ -424,7 +405,6 @@
                         @endif
                     </span>
                 </a>
-
                 <a href="{{ route('dashboard') }}" class="logo logo-light">
                     <span class="logo-sm">
                         @if($store && $store->logo)
@@ -441,7 +421,6 @@
                         @endif
                     </span>
                 </a>
-
                 <button type="button" class="btn btn-sm p-0 fs-3xl header-item float-end btn-vertical-sm-hover" id="vertical-hover">
                     <i class="ri-record-circle-line"></i>
                 </button>
@@ -451,9 +430,7 @@
                 <div class="container-fluid">
                     <div id="two-column-menu"></div>
                     <ul class="navbar-nav" id="navbar-nav">
-                        @php
-                            $user = Auth::user();
-                        @endphp
+                        @php $user = Auth::user(); @endphp
 
                         @if($user)
                             <li class="menu-title"><span data-key="t-menu">Menu</span></li>
@@ -504,9 +481,7 @@
                                     <div class="collapse menu-dropdown {{ request()->routeIs('users.*') ? 'show' : '' }}" id="sidebarusers">
                                         <ul class="nav nav-sm flex-column">
                                             <li class="nav-item">
-                                                <a href="{{ route('users.index') }}" class="nav-link {{ request()->routeIs('users.index') ? 'nav-active-child' : '' }}" data-key="t-signin">
-                                                    Users
-                                                </a>
+                                                <a href="{{ route('users.index') }}" class="nav-link {{ request()->routeIs('users.index') ? 'nav-active-child' : '' }}">Users</a>
                                             </li>
                                         </ul>
                                     </div>
@@ -526,16 +501,12 @@
                                         <ul class="nav nav-sm flex-column">
                                             @can('View role')
                                                 <li class="nav-item">
-                                                    <a href="{{ route('roles.index') }}" class="nav-link {{ request()->routeIs('roles.*') && !request()->routeIs('permissions.*') ? 'nav-active-child' : '' }}" data-key="t-starter">
-                                                        Roles
-                                                    </a>
+                                                    <a href="{{ route('roles.index') }}" class="nav-link {{ request()->routeIs('roles.*') && !request()->routeIs('permissions.*') ? 'nav-active-child' : '' }}">Roles</a>
                                                 </li>
                                             @endcan
                                             @can('View permission')
                                                 <li class="nav-item">
-                                                    <a href="{{ route('permissions.index') }}" class="nav-link {{ request()->routeIs('permissions.*') ? 'nav-active-child' : '' }}" data-key="t-profile">
-                                                        Permissions
-                                                    </a>
+                                                    <a href="{{ route('permissions.index') }}" class="nav-link {{ request()->routeIs('permissions.*') ? 'nav-active-child' : '' }}">Permissions</a>
                                                 </li>
                                             @endcan
                                         </ul>
@@ -555,9 +526,7 @@
                                 <div class="collapse menu-dropdown {{ request()->routeIs('user.overview') ? 'show' : '' }}" id="sidebaraccount">
                                     <ul class="nav nav-sm flex-column">
                                         <li class="nav-item">
-                                            <a href="{{ route('user.overview', $user) }}" class="nav-link {{ request()->routeIs('user.overview') ? 'nav-active-child' : '' }}" data-key="t-starter">
-                                                Profile Overview
-                                            </a>
+                                            <a href="{{ route('user.overview', $user) }}" class="nav-link {{ request()->routeIs('user.overview') ? 'nav-active-child' : '' }}">Profile Overview</a>
                                         </li>
                                     </ul>
                                 </div>
@@ -575,15 +544,13 @@
                                        href="#sidebarbanner" data-bs-toggle="collapse" role="button"
                                        aria-expanded="{{ request()->routeIs('banners.*') ? 'true' : 'false' }}"
                                        aria-controls="sidebarbanner">
-                                        <i class="ph-image"></i> <span data-key="t-authentication">Banner Management</span>
+                                        <i class="ph-image"></i> <span>Banner Management</span>
                                         <i class="ri-arrow-down-s-line ms-auto"></i>
                                     </a>
                                     <div class="collapse menu-dropdown {{ request()->routeIs('banners.*') ? 'show' : '' }}" id="sidebarbanner">
                                         <ul class="nav nav-sm flex-column">
                                             <li class="nav-item">
-                                                <a href="{{ route('banners.index') }}" class="nav-link {{ request()->routeIs('banners.index') ? 'nav-active-child' : '' }}" data-key="t-signin">
-                                                    Banners
-                                                </a>
+                                                <a href="{{ route('banners.index') }}" class="nav-link {{ request()->routeIs('banners.index') ? 'nav-active-child' : '' }}">Banners</a>
                                             </li>
                                         </ul>
                                     </div>
@@ -596,15 +563,13 @@
                                        href="#sidebarcategories" data-bs-toggle="collapse" role="button"
                                        aria-expanded="{{ request()->routeIs('categories.*') ? 'true' : 'false' }}"
                                        aria-controls="sidebarcategories">
-                                        <i class="ph-list"></i> <span data-key="t-authentication">Category Management</span>
+                                        <i class="ph-list"></i> <span>Category Management</span>
                                         <i class="ri-arrow-down-s-line ms-auto"></i>
                                     </a>
                                     <div class="collapse menu-dropdown {{ request()->routeIs('categories.*') ? 'show' : '' }}" id="sidebarcategories">
                                         <ul class="nav nav-sm flex-column">
                                             <li class="nav-item">
-                                                <a href="{{ route('categories.index') }}" class="nav-link {{ request()->routeIs('categories.index') ? 'nav-active-child' : '' }}" data-key="t-signin">
-                                                    Categories
-                                                </a>
+                                                <a href="{{ route('categories.index') }}" class="nav-link {{ request()->routeIs('categories.index') ? 'nav-active-child' : '' }}">Categories</a>
                                             </li>
                                         </ul>
                                     </div>
@@ -617,15 +582,13 @@
                                        href="#sidebarbrand" data-bs-toggle="collapse" role="button"
                                        aria-expanded="{{ request()->routeIs('brands.*') ? 'true' : 'false' }}"
                                        aria-controls="sidebarbrand">
-                                        <i class="ph-tag"></i> <span data-key="t-authentication">Brand Management</span>
+                                        <i class="ph-tag"></i> <span>Brand Management</span>
                                         <i class="ri-arrow-down-s-line ms-auto"></i>
                                     </a>
                                     <div class="collapse menu-dropdown {{ request()->routeIs('brands.*') ? 'show' : '' }}" id="sidebarbrand">
                                         <ul class="nav nav-sm flex-column">
                                             <li class="nav-item">
-                                                <a href="{{ route('brands.index') }}" class="nav-link {{ request()->routeIs('brands.index') ? 'nav-active-child' : '' }}" data-key="t-signin">
-                                                    Brands
-                                                </a>
+                                                <a href="{{ route('brands.index') }}" class="nav-link {{ request()->routeIs('brands.index') ? 'nav-active-child' : '' }}">Brands</a>
                                             </li>
                                         </ul>
                                     </div>
@@ -638,15 +601,13 @@
                                        href="#sidebarproduct" data-bs-toggle="collapse" role="button"
                                        aria-expanded="{{ request()->routeIs('products.*') ? 'true' : 'false' }}"
                                        aria-controls="sidebarproduct">
-                                        <i class="ph-package"></i> <span data-key="t-authentication">Product Management</span>
+                                        <i class="ph-package"></i> <span>Product Management</span>
                                         <i class="ri-arrow-down-s-line ms-auto"></i>
                                     </a>
                                     <div class="collapse menu-dropdown {{ request()->routeIs('products.*') ? 'show' : '' }}" id="sidebarproduct">
                                         <ul class="nav nav-sm flex-column">
                                             <li class="nav-item">
-                                                <a href="{{ route('products.index') }}" class="nav-link {{ request()->routeIs('products.index') ? 'nav-active-child' : '' }}" data-key="t-signin">
-                                                    Products
-                                                </a>
+                                                <a href="{{ route('products.index') }}" class="nav-link {{ request()->routeIs('products.index') ? 'nav-active-child' : '' }}">Products</a>
                                             </li>
                                         </ul>
                                     </div>
@@ -659,71 +620,56 @@
                                        href="#sidebarpos" data-bs-toggle="collapse" role="button"
                                        aria-expanded="{{ request()->routeIs('pos.*') ? 'true' : 'false' }}"
                                        aria-controls="sidebarpos">
-                                        <i class="ph-shopping-cart"></i> <span data-key="t-authentication">POS Management</span>
+                                        <i class="ph-shopping-cart"></i> <span>POS Management</span>
                                         <i class="ri-arrow-down-s-line ms-auto"></i>
                                     </a>
                                     <div class="collapse menu-dropdown {{ request()->routeIs('pos.*') ? 'show' : '' }}" id="sidebarpos">
                                         <ul class="nav nav-sm flex-column">
                                             <li class="nav-item">
-                                                <a href="{{ route('pos.index') }}" class="nav-link {{ request()->routeIs('pos.index') ? 'nav-active-child' : '' }}" data-key="t-signin">
-                                                    Point of Sale
-                                                </a>
+                                                <a href="{{ route('pos.index') }}" class="nav-link {{ request()->routeIs('pos.index') ? 'nav-active-child' : '' }}">Point of Sale</a>
                                             </li>
                                             <li class="nav-item">
-                                                <a href="{{ route('pos.grid') }}" class="nav-link {{ request()->routeIs('pos.grid') ? 'nav-active-child' : '' }}" data-key="t-grid-pos">
-                                                    Grid POS
-                                                </a>
+                                                <a href="{{ route('pos.grid') }}" class="nav-link {{ request()->routeIs('pos.grid') ? 'nav-active-child' : '' }}">Grid POS</a>
                                             </li>
                                         </ul>
                                     </div>
                                 </li>
                             @endcan
 
-                            {{-- Inventory Operations --}}
                             @can('View inventory')
                                 <li class="nav-item">
                                     <a class="nav-link menu-link {{ request()->routeIs('inventory.*') || request()->routeIs('stock-locations.*') ? 'nav-active-parent' : 'collapsed' }}"
                                        href="#sidebarmanageinventory" data-bs-toggle="collapse" role="button"
                                        aria-expanded="{{ request()->routeIs('inventory.*') || request()->routeIs('stock-locations.*') ? 'true' : 'false' }}"
                                        aria-controls="sidebarmanageinventory">
-                                        <i class="ph-warehouse"></i> <span data-key="t-authentication">Inventory Operations</span>
+                                        <i class="ph-warehouse"></i> <span>Inventory Operations</span>
                                         <i class="ri-arrow-down-s-line ms-auto"></i>
                                     </a>
                                     <div class="collapse menu-dropdown {{ request()->routeIs('inventory.*') || request()->routeIs('stock-locations.*') ? 'show' : '' }}" id="sidebarmanageinventory">
                                         <ul class="nav nav-sm flex-column">
                                             @can('View inventory')
                                                 <li class="nav-item">
-                                                    <a href="{{ route('inventory.index') }}" class="nav-link {{ request()->routeIs('inventory.index') ? 'nav-active-child' : '' }}" data-key="t-signin">
-                                                        Transactions
-                                                    </a>
+                                                    <a href="{{ route('inventory.index') }}" class="nav-link {{ request()->routeIs('inventory.index') ? 'nav-active-child' : '' }}">Transactions</a>
                                                 </li>
                                             @endcan
                                             @can('View stock levels')
                                                 <li class="nav-item">
-                                                    <a href="{{ route('inventory.stock-levels') }}" class="nav-link {{ request()->routeIs('inventory.stock-levels') ? 'nav-active-child' : '' }}" data-key="t-signin">
-                                                        Stock Levels
-                                                    </a>
+                                                    <a href="{{ route('inventory.stock-levels') }}" class="nav-link {{ request()->routeIs('inventory.stock-levels') ? 'nav-active-child' : '' }}">Stock Levels</a>
                                                 </li>
                                             @endcan
                                             @can('Manage stock locations')
                                                 <li class="nav-item">
-                                                    <a href="{{ route('stock-locations.index') }}" class="nav-link {{ request()->routeIs('stock-locations.*') ? 'nav-active-child' : '' }}" data-key="t-signin">
-                                                        Stock Locations
-                                                    </a>
+                                                    <a href="{{ route('stock-locations.index') }}" class="nav-link {{ request()->routeIs('stock-locations.*') ? 'nav-active-child' : '' }}">Stock Locations</a>
                                                 </li>
                                             @endcan
                                             @can('View low stock alerts')
                                                 <li class="nav-item">
-                                                    <a href="{{ route('inventory.low-stock-alerts') }}" class="nav-link {{ request()->routeIs('inventory.low-stock-alerts') ? 'nav-active-child' : '' }}" data-key="t-signin">
-                                                        Low Stock Alerts
-                                                    </a>
+                                                    <a href="{{ route('inventory.low-stock-alerts') }}" class="nav-link {{ request()->routeIs('inventory.low-stock-alerts') ? 'nav-active-child' : '' }}">Low Stock Alerts</a>
                                                 </li>
                                             @endcan
                                             @can('View inventory reports')
                                                 <li class="nav-item">
-                                                    <a href="{{ route('inventory.stock-value-report') }}" class="nav-link {{ request()->routeIs('inventory.stock-value-report') ? 'nav-active-child' : '' }}" data-key="t-signin">
-                                                        Stock Value Report
-                                                    </a>
+                                                    <a href="{{ route('inventory.stock-value-report') }}" class="nav-link {{ request()->routeIs('inventory.stock-value-report') ? 'nav-active-child' : '' }}">Stock Value Report</a>
                                                 </li>
                                             @endcan
                                         </ul>
@@ -731,22 +677,19 @@
                                 </li>
                             @endcan
 
-                            {{-- Orders & Sales --}}
                             @can('View order')
                                 <li class="nav-item">
                                     <a class="nav-link menu-link {{ request()->routeIs('orders.*') ? 'nav-active-parent' : 'collapsed' }}"
                                        href="#sidebarorders" data-bs-toggle="collapse" role="button"
                                        aria-expanded="{{ request()->routeIs('orders.*') ? 'true' : 'false' }}"
                                        aria-controls="sidebarorders">
-                                        <i class="ph-shopping-cart-simple"></i> <span data-key="t-authentication">Orders Management</span>
+                                        <i class="ph-shopping-cart-simple"></i> <span>Orders Management</span>
                                         <i class="ri-arrow-down-s-line ms-auto"></i>
                                     </a>
                                     <div class="collapse menu-dropdown {{ request()->routeIs('orders.*') ? 'show' : '' }}" id="sidebarorders">
                                         <ul class="nav nav-sm flex-column">
                                             <li class="nav-item">
-                                                <a href="{{ route('orders.index') }}" class="nav-link {{ request()->routeIs('orders.index') ? 'nav-active-child' : '' }}" data-key="t-signin">
-                                                    All Orders
-                                                </a>
+                                                <a href="{{ route('orders.index') }}" class="nav-link {{ request()->routeIs('orders.index') ? 'nav-active-child' : '' }}">All Orders</a>
                                             </li>
                                         </ul>
                                     </div>
@@ -759,42 +702,35 @@
                                        href="#sidebarcustomer" data-bs-toggle="collapse" role="button"
                                        aria-expanded="{{ request()->routeIs('customers.*') ? 'true' : 'false' }}"
                                        aria-controls="sidebarcustomer">
-                                        <i class="ph-users"></i> <span data-key="t-authentication">Customers Management</span>
+                                        <i class="ph-users"></i> <span>Customers Management</span>
                                         <i class="ri-arrow-down-s-line ms-auto"></i>
                                     </a>
                                     <div class="collapse menu-dropdown {{ request()->routeIs('customers.*') ? 'show' : '' }}" id="sidebarcustomer">
                                         <ul class="nav nav-sm flex-column">
                                             <li class="nav-item">
-                                                <a href="{{ route('customers.index') }}" class="nav-link {{ request()->routeIs('customers.index') ? 'nav-active-child' : '' }}" data-key="t-signin">
-                                                    All Customers
-                                                </a>
+                                                <a href="{{ route('customers.index') }}" class="nav-link {{ request()->routeIs('customers.index') ? 'nav-active-child' : '' }}">All Customers</a>
                                             </li>
                                         </ul>
                                     </div>
                                 </li>
                             @endcan
 
-                            {{-- Sales Analytics --}}
                             @can('View sale')
                                 <li class="nav-item">
                                     <a class="nav-link menu-link {{ request()->routeIs('sales.*') ? 'nav-active-parent' : 'collapsed' }}"
                                        href="#sidebarsales" data-bs-toggle="collapse" role="button"
                                        aria-expanded="{{ request()->routeIs('sales.*') ? 'true' : 'false' }}"
                                        aria-controls="sidebarsales">
-                                        <i class="ph-chart-line"></i> <span data-key="t-authentication">Sales Analytics</span>
+                                        <i class="ph-chart-line"></i> <span>Sales Analytics</span>
                                         <i class="ri-arrow-down-s-line ms-auto"></i>
                                     </a>
                                     <div class="collapse menu-dropdown {{ request()->routeIs('sales.*') ? 'show' : '' }}" id="sidebarsales">
                                         <ul class="nav nav-sm flex-column">
                                             <li class="nav-item">
-                                                <a href="{{ route('sales.index') }}" class="nav-link {{ request()->routeIs('sales.index') ? 'nav-active-child' : '' }}" data-key="t-signin">
-                                                    Sales Reports
-                                                </a>
+                                                <a href="{{ route('sales.index') }}" class="nav-link {{ request()->routeIs('sales.index') ? 'nav-active-child' : '' }}">Sales Reports</a>
                                             </li>
                                             <li class="nav-item">
-                                                <a href="{{ route('sales.commissions') }}" class="nav-link {{ request()->routeIs('sales.commissions') ? 'nav-active-child' : '' }}" data-key="t-signin">
-                                                    Commissions
-                                                </a>
+                                                <a href="{{ route('sales.commissions') }}" class="nav-link {{ request()->routeIs('sales.commissions') ? 'nav-active-child' : '' }}">Commissions</a>
                                             </li>
                                         </ul>
                                     </div>
@@ -807,25 +743,19 @@
                                        href="#sidebarsalesperson" data-bs-toggle="collapse" role="button"
                                        aria-expanded="{{ request()->routeIs('salesperson.*') ? 'true' : 'false' }}"
                                        aria-controls="sidebarsalesperson">
-                                        <i class="ph-user-tie"></i> <span data-key="t-authentication">My Sales</span>
+                                        <i class="ph-user-tie"></i> <span>My Sales</span>
                                         <i class="ri-arrow-down-s-line ms-auto"></i>
                                     </a>
                                     <div class="collapse menu-dropdown {{ request()->routeIs('salesperson.*') ? 'show' : '' }}" id="sidebarsalesperson">
                                         <ul class="nav nav-sm flex-column">
                                             <li class="nav-item">
-                                                <a href="{{ route('salesperson.dashboard') }}" class="nav-link {{ request()->routeIs('salesperson.dashboard') ? 'nav-active-child' : '' }}" data-key="t-signin">
-                                                    My Dashboard
-                                                </a>
+                                                <a href="{{ route('salesperson.dashboard') }}" class="nav-link {{ request()->routeIs('salesperson.dashboard') ? 'nav-active-child' : '' }}">My Dashboard</a>
                                             </li>
                                             <li class="nav-item">
-                                                <a href="{{ route('salesperson.commissions') }}" class="nav-link {{ request()->routeIs('salesperson.commissions') ? 'nav-active-child' : '' }}" data-key="t-signin">
-                                                    My Commissions
-                                                </a>
+                                                <a href="{{ route('salesperson.commissions') }}" class="nav-link {{ request()->routeIs('salesperson.commissions') ? 'nav-active-child' : '' }}">My Commissions</a>
                                             </li>
                                             <li class="nav-item">
-                                                <a href="{{ route('salesperson.performance') }}" class="nav-link {{ request()->routeIs('salesperson.performance') ? 'nav-active-child' : '' }}" data-key="t-signin">
-                                                    My Performance
-                                                </a>
+                                                <a href="{{ route('salesperson.performance') }}" class="nav-link {{ request()->routeIs('salesperson.performance') ? 'nav-active-child' : '' }}">My Performance</a>
                                             </li>
                                         </ul>
                                     </div>
@@ -841,15 +771,13 @@
                                        href="#sidebarsetting" data-bs-toggle="collapse" role="button"
                                        aria-expanded="{{ request()->routeIs('settings.store.*') ? 'true' : 'false' }}"
                                        aria-controls="sidebarsetting">
-                                        <i class="ph-gear"></i> <span data-key="t-authentication">Store Settings</span>
+                                        <i class="ph-gear"></i> <span>Store Settings</span>
                                         <i class="ri-arrow-down-s-line ms-auto"></i>
                                     </a>
                                     <div class="collapse menu-dropdown {{ request()->routeIs('settings.store.*') ? 'show' : '' }}" id="sidebarsetting">
                                         <ul class="nav nav-sm flex-column">
                                             <li class="nav-item">
-                                                <a href="{{ route('settings.store.index') }}" class="nav-link {{ request()->routeIs('settings.store.index') ? 'nav-active-child' : '' }}" data-key="t-signin">
-                                                    Store Configuration
-                                                </a>
+                                                <a href="{{ route('settings.store.index') }}" class="nav-link {{ request()->routeIs('settings.store.index') ? 'nav-active-child' : '' }}">Store Configuration</a>
                                             </li>
                                         </ul>
                                     </div>
@@ -872,20 +800,12 @@
                     <div class="d-flex">
                         <div class="navbar-brand-box horizontal-logo">
                             <a href="{{ route('dashboard') }}" class="logo logo-dark">
-                                <span class="logo-sm">
-                                    <img src="{{ asset('theme/layouts/assets/images/logo-sm.png') }}" alt="" height="22">
-                                </span>
-                                <span class="logo-lg">
-                                    <img src="{{ asset('theme/layouts/assets/images/logo-dark.png') }}" alt="" height="22">
-                                </span>
+                                <span class="logo-sm"><img src="{{ asset('theme/layouts/assets/images/logo-sm.png') }}" alt="" height="22"></span>
+                                <span class="logo-lg"><img src="{{ asset('theme/layouts/assets/images/logo-dark.png') }}" alt="" height="22"></span>
                             </a>
                             <a href="{{ route('dashboard') }}" class="logo logo-light">
-                                <span class="logo-sm">
-                                    <img src="{{ asset('theme/layouts/assets/images/logo-sm.png') }}" alt="" height="22">
-                                </span>
-                                <span class="logo-lg">
-                                    <img src="{{ asset('theme/layouts/assets/images/logo-light.png') }}" alt="" height="22">
-                                </span>
+                                <span class="logo-sm"><img src="{{ asset('theme/layouts/assets/images/logo-sm.png') }}" alt="" height="22"></span>
+                                <span class="logo-lg"><img src="{{ asset('theme/layouts/assets/images/logo-light.png') }}" alt="" height="22"></span>
                             </a>
                         </div>
 
@@ -909,42 +829,24 @@
                     </div>
 
                     <div class="d-flex align-items-center">
-                        <!-- ===== THEME TOGGLE BUTTON ===== -->
+                        <!-- Dark mode toggle -->
                         <div class="dropdown topbar-head-dropdown ms-1 header-item">
-                            <button type="button"
-                                    id="theme-mode-btn"
-                                    class="btn btn-icon btn-topbar btn-ghost-dark rounded-circle"
-                                    data-bs-toggle="dropdown"
-                                    aria-haspopup="true"
-                                    aria-expanded="false">
-                                <i id="theme-icon" class="bi bi-sun align-middle fs-3xl"></i>
+                            <button type="button" class="btn btn-icon btn-topbar btn-ghost-dark rounded-circle mode-layout" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="bi bi-sun align-middle fs-3xl"></i>
                             </button>
                             <div class="dropdown-menu p-2 dropdown-menu-end" id="light-dark-mode">
-                                <a href="#!" class="dropdown-item" data-mode="light">
-                                    <i class="bi bi-sun align-middle me-2"></i> Default (light mode)
-                                </a>
-                                <a href="#!" class="dropdown-item" data-mode="dark">
-                                    <i class="bi bi-moon align-middle me-2"></i> Dark
-                                </a>
-                                <a href="#!" class="dropdown-item" data-mode="auto">
-                                    <i class="bi bi-moon-stars align-middle me-2"></i> Auto (system default)
-                                </a>
+                                <a href="#!" class="dropdown-item" data-mode="light"><i class="bi bi-sun align-middle me-2"></i> Default (light mode)</a>
+                                <a href="#!" class="dropdown-item" data-mode="dark"><i class="bi bi-moon align-middle me-2"></i> Dark</a>
+                                <a href="#!" class="dropdown-item" data-mode="auto"><i class="bi bi-moon-stars align-middle me-2"></i> Auto (system default)</a>
                             </div>
                         </div>
 
-                        <!-- ===== USER PROFILE DROPDOWN ===== -->
+                        <!-- User dropdown -->
                         <div class="dropdown ms-sm-3 header-item topbar-user">
-                            <button type="button"
-                                    class="btn shadow-none"
-                                    id="page-header-user-dropdown"
-                                    data-bs-toggle="dropdown"
-                                    aria-haspopup="true"
-                                    aria-expanded="false">
+                            @php $userdata = Auth::user(); @endphp
+                            <button type="button" class="btn shadow-none" id="page-header-user-dropdown"
+                                    data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                 <span class="d-flex align-items-center">
-                                    @php
-                                        $userdata = Auth::user();
-                                    @endphp
-
                                     @if($userdata)
                                         <img class="rounded-circle header-profile-user-enhanced"
                                              src="{{ $userdata->profile_image ? asset('storage/' . $userdata->profile_image) : asset('theme/layouts/assets/images/users/user-dummy-img.jpg') }}"
@@ -966,7 +868,6 @@
                                     @endif
                                 </span>
                             </button>
-
                             <div class="dropdown-menu dropdown-menu-end">
                                 @if($userdata)
                                     <h6 class="dropdown-header">Welcome {{ $userdata->name }}!</h6>
@@ -974,7 +875,6 @@
                                         <i class="mdi mdi-account-circle text-muted fs-lg align-middle me-1"></i>
                                         <span class="align-middle">Profile</span>
                                     </a>
-                                    <div class="dropdown-divider"></div>
                                     <form method="POST" action="{{ route('logout') }}">
                                         @csrf
                                         <a class="dropdown-item" href="{{ route('logout') }}"
@@ -1013,6 +913,7 @@
             </div>
         </footer>
     </div>
+    <!-- END layout-wrapper -->
 
     <!-- Back to Top -->
     <button class="btn btn-dark btn-icon" id="back-to-top" title="Back to top">
@@ -1031,8 +932,7 @@
     <!-- Customizer -->
     <div class="customizer-setting d-none d-md-block">
         <div class="btn btn-info p-2 text-uppercase rounded-end-0 shadow-lg"
-             data-bs-toggle="offcanvas"
-             data-bs-target="#theme-settings-offcanvas"
+             data-bs-toggle="offcanvas" data-bs-target="#theme-settings-offcanvas"
              aria-controls="theme-settings-offcanvas">
             <i class="bi bi-gear mb-1"></i> Customizer
         </div>
@@ -1085,7 +985,7 @@
                                 <div class="form-check card-radio">
                                     <input class="form-check-input" type="radio" name="data-bs-theme" id="layout-mode-light" value="light">
                                     <label class="form-check-label p-0 bg-transparent" for="layout-mode-light">
-                                        <img src="{{ asset('theme/layouts/assets/images/custom-theme/light-mode.png')}}" alt="" class="img-fluid">
+                                        <img src="{{ asset('theme/layouts/assets/images/custom-theme/light-mode.png') }}" alt="" class="img-fluid">
                                     </label>
                                 </div>
                                 <h5 class="fs-sm text-center fw-medium mt-2">Light</h5>
@@ -1094,7 +994,7 @@
                                 <div class="form-check card-radio dark">
                                     <input class="form-check-input" type="radio" name="data-bs-theme" id="layout-mode-dark" value="dark">
                                     <label class="form-check-label p-0 bg-transparent" for="layout-mode-dark">
-                                        <img src="{{ asset('theme/layouts/assets/images/custom-theme/dark-mode.png')}}" alt="" class="img-fluid">
+                                        <img src="{{ asset('theme/layouts/assets/images/custom-theme/dark-mode.png') }}" alt="" class="img-fluid">
                                     </label>
                                 </div>
                                 <h5 class="fs-sm text-center fw-medium mt-2">Dark</h5>
@@ -1168,17 +1068,17 @@
     <div id="spotlight-overlay"
          style="display:none; position:fixed; inset:0; z-index:9999; align-items:flex-start; justify-content:center; padding-top:6vh;">
         <div id="spotlight-box"
-             style="width:100%; max-width:860px; margin:0 24px; background:rgba(24, 26, 32, 0.96); border:1px solid rgba(255,255,255,0.1); border-radius:28px; box-shadow:0 32px 80px rgba(0,0,0,0.6); overflow:hidden;">
+             style="width:100%; max-width:860px; margin:0 24px; background:rgba(24,26,32,0.96); border:1px solid rgba(255,255,255,0.1); border-radius:28px; box-shadow:0 32px 80px rgba(0,0,0,0.6); overflow:hidden;">
             <div style="display:flex; align-items:center; gap:16px; padding:20px 24px; border-bottom:1px solid rgba(255,255,255,0.08);">
                 <i class="mdi mdi-magnify" style="font-size:26px; color:#4f8ef7; flex-shrink:0;"></i>
-                <input id="spotlight-input" type="text" placeholder="Search for pages, products, customers, orders…" autocomplete="off"
-                    style="flex:1; background:transparent; border:none; outline:none; font-size:18px; color:#fff; caret-color:#4f8ef7; padding:8px 0;">
-                <div style="display:flex; gap:8px;">
-                    <kbd id="spotlight-esc"
-                         style="font-size:12px; padding:4px 10px; border-radius:8px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.6); cursor:pointer;">
-                        ESC
-                    </kbd>
-                </div>
+                <input id="spotlight-input" type="text"
+                       placeholder="Search for pages, products, customers, orders…"
+                       autocomplete="off"
+                       style="flex:1; background:transparent; border:none; outline:none; font-size:18px; color:#fff; caret-color:#4f8ef7; padding:8px 0;">
+                <kbd id="spotlight-esc"
+                     style="font-size:12px; padding:4px 10px; border-radius:8px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.6); cursor:pointer;">
+                    ESC
+                </kbd>
             </div>
             <div id="spotlight-results" style="max-height:520px; overflow-y:auto; padding:12px 0;">
                 <div id="spotlight-empty" style="padding:48px 24px; text-align:center; color:rgba(255,255,255,0.35);">
@@ -1200,145 +1100,35 @@
         </div>
     </div>
 
-    <!-- ======================================================
-         CORE SCRIPTS
-         ====================================================== -->
+    <!-- =====================================================
+         SCRIPTS — correct load order:
+         1. jQuery  2. Bootstrap bundle  3. app.min.js (theme JS)
+         4. simplebar  5. plugins
+         ===================================================== -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="{{ asset('theme/layouts/assets/libs/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ asset('theme/layouts/assets/js/app.min.js') }}"></script>
     <script src="{{ asset('theme/layouts/assets/libs/simplebar/simplebar.min.js') }}"></script>
     <script src="{{ asset('theme/layouts/assets/js/plugins.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-    <!-- ======================================================
-         MAIN INITIALISATION SCRIPT
-         ====================================================== -->
     <script>
     document.addEventListener('DOMContentLoaded', function () {
 
-        // --------------------------------------------------
-        // 1. BOOTSTRAP DROPDOWNS — force-init every toggle
-        //    (fixes user dropdown + theme dropdown not opening)
-        // --------------------------------------------------
-        document.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(function (el) {
-            // Bootstrap auto-inits, but re-instantiating is safe and ensures
-            // nested-span buttons that Bootstrap sometimes misses are registered.
-            try { new bootstrap.Dropdown(el); } catch (e) {}
-        });
-
-        // --------------------------------------------------
-        // 2. SIDEBAR HAMBURGER TOGGLE
-        //    layout.js listens on #vertical-hover, NOT on
-        //    #topnav-hamburger-icon, so we proxy the click.
-        // --------------------------------------------------
-        var hamburger     = document.getElementById('topnav-hamburger-icon');
-        var vertHover     = document.getElementById('vertical-hover');
-        var layoutWrapper = document.getElementById('layout-wrapper');
-        var overlay       = document.querySelector('.vertical-overlay');
-
-        if (hamburger) {
-            hamburger.addEventListener('click', function (e) {
-                e.stopPropagation();
-
-                // Let layout.js handle desktop collapse via its own button
-                if (vertHover) { vertHover.click(); }
-
-                // Toggle mobile open class (used by CSS for the overlay / slide-in)
-                document.body.classList.toggle('vertical-sidebar-enable');
-            });
-        }
-
-        // Close sidebar when the dark overlay is tapped on mobile
-        if (overlay) {
-            overlay.addEventListener('click', function () {
-                document.body.classList.remove('vertical-sidebar-enable');
-                // Trigger layout.js close if sidebar is open
-                if (document.body.classList.contains('sidebar-enable') || vertHover) {
-                    if (vertHover) { vertHover.click(); }
-                }
-            });
-        }
-
-        // --------------------------------------------------
-        // 3. THEME TOGGLE (light / dark / auto)
-        //    Reads localStorage on load; updates html attrs
-        //    and the topbar icon on every change.
-        // --------------------------------------------------
-        var THEME_KEY = 'data-bs-theme';
-
-        function applyTheme(mode) {
-            var resolved = mode;
-            if (mode === 'auto') {
-                resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            }
-
-            // Set Bootstrap dark-mode attribute
-            document.documentElement.setAttribute('data-bs-theme', resolved);
-            // Keep the theme's own topbar attribute in sync
-            document.documentElement.setAttribute('data-topbar', resolved === 'dark' ? 'dark' : 'light');
-            // Keep data-sidebar in sync (optional — remove if you want independent sidebar colour)
-            document.documentElement.setAttribute('data-sidebar', resolved === 'dark' ? 'dark' : 'light');
-
-            // Update topbar sun/moon icon
-            var icon = document.getElementById('theme-icon');
-            if (icon) {
-                icon.className = resolved === 'dark'
-                    ? 'bi bi-moon align-middle fs-3xl'
-                    : 'bi bi-sun align-middle fs-3xl';
-            }
-
-            // Keep customizer radios in sync
-            document.querySelectorAll('input[name="data-bs-theme"]').forEach(function (radio) {
-                radio.checked = (radio.value === resolved);
-            });
-        }
-
-        // Restore saved preference (or default to light)
-        var savedTheme = localStorage.getItem(THEME_KEY) || 'light';
-        applyTheme(savedTheme);
-
-        // Topbar dropdown items  (data-mode="light|dark|auto")
-        document.querySelectorAll('[data-mode]').forEach(function (el) {
-            el.addEventListener('click', function (e) {
-                e.preventDefault();
-                var mode = this.getAttribute('data-mode');
-                localStorage.setItem(THEME_KEY, mode);
-                applyTheme(mode);
-            });
-        });
-
-        // Customizer radio inputs  (name="data-bs-theme")
-        document.querySelectorAll('input[name="data-bs-theme"]').forEach(function (radio) {
-            radio.addEventListener('change', function () {
-                localStorage.setItem(THEME_KEY, this.value);
-                applyTheme(this.value);
-            });
-        });
-
-        // Respect OS-level preference changes when mode is "auto"
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
-            if (localStorage.getItem(THEME_KEY) === 'auto') { applyTheme('auto'); }
-        });
-
-        // --------------------------------------------------
-        // 4. SIMPLEBAR (sidebar scroll)
-        // --------------------------------------------------
+        // ── SimpleBar sidebar scroll ──────────────────────────────────
         var scrollbarEl = document.getElementById('scrollbar');
         if (scrollbarEl && typeof SimpleBar !== 'undefined') {
             new SimpleBar(scrollbarEl);
         }
 
-        // --------------------------------------------------
-        // 5. NPROGRESS — page-navigation progress bar
-        // --------------------------------------------------
+        // ── NProgress page-load bar ───────────────────────────────────
         if (typeof NProgress !== 'undefined') {
             NProgress.configure({ showSpinner: false, speed: 400, minimum: 0.1 });
             document.querySelectorAll('a[href]').forEach(function (a) {
                 var href = a.getAttribute('href');
-                if (href
-                    && !href.startsWith('#')
-                    && !href.startsWith('javascript')
-                    && !href.startsWith('mailto')
-                    && !href.startsWith('tel')
-                    && !a.hasAttribute('data-bs-toggle')
-                    && !a.hasAttribute('data-bs-dismiss')
+                if (href && !href.startsWith('#') && !href.startsWith('javascript')
+                    && !href.startsWith('mailto') && !href.startsWith('tel')
+                    && !a.hasAttribute('data-bs-toggle') && !a.hasAttribute('data-bs-dismiss')
                     && a.getAttribute('target') !== '_blank') {
                     a.addEventListener('click', function () { NProgress.start(); });
                 }
@@ -1347,9 +1137,7 @@
             window.addEventListener('load',     function () { NProgress.done(); });
         }
 
-        // --------------------------------------------------
-        // 6. ACTIVE LINK DETECTION
-        // --------------------------------------------------
+        // ── Active sidebar link detection ─────────────────────────────
         (function () {
             var currentPath = window.location.pathname;
             document.querySelectorAll('#navbar-nav .nav-sm a.nav-link').forEach(function (link) {
@@ -1358,7 +1146,6 @@
                     var isActive = linkPath === currentPath
                         || (linkPath.length > 1 && currentPath.startsWith(linkPath));
                     if (!isActive) return;
-
                     link.classList.add('nav-active-child');
                     var parentCollapse = link.closest('.collapse');
                     if (parentCollapse) {
@@ -1377,27 +1164,23 @@
             });
         })();
 
-        // --------------------------------------------------
-        // 7. RIPPLE EFFECT on sidebar links
-        // --------------------------------------------------
+        // ── Ripple effect on nav links ────────────────────────────────
         document.querySelectorAll('#navbar-nav .nav-link').forEach(function (link) {
             link.addEventListener('click', function (e) {
                 if (link.hasAttribute('data-bs-toggle')) return;
                 var ripple = document.createElement('span');
                 ripple.classList.add('nav-ripple');
-                var rect  = link.getBoundingClientRect();
-                var size  = Math.max(rect.width, rect.height);
-                var x     = e.clientX - rect.left  - size / 2;
-                var y     = e.clientY - rect.top   - size / 2;
-                ripple.style.cssText = 'width:' + size + 'px;height:' + size + 'px;left:' + x + 'px;top:' + y + 'px;';
+                var rect = link.getBoundingClientRect();
+                var size = Math.max(rect.width, rect.height);
+                ripple.style.cssText = 'width:' + size + 'px;height:' + size + 'px;'
+                    + 'left:' + (e.clientX - rect.left - size / 2) + 'px;'
+                    + 'top:'  + (e.clientY - rect.top  - size / 2) + 'px;';
                 link.appendChild(ripple);
-                setTimeout(function () { if (ripple.parentNode) ripple.parentNode.removeChild(ripple); }, 650);
+                setTimeout(function () { ripple.parentNode && ripple.parentNode.removeChild(ripple); }, 650);
             });
         });
 
-        // --------------------------------------------------
-        // 8. BACK TO TOP
-        // --------------------------------------------------
+        // ── Back-to-top button ────────────────────────────────────────
         var backToTop = document.getElementById('back-to-top');
         if (backToTop) {
             window.addEventListener('scroll', function () {
@@ -1408,20 +1191,13 @@
             });
         }
 
-        // --------------------------------------------------
-        // 9. CUSTOMIZER — reset button
-        // --------------------------------------------------
+        // ── Reset layout ──────────────────────────────────────────────
         var resetBtn = document.getElementById('reset-layout');
         if (resetBtn) {
-            resetBtn.addEventListener('click', function () {
-                localStorage.clear();
-                location.reload();
-            });
+            resetBtn.addEventListener('click', function () { localStorage.clear(); location.reload(); });
         }
 
-        // --------------------------------------------------
-        // 10. FORM SUBMISSION progress
-        // --------------------------------------------------
+        // ── NProgress on form submit ──────────────────────────────────
         document.querySelectorAll('form').forEach(function (form) {
             if (form.getAttribute('action') && !form.dataset.noProgress) {
                 form.addEventListener('submit', function () {
@@ -1429,35 +1205,78 @@
                 });
             }
         });
+
+        // ── Hamburger / sidebar toggle (fallback if app.min.js
+        //    doesn't bind it automatically) ──────────────────────────
+        var hamburger = document.getElementById('topnav-hamburger-icon');
+        if (hamburger) {
+            hamburger.addEventListener('click', function () {
+                var body = document.body;
+                // Velzon theme toggles these classes on <body>
+                if (body.classList.contains('vertical-sidebar-enable')) {
+                    body.classList.remove('vertical-sidebar-enable');
+                } else {
+                    body.classList.add('vertical-sidebar-enable');
+                }
+                // Also toggle sidebar-enable for desktop collapsed state
+                if (window.innerWidth >= 1025) {
+                    body.classList.toggle('sidebar-enable');
+                    // The theme uses data-sidebar-size to switch between lg/sm
+                    var html = document.documentElement;
+                    if (html.getAttribute('data-sidebar-size') === 'sm') {
+                        html.setAttribute('data-sidebar-size', 'lg');
+                    } else {
+                        html.setAttribute('data-sidebar-size', 'sm');
+                    }
+                }
+            });
+        }
+
+        // ── Vertical overlay click closes sidebar on mobile ──────────
+        var overlay = document.querySelector('.vertical-overlay');
+        if (overlay) {
+            overlay.addEventListener('click', function () {
+                document.body.classList.remove('vertical-sidebar-enable');
+            });
+        }
+
+        // ── Manually initialise Bootstrap dropdowns (safety net) ─────
+        // app.min.js should handle this, but if it doesn't we do it here.
+        if (typeof bootstrap !== 'undefined' && bootstrap.Dropdown) {
+            document.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(function (el) {
+                // Only init if not already initialised
+                if (!bootstrap.Dropdown.getInstance(el)) {
+                    new bootstrap.Dropdown(el);
+                }
+            });
+        }
     });
     </script>
 
-    <!-- ======================================================
-         SPOTLIGHT SEARCH
-         ====================================================== -->
+    <!-- SPOTLIGHT SEARCH JAVASCRIPT -->
     <script>
     (function () {
         var STATIC_PAGES = [
-            { title: 'Dashboard',               url: '{{ route("dashboard") }}',                    icon: 'mdi-gauge',           category: 'Main' },
-            { title: 'Users',                   url: '{{ route("users.index") }}',                  icon: 'mdi-account-group',   category: 'Users & Privileges' },
-            { title: 'Roles',                   url: '{{ route("roles.index") }}',                  icon: 'mdi-shield-account',  category: 'Users & Privileges' },
-            { title: 'Permissions',             url: '{{ route("permissions.index") }}',            icon: 'mdi-lock',            category: 'Users & Privileges' },
-            { title: 'Products',                url: '{{ route("products.index") }}',               icon: 'mdi-package-variant', category: 'Inventory' },
-            { title: 'Categories',              url: '{{ route("categories.index") }}',             icon: 'mdi-view-list',       category: 'Inventory' },
-            { title: 'Brands',                  url: '{{ route("brands.index") }}',                 icon: 'mdi-tag',             category: 'Inventory' },
-            { title: 'Banners',                 url: '{{ route("banners.index") }}',                icon: 'mdi-image',           category: 'Marketing' },
-            { title: 'POS',                     url: '{{ route("pos.index") }}',                    icon: 'mdi-cart',            category: 'Sales' },
-            { title: 'Grid POS',                url: '{{ route("pos.grid") }}',                     icon: 'mdi-cart',            category: 'Sales' },
-            { title: 'Orders',                  url: '{{ route("orders.index") }}',                 icon: 'mdi-cart-check',      category: 'Sales' },
-            { title: 'Customers',               url: '{{ route("customers.index") }}',              icon: 'mdi-account',         category: 'Sales' },
-            { title: 'Inventory',               url: '{{ route("inventory.index") }}',              icon: 'mdi-warehouse',       category: 'Inventory' },
-            { title: 'Stock Levels',            url: '{{ route("inventory.stock-levels") }}',       icon: 'mdi-chart-line',      category: 'Inventory' },
-            { title: 'Stock Locations',         url: '{{ route("stock-locations.index") }}',        icon: 'mdi-map-marker',      category: 'Inventory' },
-            { title: 'Low Stock Alerts',        url: '{{ route("inventory.low-stock-alerts") }}',   icon: 'mdi-alert',           category: 'Inventory' },
-            { title: 'Sales',                   url: '{{ route("sales.index") }}',                  icon: 'mdi-chart-line',      category: 'Sales' },
-            { title: 'Sales Person Dashboard',  url: '{{ route("salesperson.dashboard") }}',        icon: 'mdi-account-tie',     category: 'Sales' },
-            { title: 'My Commissions',          url: '{{ route("salesperson.commissions") }}',      icon: 'mdi-cash-multiple',   category: 'Sales' },
-            { title: 'Store Settings',          url: '{{ route("settings.store.index") }}',         icon: 'mdi-cog',             category: 'Settings' },
+            { title: 'Dashboard',               url: '{{ route("dashboard") }}',                    icon: 'mdi-gauge',          category: 'Main' },
+            { title: 'Users',                   url: '{{ route("users.index") }}',                  icon: 'mdi-account-group',  category: 'Users & Privileges' },
+            { title: 'Roles',                   url: '{{ route("roles.index") }}',                  icon: 'mdi-shield-account', category: 'Users & Privileges' },
+            { title: 'Permissions',             url: '{{ route("permissions.index") }}',            icon: 'mdi-lock',           category: 'Users & Privileges' },
+            { title: 'Products',                url: '{{ route("products.index") }}',               icon: 'mdi-package-variant',category: 'Inventory' },
+            { title: 'Categories',              url: '{{ route("categories.index") }}',             icon: 'mdi-view-list',      category: 'Inventory' },
+            { title: 'Brands',                  url: '{{ route("brands.index") }}',                 icon: 'mdi-tag',            category: 'Inventory' },
+            { title: 'Banners',                 url: '{{ route("banners.index") }}',                icon: 'mdi-image',          category: 'Marketing' },
+            { title: 'POS',                     url: '{{ route("pos.index") }}',                    icon: 'mdi-cart',           category: 'Sales' },
+            { title: 'Grid POS',                url: '{{ route("pos.grid") }}',                     icon: 'mdi-cart',           category: 'Sales' },
+            { title: 'Orders',                  url: '{{ route("orders.index") }}',                 icon: 'mdi-cart-check',     category: 'Sales' },
+            { title: 'Customers',               url: '{{ route("customers.index") }}',              icon: 'mdi-account',        category: 'Sales' },
+            { title: 'Inventory',               url: '{{ route("inventory.index") }}',              icon: 'mdi-warehouse',      category: 'Inventory' },
+            { title: 'Stock Levels',            url: '{{ route("inventory.stock-levels") }}',       icon: 'mdi-chart-line',     category: 'Inventory' },
+            { title: 'Stock Locations',         url: '{{ route("stock-locations.index") }}',        icon: 'mdi-map-marker',     category: 'Inventory' },
+            { title: 'Low Stock Alerts',        url: '{{ route("inventory.low-stock-alerts") }}',   icon: 'mdi-alert',          category: 'Inventory' },
+            { title: 'Sales',                   url: '{{ route("sales.index") }}',                  icon: 'mdi-chart-line',     category: 'Sales' },
+            { title: 'Sales Person Dashboard',  url: '{{ route("salesperson.dashboard") }}',        icon: 'mdi-account-tie',    category: 'Sales' },
+            { title: 'My Commissions',          url: '{{ route("salesperson.commissions") }}',      icon: 'mdi-cash-multiple',  category: 'Sales' },
+            { title: 'Store Settings',          url: '{{ route("settings.store.index") }}',         icon: 'mdi-cog',            category: 'Settings' },
             @auth
             { title: 'My Profile', url: '{{ route("user.overview", Auth::user()) }}', icon: 'mdi-account-circle', category: 'User' },
             @else
@@ -1470,16 +1289,16 @@
             'Marketing': '#2a9d8f', 'Sales': '#10b981', 'Settings': '#6a0572', 'User': '#e9c46a'
         };
 
-        var overlay       = document.getElementById('spotlight-overlay');
-        var input         = document.getElementById('spotlight-input');
-        var emptyState    = document.getElementById('spotlight-empty');
-        var loadingEl     = document.getElementById('spotlight-loading');
-        var list          = document.getElementById('spotlight-list');
-        var trigger       = document.getElementById('spotlight-trigger');
-        var escBtn        = document.getElementById('spotlight-esc');
+        var overlay  = document.getElementById('spotlight-overlay');
+        var input    = document.getElementById('spotlight-input');
+        var emptyEl  = document.getElementById('spotlight-empty');
+        var loadEl   = document.getElementById('spotlight-loading');
+        var list     = document.getElementById('spotlight-list');
+        var trigger  = document.getElementById('spotlight-trigger');
+        var escBtn   = document.getElementById('spotlight-esc');
 
-        var debounceTimer = null;
-        var activeIndex   = -1;
+        var debounceTimer  = null;
+        var activeIndex    = -1;
         var currentResults = [];
 
         function openSpotlight() {
@@ -1490,32 +1309,31 @@
         }
 
         function closeSpotlight() {
-            if (overlay) overlay.style.animation = 'spotlightOverlayFadeOut 0.2s ease forwards';
+            if (!overlay) return;
+            overlay.style.animation = 'spotlightOverlayFadeOut 0.2s ease forwards';
             setTimeout(function () {
-                if (overlay) overlay.style.display = 'none';
-                if (input)   input.value = '';
+                overlay.style.display = 'none';
+                if (input) input.value = '';
                 showEmptyState();
             }, 200);
         }
 
         function showEmptyState() {
-            if (emptyState) emptyState.style.display = 'block';
-            if (loadingEl)  loadingEl.style.display  = 'none';
-            if (list)       { list.style.display = 'none'; list.innerHTML = ''; }
-            currentResults = [];
-            activeIndex    = -1;
+            if (emptyEl) { emptyEl.innerHTML = '<i class="mdi mdi-lightning-bolt" style="font-size:48px;display:block;margin-bottom:16px;opacity:0.4;"></i><span style="font-size:15px;">Start typing to search…</span>'; emptyEl.style.display = 'block'; }
+            if (loadEl)  loadEl.style.display = 'none';
+            if (list)    { list.style.display = 'none'; list.innerHTML = ''; }
+            currentResults = []; activeIndex = -1;
         }
 
         function showLoading() {
-            if (emptyState) emptyState.style.display = 'none';
-            if (loadingEl)  loadingEl.style.display  = 'block';
-            if (list)       list.style.display        = 'none';
+            if (emptyEl) emptyEl.style.display = 'none';
+            if (loadEl)  loadEl.style.display = 'block';
+            if (list)    list.style.display = 'none';
         }
 
         function performSearch(query) {
             if (!query || !query.trim()) { showEmptyState(); return; }
             showLoading();
-
             var q = query.toLowerCase();
             var staticResults = STATIC_PAGES.filter(function (p) {
                 return p.title.toLowerCase().includes(q) || p.category.toLowerCase().includes(q);
@@ -1527,86 +1345,60 @@
                 if (query.length < 2) return;
                 fetch('/api/search?q=' + encodeURIComponent(query) + '&_token={{ csrf_token() }}', {
                     headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
-                })
-                .then(function (r) { return r.ok ? r.json() : { results: [] }; })
-                .then(function (data) {
+                }).then(function (r) { return r.ok ? r.json() : { results: [] }; })
+                  .then(function (data) {
                     if (!input || input.value.trim() !== query) return;
-                    var dynamic = data.results || [];
-                    var merged  = staticResults.concat(dynamic);
-                    var seen    = {};
-                    renderResults(merged.filter(function (r) {
-                        if (seen[r.url]) return false;
-                        seen[r.url] = true;
-                        return true;
-                    }));
-                })
-                .catch(function () {});
+                    var merged = staticResults.concat(data.results || []);
+                    var seen = {}, deduped = merged.filter(function (r) {
+                        if (seen[r.url]) return false; seen[r.url] = true; return true;
+                    });
+                    renderResults(deduped);
+                }).catch(function () {});
             }, 280);
         }
 
         function renderResults(results) {
-            if (loadingEl)  loadingEl.style.display  = 'none';
-            if (emptyState) emptyState.style.display = 'none';
-            if (list)       { list.innerHTML = ''; list.style.display = 'block'; }
-            activeIndex    = -1;
-            currentResults = results;
+            if (loadEl)  loadEl.style.display = 'none';
+            if (emptyEl) emptyEl.style.display = 'none';
+            if (list)    { list.innerHTML = ''; list.style.display = 'block'; }
+            activeIndex = -1; currentResults = results;
 
             if (!results.length) {
-                if (emptyState) {
-                    emptyState.innerHTML = '<i class="mdi mdi-magnify-close" style="font-size:42px;display:block;margin-bottom:16px;opacity:0.4;"></i>'
+                if (emptyEl) {
+                    emptyEl.innerHTML = '<i class="mdi mdi-magnify-close" style="font-size:42px;display:block;margin-bottom:16px;opacity:0.4;"></i>'
                         + '<span style="font-size:15px;">No results found for "' + (input ? input.value : '') + '"</span>';
-                    emptyState.style.display = 'block';
+                    emptyEl.style.display = 'block';
                 }
                 if (list) list.style.display = 'none';
                 return;
             }
 
             var grouped = {};
-            results.forEach(function (r) {
-                if (!grouped[r.category]) grouped[r.category] = [];
-                grouped[r.category].push(r);
-            });
+            results.forEach(function (r) { if (!grouped[r.category]) grouped[r.category] = []; grouped[r.category].push(r); });
 
             Object.keys(grouped).forEach(function (cat) {
                 var header = document.createElement('li');
-                header.style.cssText = 'padding:12px 24px 6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:rgba(255,255,255,0.35);';
+                header.style.cssText = 'padding:12px 24px 6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.35);';
                 header.textContent = cat;
                 list.appendChild(header);
 
                 grouped[cat].forEach(function (r) {
-                    var accentColor = CAT_COLORS[r.category] || '#4f8ef7';
                     var li = document.createElement('li');
                     li.className = 'spotlight-result-item';
-                    li.style.cssText = 'display:flex;align-items:center;gap:14px;padding:12px 24px;cursor:pointer;transition:all 0.2s ease;border-radius:10px;margin:4px 12px;';
+                    li.style.cssText = 'display:flex;align-items:center;gap:14px;padding:12px 24px;cursor:pointer;transition:all .2s ease;border-radius:10px;margin:4px 12px;';
+                    var color = CAT_COLORS[r.category] || '#4f8ef7';
 
-                    var iconWrap = document.createElement('span');
-                    iconWrap.style.cssText = 'width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + accentColor + '22;';
-                    var icon = document.createElement('i');
-                    icon.className = (r.icon || 'mdi-chevron-right') + ' mdi';
-                    icon.style.cssText = 'font-size:18px;color:' + accentColor + ';';
-                    iconWrap.appendChild(icon);
+                    li.innerHTML = '<span style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + color + '22;">'
+                        + '<i class="' + (r.icon || 'mdi-chevron-right') + ' mdi" style="font-size:18px;color:' + color + ';"></i></span>'
+                        + '<span style="flex:1;min-width:0;">'
+                        +   '<span style="display:block;font-size:15px;font-weight:500;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + r.title + '</span>'
+                        +   '<span style="display:block;font-size:12px;color:rgba(255,255,255,.4);margin-top:2px;">' + (r.subtitle || r.category) + '</span>'
+                        + '</span>'
+                        + '<i class="mdi mdi-arrow-right" style="font-size:16px;color:rgba(255,255,255,.25);flex-shrink:0;"></i>';
 
-                    var textWrap = document.createElement('span');
-                    textWrap.style.cssText = 'flex:1;min-width:0;';
-                    var title = document.createElement('span');
-                    title.style.cssText = 'display:block;font-size:15px;font-weight:500;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
-                    title.textContent = r.title;
-                    var sub = document.createElement('span');
-                    sub.style.cssText = 'display:block;font-size:12px;color:rgba(255,255,255,0.4);margin-top:2px;';
-                    sub.textContent = r.subtitle || r.category;
-                    textWrap.appendChild(title);
-                    textWrap.appendChild(sub);
-
-                    var arrow = document.createElement('i');
-                    arrow.className = 'mdi mdi-arrow-right';
-                    arrow.style.cssText = 'font-size:16px;color:rgba(255,255,255,0.25);flex-shrink:0;transition:transform 0.2s ease;';
-
-                    li.appendChild(iconWrap);
-                    li.appendChild(textWrap);
-                    li.appendChild(arrow);
-                    li.addEventListener('click', function () { window.location.href = r.url; });
-                    li.addEventListener('mouseenter', function () { arrow.style.transform = 'translateX(4px)'; });
-                    li.addEventListener('mouseleave', function () { arrow.style.transform = ''; });
+                    li.addEventListener('mouseover', function () { li.style.background = 'rgba(255,255,255,0.06)'; });
+                    li.addEventListener('mouseout',  function () { li.style.background = ''; });
+                    li.addEventListener('click',     function () { window.location.href = r.url; });
                     list.appendChild(li);
                 });
             });
@@ -1635,9 +1427,7 @@
     })();
     </script>
 
-    <!-- ======================================================
-         ROUTE-SPECIFIC JS INCLUDES
-         ====================================================== -->
+    <!-- Route-specific JS includes -->
     @if (Route::is('dashboard'))
         @include('layouts.pages-assets.js.dashboard-list-js')
     @endif
