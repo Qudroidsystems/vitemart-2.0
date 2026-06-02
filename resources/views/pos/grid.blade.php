@@ -18,7 +18,7 @@
                     </span>
                 </div>
 
-                <!-- SEARCH -->
+                <!-- SEARCH — same as pos.index -->
                 <div class="pos-topbar-center">
                     <div class="pos-search-outer position-relative">
                         <input type="text" id="barcodeInput"
@@ -31,6 +31,7 @@
                             <span class="spinner-border spinner-border-sm"></span>
                         </span>
                     </div>
+                    <!-- Shortcuts row -->
                     <div class="pos-shortcuts-row">
                         <small class="text-muted me-1">Shortcuts:</small>
                         <span class="badge bg-secondary">F1</span> Search &nbsp;
@@ -58,19 +59,23 @@
 
                 <!-- ─── LEFT: Products ─── -->
                 <div class="pos-products-panel">
+                    <!-- Category pills -->
                     <div class="pos-cat-bar" id="catBar">
                         <button class="pos-cat-pill active" data-cat="all">
                             <i class="bi bi-grid-fill me-1"></i>All
                         </button>
                     </div>
 
+                    <!-- Loading overlay -->
                     <div id="gridLoadingOverlay" class="pos-grid-loading">
                         <div class="spinner-border text-primary" style="width:3rem;height:3rem;" role="status"></div>
                         <p class="mt-3 text-primary fw-semibold">Loading products…</p>
                     </div>
 
+                    <!-- Product grid -->
                     <div class="pos-product-grid" id="productGrid"></div>
 
+                    <!-- Empty state -->
                     <div id="emptyState" class="pos-empty-state d-none">
                         <i class="bi bi-search"></i>
                         <h5>No products found</h5>
@@ -81,6 +86,7 @@
                 <!-- ─── RIGHT: Order Panel ─── -->
                 <div class="pos-order-panel">
 
+                    <!-- Customer -->
                     <div class="pos-customer-row">
                         <div class="pos-customer-select-wrap">
                             <i class="bi bi-person-circle pos-customer-icon"></i>
@@ -100,6 +106,7 @@
                         <button class="pos-icon-btn danger" id="clearCart" title="Clear (F2)"><i class="bi bi-trash3-fill"></i></button>
                     </div>
 
+                    <!-- Cart -->
                     <div class="pos-cart-area" id="cartArea">
                         <div id="emptyCartState" class="pos-cart-empty">
                             <div class="pos-cart-empty-icon"><i class="bi bi-cart4"></i></div>
@@ -122,6 +129,7 @@
                         </div>
                     </div>
 
+                    <!-- Discount -->
                     <div class="pos-discount-row">
                         <span class="pos-discount-label">Discount</span>
                         <div class="pos-discount-inputs">
@@ -137,12 +145,14 @@
                         </div>
                     </div>
 
+                    <!-- Totals -->
                     <div class="pos-totals">
                         <div class="pos-total-row"><span>Subtotal</span><span id="subtotal">₦0.00</span></div>
                         <div class="pos-total-row"><span>Tax ({{ config('pos.tax_rate', 0) }}%)</span><span id="taxAmount">₦0.00</span></div>
                         <div class="pos-total-row grand"><span>Total</span><span id="grandTotal">₦0.00</span></div>
                     </div>
 
+                    <!-- Payment -->
                     <div class="pos-payment-group">
                         <label class="pos-payment-opt">
                             <input type="radio" name="payment" value="cash" checked>
@@ -158,6 +168,7 @@
                         </label>
                     </div>
 
+                    <!-- Charge Button -->
                     <button class="pos-charge-btn" id="completeOrder">
                         <i class="bi bi-printer-fill me-2"></i>
                         <span>Charge</span>
@@ -193,6 +204,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body px-4 pb-0">
+                <!-- Measurement Toggle -->
                 <div class="pos-measure-toggle mb-3">
                     <label class="pos-measure-opt">
                         <input type="radio" name="measurementType" id="measureQuantity" value="quantity" checked>
@@ -204,6 +216,7 @@
                     </label>
                 </div>
 
+                <!-- Unit Selection -->
                 <div id="unitSelectionWrap" class="mb-3 d-none">
                     <label class="form-label small fw-semibold text-muted">Select Unit</label>
                     <select class="form-select form-select-sm" id="unitSelect">
@@ -215,6 +228,7 @@
                     </div>
                 </div>
 
+                <!-- Price Input (unit mode) -->
                 <div id="priceInputSection" class="pos-price-box mb-3 d-none">
                     <label class="form-label small fw-semibold mb-1">
                         Total Price
@@ -231,6 +245,7 @@
                     </small>
                 </div>
 
+                <!-- Quantity Input -->
                 <div id="quantityInputSection">
                     <label class="form-label small fw-semibold text-muted mb-1" id="measurementLabel">
                         Quantity
@@ -243,6 +258,7 @@
                     </div>
                 </div>
 
+                <!-- Unit Input -->
                 <div id="unitInputSection" class="d-none">
                     <label class="form-label small fw-semibold text-muted mb-1">Amount</label>
                     <div class="pos-qty-stepper">
@@ -256,6 +272,7 @@
                     <span class="fw-bold text-success fs-5" id="totalPriceDisplay">Total: ₦0.00</span>
                 </div>
 
+                <!-- Quick Buttons -->
                 <div id="quantityQuickButtons" class="pos-quick-btns mb-3">
                     <button class="pos-quick-btn quick-btn" data-value="1">1</button>
                     <button class="pos-quick-btn quick-btn" data-value="2">2</button>
@@ -361,6 +378,7 @@
     </div>
 </div>
 
+<!-- Accessibility live regions -->
 <div class="visually-hidden" role="status" aria-live="polite" id="cartStatus"></div>
 
 <script src="{{ asset('theme/layouts/assets/libs/axios/axios.min.js') }}"></script>
@@ -370,21 +388,16 @@
 document.addEventListener('DOMContentLoaded', function () {
 
     // ══════════════════════════════════════════════════════
-    // PRODUCT REGISTRY
+    // PRODUCT REGISTRY — avoids any data-attribute JSON issues
+    // Products are stored in a JS Map keyed by product ID
     // ══════════════════════════════════════════════════════
-    const productRegistry = new Map();
+    const productRegistry = new Map();   // id (string) => product object
 
     function registerProduct(p) {
-        if (!p || p.id === undefined || p.id === null) {
-            console.warn('registerProduct: invalid product', p);
-            return;
-        }
         productRegistry.set(String(p.id), p);
     }
     function getProduct(id) {
-        const p = productRegistry.get(String(id));
-        if (!p) console.warn('getProduct: not found for id=' + id + '. Registry size=' + productRegistry.size);
-        return p;
+        return productRegistry.get(String(id));
     }
 
     // ══════════════════════════════════════════════════════
@@ -399,27 +412,27 @@ document.addEventListener('DOMContentLoaded', function () {
     // ══════════════════════════════════════════════════════
     // DOM REFS
     // ══════════════════════════════════════════════════════
-    const input              = document.getElementById('barcodeInput');
-    const productGrid        = document.getElementById('productGrid');
-    const emptyState         = document.getElementById('emptyState');
+    const input             = document.getElementById('barcodeInput');
+    const productGrid       = document.getElementById('productGrid');
+    const emptyState        = document.getElementById('emptyState');
     const gridLoadingOverlay = document.getElementById('gridLoadingOverlay');
-    const cartBody           = document.getElementById('cartBody');
-    const emptyCartState     = document.getElementById('emptyCartState');
-    const cartItemsWrap      = document.getElementById('cartItemsWrap');
-    const subtotalEl         = document.getElementById('subtotal');
-    const taxAmountEl        = document.getElementById('taxAmount');
-    const grandTotalEl       = document.getElementById('grandTotal');
-    const chargeBtnTotal     = document.getElementById('chargeBtnTotal');
-    const discountValueEl    = document.getElementById('discountValue');
-    const discountTypeEl     = document.getElementById('discountType');
-    const modalQty           = document.getElementById('modalQty');
-    const modalUnit          = document.getElementById('modalUnit');
-    const confirmAddBtn      = document.getElementById('confirmAddBtn');
-    const removeFromCartBtn  = document.getElementById('removeFromCartBtn');
-    const customerSelect     = document.getElementById('customerSelect');
-    const pricePerUnitInput  = document.getElementById('pricePerUnit');
-    const unitSelect         = document.getElementById('unitSelect');
-    const catBar             = document.getElementById('catBar');
+    const cartBody          = document.getElementById('cartBody');
+    const emptyCartState    = document.getElementById('emptyCartState');
+    const cartItemsWrap     = document.getElementById('cartItemsWrap');
+    const subtotalEl        = document.getElementById('subtotal');
+    const taxAmountEl       = document.getElementById('taxAmount');
+    const grandTotalEl      = document.getElementById('grandTotal');
+    const chargeBtnTotal    = document.getElementById('chargeBtnTotal');
+    const discountValueEl   = document.getElementById('discountValue');
+    const discountTypeEl    = document.getElementById('discountType');
+    const modalQty          = document.getElementById('modalQty');
+    const modalUnit         = document.getElementById('modalUnit');
+    const confirmAddBtn     = document.getElementById('confirmAddBtn');
+    const removeFromCartBtn = document.getElementById('removeFromCartBtn');
+    const customerSelect    = document.getElementById('customerSelect');
+    const pricePerUnitInput = document.getElementById('pricePerUnit');
+    const unitSelect        = document.getElementById('unitSelect');
+    const catBar            = document.getElementById('catBar');
 
     // ══════════════════════════════════════════════════════
     // STATE
@@ -435,12 +448,12 @@ document.addEventListener('DOMContentLoaded', function () {
     let activeCategoryFilter   = 'all';
     let availableUnits         = [];
     let selectedUnit           = null;
-    let currentProduct         = null;
+    let currentProduct         = null;         // plain JS object from registry
     let currentMeasurementType = 'quantity';
     let originalPricePerUnit   = 0;
     let isPriceInputActive     = false;
     let productQuantityCache   = {};
-    let lastLimitToIds         = null; // track current search filter
+    let printWindow            = null;
 
     input.focus();
 
@@ -459,6 +472,7 @@ document.addEventListener('DOMContentLoaded', function () {
         setupOfflineMode();
         setupKeyboardShortcuts();
 
+        // Re-focus search when clicking non-interactive areas
         document.addEventListener('click', function (e) {
             if (!e.target.closest('.modal') &&
                 !e.target.closest('#customerSelect') &&
@@ -483,20 +497,9 @@ document.addEventListener('DOMContentLoaded', function () {
         try {
             const res = await axios.get('{{ route("pos.initial-products") }}');
             const products = res.data.products || [];
-
-            if (res.data.error) {
-                console.error('Server error in getInitialProducts:', res.data.error);
-            }
-
-            if (products.length === 0) {
-                console.warn('No products returned from getInitialProducts. Check server logs.');
-            }
-
             products.forEach(p => registerProduct(p));
-            console.log('Loaded', products.length, 'products into registry. Registry size:', productRegistry.size);
         } catch (e) {
-            console.error('loadInitialProducts failed:', e.response?.status, e.response?.data || e.message);
-            showToast('Failed to load products. Check console.', 'error', 4000);
+            // silently continue — grid will be empty
         } finally {
             gridLoadingOverlay.style.display = 'none';
             buildCategoryPills();
@@ -520,7 +523,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (q.length >= 2 && !isLikelyBarcode(q)) {
             searchProducts(q);
         } else if (q.length === 0) {
-            lastLimitToIds = null;
             buildCategoryPills();
             renderGrid();
         }
@@ -534,7 +536,6 @@ document.addEventListener('DOMContentLoaded', function () {
             const products = res.data || [];
             if (products.length > 0) {
                 registerProduct(products[0]);
-                lastLimitToIds = null;
                 renderGrid();
                 openQuantityModal(String(products[0].id));
                 playScanSound();
@@ -571,9 +572,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const res = await axios.get('{{ route("pos.search") }}', { params: { q } });
             const results = res.data || [];
             results.forEach(p => registerProduct(p));
-            lastLimitToIds = results.map(p => String(p.id));
             buildCategoryPills();
-            renderGrid(lastLimitToIds);
+            renderGrid(results.map(p => String(p.id)));  // show only search results
         } catch (e) {
             showToast('Search failed', 'error');
         } finally {
@@ -588,6 +588,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const allProds = Array.from(productRegistry.values());
         const cats = [...new Set(allProds.map(p => p.category || '').filter(Boolean))];
 
+        // Remove dynamic pills, keep "All"
         catBar.querySelectorAll('.pos-cat-pill:not([data-cat="all"])').forEach(el => el.remove());
 
         cats.forEach(cat => {
@@ -604,7 +605,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 activeCategoryFilter = pill.dataset.cat;
                 catBar.querySelectorAll('.pos-cat-pill').forEach(p => p.classList.remove('active'));
                 pill.classList.add('active');
-                renderGrid(lastLimitToIds);
+                renderGrid();
             };
         });
     }
@@ -615,14 +616,17 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderGrid(limitToIds = null) {
         let products = Array.from(productRegistry.values());
 
+        // Filter to search result IDs if provided
         if (limitToIds !== null) {
             products = products.filter(p => limitToIds.includes(String(p.id)));
         }
 
+        // Filter by category
         if (activeCategoryFilter !== 'all') {
             products = products.filter(p => (p.category || '') === activeCategoryFilter);
         }
 
+        // Sort: in-cart first, then alphabetically
         products.sort((a, b) => {
             const aCart = cart.some(i => String(i.product_id) === String(a.id));
             const bCart = cart.some(i => String(i.product_id) === String(b.id));
@@ -644,14 +648,12 @@ document.addEventListener('DOMContentLoaded', function () {
             const cartItem   = cart.find(i => String(i.product_id) === String(p.id));
             const inCart     = !!cartItem;
             const outOfStock = parseFloat(p.stock) <= 0;
-            const stockVal   = parseFloat(p.stock) || 0;
-            const stockClass = stockVal > 10 ? 'good' : stockVal > 0 ? 'low' : 'out';
+            const stockClass = parseFloat(p.stock) > 10 ? 'good' : parseFloat(p.stock) > 0 ? 'low' : 'out';
             const savedPref  = getSavedUnitPref(p.id);
-            const productIdStr = String(p.id);
 
             const card = document.createElement('div');
             card.className = `pos-prod-card${inCart ? ' in-cart' : ''}${outOfStock ? ' out-of-stock' : ''}`;
-            card.dataset.productId = productIdStr;
+            card.dataset.productId = String(p.id);   // only store the ID, never JSON
             card.setAttribute('role', 'button');
             card.setAttribute('tabindex', outOfStock ? '-1' : '0');
 
@@ -667,27 +669,27 @@ document.addEventListener('DOMContentLoaded', function () {
                 <div class="prod-info">
                     <div class="prod-name" title="${escHtml(p.title)}">${escHtml(p.title)}</div>
                     <div class="prod-price">${formatCurrency(price)}</div>
-                    <div class="prod-meta">${escHtml(p.primary_unit || 'Unit')}${p.sku ? ' · ' + escHtml(p.sku) : ''}</div>
+                    <div class="prod-meta">${escHtml(p.primary_unit || 'Unit')} · ${escHtml(p.sku || '')}</div>
                     ${savedPref ? `<div class="prod-saved-unit"><i class="bi bi-star-fill text-warning"></i> ${escHtml(savedPref.shortName)}</div>` : ''}
                 </div>
                 ${inCart ? `<div class="prod-in-cart-bar">In Cart</div>` : ''}
             `;
 
             if (!outOfStock) {
-                const handleClick = () => openQuantityModal(productIdStr);
+                const handleClick = () => openQuantityModal(String(p.id));
                 card.addEventListener('click', handleClick);
                 card.addEventListener('keydown', e => {
                     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick(); }
                 });
             }
 
+            // Right-click: remove from cart
             card.addEventListener('contextmenu', e => {
                 e.preventDefault();
                 if (inCart) {
-                    cart = cart.filter(i => String(i.product_id) !== productIdStr);
+                    cart = cart.filter(i => String(i.product_id) !== String(p.id));
                     delete productQuantityCache[p.id];
-                    renderCartAndTotals();
-                    renderGrid(limitToIds);
+                    renderCartAndTotals(); renderGrid(limitToIds);
                     showToast('Removed from cart', 'info');
                 }
             });
@@ -697,13 +699,12 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ══════════════════════════════════════════════════════
-    // OPEN QUANTITY MODAL
+    // OPEN QUANTITY MODAL — takes an ID, looks up from registry
     // ══════════════════════════════════════════════════════
     function openQuantityModal(productId) {
         const p = getProduct(productId);
         if (!p) {
-            showToast('Product data not found. Try searching again.', 'error');
-            console.error('openQuantityModal: product not in registry. id=' + productId + ', registry keys:', Array.from(productRegistry.keys()).slice(0,10));
+            showToast('Product data not found', 'error');
             return;
         }
 
@@ -712,10 +713,11 @@ document.addEventListener('DOMContentLoaded', function () {
         selectedUnit           = null;
         isPriceInputActive     = false;
 
-        const price    = parseFloat(p.sale_price || p.price) || 0;
-        const cartItem = cart.find(i => String(i.product_id) === String(p.id));
-        const prevQty  = cartItem ? cartItem.qty : (productQuantityCache[p.id] || 1);
+        const price     = parseFloat(p.sale_price || p.price) || 0;
+        const cartItem  = cart.find(i => String(i.product_id) === String(p.id));
+        const prevQty   = cartItem ? cartItem.qty : (productQuantityCache[p.id] || 1);
 
+        // Fill modal header
         document.getElementById('modalProductLabel').textContent = p.title;
         document.getElementById('modalProductPrice').textContent = formatCurrency(price);
         document.getElementById('modalProductStock').textContent = `Stock: ${formatNum(p.stock, 0)}`;
@@ -724,6 +726,7 @@ document.addEventListener('DOMContentLoaded', function () {
             `<span class="badge bg-secondary"><i class="bi bi-upc-scan me-1"></i>SKU: ${escHtml(p.sku||'')}</span>
              <span class="badge bg-info text-dark"><i class="bi bi-barcode me-1"></i>${escHtml(p.barcode||'')}</span>`;
 
+        // Thumbnail
         const thumb = document.getElementById('modalThumb');
         if (p.thumbnail) {
             thumb.innerHTML = `<img src="${p.thumbnail}" alt="${escHtml(p.title)}" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">`;
@@ -731,11 +734,13 @@ document.addEventListener('DOMContentLoaded', function () {
             thumb.innerHTML = '<i class="bi bi-box-seam"></i>';
         }
 
+        // Unit availability
         const hasUnits = Array.isArray(p.units) && p.units.length > 0;
         const measureUnitRadio = document.getElementById('measureUnit');
         measureUnitRadio.disabled = !hasUnits;
         measureUnitRadio.closest('.pos-measure-opt').style.opacity = hasUnits ? '1' : '0.4';
 
+        // Restore saved preference
         const savedPref = getSavedUnitPref(p.id);
         if (savedPref && hasUnits) {
             document.getElementById('measureUnit').checked = true;
@@ -768,8 +773,7 @@ document.addEventListener('DOMContentLoaded', function () {
             : '<i class="bi bi-cart-plus me-1"></i>Add to Cart';
 
         originalPricePerUnit = price;
-        updateModalTotal();
-        updateAmountDisplay();
+        updateModalTotal(); updateAmountDisplay();
         quantityModal.show();
     }
 
@@ -811,6 +815,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
+        // Quantity / unit inputs
         modalQty.addEventListener('input', () => {
             if (!isPriceInputActive) pricePerUnitInput.value = ((parseInt(modalQty.value)||1) * originalPricePerUnit).toFixed(2);
             updateModalTotal(); updateAmountDisplay();
@@ -821,7 +826,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         pricePerUnitInput.addEventListener('focus', () => isPriceInputActive = true);
-        pricePerUnitInput.addEventListener('blur', () => {
+        pricePerUnitInput.addEventListener('blur',  () => {
             isPriceInputActive = false;
             if ((parseFloat(pricePerUnitInput.value)||0) === 0 && currentProduct) {
                 pricePerUnitInput.value = originalPricePerUnit.toFixed(2);
@@ -841,6 +846,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
+        // Stepper buttons
         document.getElementById('increaseQty').addEventListener('click', () => {
             modalQty.value = (parseInt(modalQty.value)||1) + 1;
             pricePerUnitInput.value = (parseInt(modalQty.value) * originalPricePerUnit).toFixed(2);
@@ -862,6 +868,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (c > getUnitStep()) { modalUnit.value = (c - getUnitStep()).toFixed(3); pricePerUnitInput.value = (parseFloat(modalUnit.value) * originalPricePerUnit).toFixed(2); updateModalTotal(); updateAmountDisplay(); modalUnit.focus(); modalUnit.select(); }
         });
 
+        // Quick buttons
         document.querySelectorAll('.quick-btn').forEach(btn => {
             btn.addEventListener('click', function () {
                 if (currentMeasurementType === 'quantity') {
@@ -889,6 +896,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (this.checked && currentProduct && selectedUnit) saveUnitPref();
         });
 
+        // Enter key confirms
         [modalQty, modalUnit, pricePerUnitInput].forEach(el => {
             el.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); confirmAddBtn.click(); } });
         });
@@ -973,8 +981,9 @@ document.addEventListener('DOMContentLoaded', function () {
     async function loadProductUnits() {
         if (!currentProduct) return;
         try {
-            const url = '{{ route("api.product.units", ["product" => "__ID__"]) }}'.replace('__ID__', currentProduct.id);
-            const res = await axios.get(url);
+            const res = await axios.get(
+                '{{ route("api.product.units", ["product" => "__ID__"]) }}'.replace('__ID__', currentProduct.id)
+            );
             availableUnits = res.data.units || [];
             unitSelect.innerHTML = '<option value="">-- Select unit --</option>';
             const savedPref = getSavedUnitPref(currentProduct.id);
@@ -986,6 +995,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     unitSelect.appendChild(opt);
                 });
             } else {
+                // fallback default
                 selectedUnit = { id: 1, name: currentProduct.primary_unit||'Unit', short_name: currentProduct.primary_unit||'unit', conversion_factor:1, is_default:true };
                 unitSelect.appendChild(new Option(`${selectedUnit.name} (${selectedUnit.short_name})`, '1', true, true));
             }
@@ -997,7 +1007,6 @@ document.addEventListener('DOMContentLoaded', function () {
             if (savedPref) document.getElementById('rememberUnitPreference').checked = true;
             updateUnitLabel(); updateAmountDisplay();
         } catch (e) {
-            console.error('loadProductUnits failed:', e);
             selectedUnit = { id:1, name: currentProduct.primary_unit||'Unit', short_name: currentProduct.primary_unit||'unit' };
             updateUnitLabel();
         }
@@ -1060,7 +1069,7 @@ document.addEventListener('DOMContentLoaded', function () {
         productQuantityCache[currentProduct.id] = quantity;
         quantityModal.hide();
         renderCartAndTotals();
-        renderGrid(lastLimitToIds);
+        renderGrid();
         currentProduct = null;
         showToast('Added to cart', 'success');
     }
@@ -1073,7 +1082,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     const id = currentProduct.id;
                     cart = cart.filter(i => String(i.product_id) !== String(id));
                     delete productQuantityCache[id];
-                    quantityModal.hide(); renderCartAndTotals(); renderGrid(lastLimitToIds);
+                    quantityModal.hide(); renderCartAndTotals(); renderGrid();
                     showToast('Removed from cart', 'success');
                 }
             });
@@ -1135,6 +1144,7 @@ document.addEventListener('DOMContentLoaded', function () {
             `;
             cartBody.appendChild(tr);
 
+            // Cart qty button — re-opens quantity modal
             tr.querySelector('.qty-btn-cart').addEventListener('click', function () {
                 openQuantityModal(this.dataset.productId);
             });
@@ -1153,7 +1163,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const pid = cart[idx]?.product_id;
                 cart.splice(idx, 1);
                 if (pid) delete productQuantityCache[pid];
-                renderCartAndTotals(); renderGrid(lastLimitToIds);
+                renderCartAndTotals(); renderGrid();
                 showToast('Removed', 'success');
             });
         });
@@ -1192,14 +1202,14 @@ document.addEventListener('DOMContentLoaded', function () {
             if (type === 'percent' && val > 100) { showToast('Max 100%', 'warning'); return; }
             cart[currentItemIndex].discount_type  = type;
             cart[currentItemIndex].discount_value = val;
-            renderCartAndTotals(); renderGrid(lastLimitToIds);
+            renderCartAndTotals(); renderGrid();
             bootstrap.Modal.getInstance(document.getElementById('itemDiscountModal')).hide();
             showToast('Item discount applied', 'success');
         });
     }
 
     // ══════════════════════════════════════════════════════
-    // ORDER DISCOUNT
+    // DISCOUNT
     // ══════════════════════════════════════════════════════
     document.getElementById('applyDiscountBtn').addEventListener('click', () => {
         orderDiscountValue = parseFloat(discountValueEl.value) || 0;
@@ -1217,7 +1227,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('clearCart').addEventListener('click', () => {
         if (cart.length === 0) { showToast('Cart is already empty', 'info'); return; }
         Swal.fire({ title:'Clear Cart?', text:'Remove all items?', icon:'warning', showCancelButton:true, confirmButtonText:'Yes, clear' })
-            .then(r => { if (r.isConfirmed) { cart = []; productQuantityCache = {}; renderCartAndTotals(); renderGrid(lastLimitToIds); showToast('Cart cleared','success'); } });
+            .then(r => { if (r.isConfirmed) { cart = []; productQuantityCache = {}; renderCartAndTotals(); renderGrid(); showToast('Cart cleared','success'); } });
     });
 
     document.getElementById('holdOrderBtn').addEventListener('click', () => {
@@ -1232,7 +1242,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         localStorage.setItem('heldOrders', JSON.stringify(held));
         cart = []; productQuantityCache = {}; orderDiscountValue = 0; discountValueEl.value = '0';
-        renderCartAndTotals(); renderGrid(lastLimitToIds);
+        renderCartAndTotals(); renderGrid();
         showToast('Order held!', 'success');
     });
 
@@ -1263,7 +1273,6 @@ document.addEventListener('DOMContentLoaded', function () {
                         if (order.registrySnapshot) order.registrySnapshot.forEach(([k,v]) => productRegistry.set(k, v));
                         if (order.customer) customerSelect.value = order.customer;
                         if (order.discount) { orderDiscountType=order.discount.type; orderDiscountValue=order.discount.value; discountTypeEl.value=order.discount.type; discountValueEl.value=order.discount.value; }
-                        lastLimitToIds = null;
                         renderCartAndTotals(); renderGrid(); buildCategoryPills();
                         bootstrap.Modal.getInstance(document.getElementById('loadOrderModal')).hide();
                         showToast('Order loaded!','success');
@@ -1316,7 +1325,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             localStorage.setItem('offlineOrders', JSON.stringify(offlineOrders));
             cart=[]; productQuantityCache={}; orderDiscountValue=0; discountValueEl.value='0';
-            renderCartAndTotals(); renderGrid(lastLimitToIds);
+            renderCartAndTotals(); renderGrid();
             Swal.fire({title:'Saved Offline!',html:`<div class="text-center"><i class="bi bi-wifi-off text-warning display-1 mb-3"></i><h4>Order #${oid}</h4><p>Will sync when online.</p></div>`,icon:'warning',confirmButtonText:'OK'});
             return;
         }
@@ -1369,7 +1378,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function resetAfterOrder() {
         cart=[]; productQuantityCache={}; orderDiscountValue=0; discountValueEl.value='0';
-        lastLimitToIds = null;
         renderCartAndTotals();
         input.value=''; input.focus();
         loadInitialProducts();
@@ -1457,14 +1465,17 @@ document.addEventListener('DOMContentLoaded', function () {
     // UTILITIES
     // ══════════════════════════════════════════════════════
     function showSpinner(show) { document.getElementById('searchSpinner').classList.toggle('d-none', !show); }
+
     function formatNum(n, dec=0) {
         return new Intl.NumberFormat('en-NG',{minimumFractionDigits:dec,maximumFractionDigits:dec}).format(parseFloat(n)||0);
     }
     function formatCurrency(n) { return '₦' + formatNum(n,2); }
     function formatQty(qty, isUnit=false) { return formatNum(qty, isUnit?2:0); }
+
     function escHtml(str) {
         return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
     }
+
     function showToast(message, type='success', duration=2000) {
         Swal.mixin({toast:true,position:'top-end',showConfirmButton:false,timer:duration,timerProgressBar:true}).fire({icon:type,title:message});
     }
@@ -1473,11 +1484,19 @@ document.addEventListener('DOMContentLoaded', function () {
         return function(...args){ clearTimeout(t); t=setTimeout(()=>fn.apply(this,args),delay); };
     }
 
+    // ══════════════════════════════════════════════════════
+    // BOOT
+    // ══════════════════════════════════════════════════════
     init();
 });
 </script>
 
 <style>
+/* ═══════════════════════════════════════════════════════════
+   POS GRID — STYLES
+   Matches: pos.index look+feel for topbar/search
+   Cards: large tiles like the reference screenshot
+═══════════════════════════════════════════════════════════ */
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 
 .pos-grid-page {
@@ -1526,7 +1545,10 @@ document.addEventListener('DOMContentLoaded', function () {
 }
 .pos-back-btn:hover { color:#fff; background:rgba(255,255,255,.1); border-color:rgba(255,255,255,.3); }
 
-.pos-search-outer { width:100%; }
+/* Search — same large style as pos.index */
+.pos-search-outer {
+    width:100%;
+}
 .pos-search-input {
     background: rgba(255,255,255,.1) !important;
     border: 1px solid rgba(255,255,255,.2) !important;
@@ -1547,6 +1569,7 @@ document.addEventListener('DOMContentLoaded', function () {
 }
 .pos-search-spinner { position:absolute; right:12px; top:50%; transform:translateY(-50%); color:rgba(255,255,255,.7); }
 
+/* Shortcuts row */
 .pos-shortcuts-row {
     display:flex; align-items:center; flex-wrap:wrap; gap:4px;
     margin-top:6px; font-size:.78rem; color:rgba(255,255,255,.5);
@@ -1594,90 +1617,91 @@ document.addEventListener('DOMContentLoaded', function () {
     z-index:10; border-radius:12px;
 }
 
-/* ─── PRODUCT GRID — big tiles like reference screenshot ─── */
+/* ─── PRODUCT GRID ─── */
 .pos-product-grid {
     flex:1; overflow-y:auto;
     display:grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap:16px; padding-right:6px; align-content:start;
+    /* Larger cards — 4-column default, like the reference screenshot */
+    grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+    gap:14px; padding-right:6px; align-content:start;
 }
 .pos-product-grid::-webkit-scrollbar { width:6px; }
 .pos-product-grid::-webkit-scrollbar-thumb { background:#d1d5db; border-radius:3px; }
 
-/* ─── PRODUCT CARD — large tile matching reference ─── */
+/* ─── PRODUCT CARD — large tile ─── */
 .pos-prod-card {
     background: var(--pg-surface);
     border: 1.5px solid var(--pg-border);
-    border-radius: 16px;
+    border-radius: var(--pg-radius);
     cursor: pointer; position: relative;
     display: flex; flex-direction: column; align-items: center;
-    padding: 20px 16px 0;
-    gap: 10px;
+    padding: 14px 12px 0;
+    gap: 8px;
     transition: transform .12s, border-color .15s, box-shadow .15s;
     user-select: none; overflow: hidden;
-    min-height: 240px;
+    min-height: 200px;
 }
 .pos-prod-card:hover:not(.out-of-stock) {
     border-color: var(--pg-accent);
-    box-shadow: 0 8px 24px rgba(37,99,235,.14);
+    box-shadow: 0 6px 20px rgba(37,99,235,.14);
     transform: translateY(-3px);
 }
 .pos-prod-card:active:not(.out-of-stock) { transform: translateY(0); }
 .pos-prod-card:focus-visible { outline:2px solid var(--pg-accent); outline-offset:2px; }
 .pos-prod-card.in-cart { border-color: var(--pg-green); background: #f0fdf4; }
-.pos-prod-card.in-cart:hover { border-color:#15803d; box-shadow:0 8px 24px rgba(22,163,74,.18); }
+.pos-prod-card.in-cart:hover { border-color:#15803d; box-shadow:0 6px 20px rgba(22,163,74,.18); }
 .pos-prod-card.out-of-stock { opacity:.45; cursor:not-allowed; filter:grayscale(.7); }
 .pos-prod-card.out-of-stock:hover { transform:none; box-shadow:none; border-color:var(--pg-border); }
 
-/* Cart badge */
+/* Cart badge — top-left */
 .prod-cart-badge {
-    position:absolute; top:8px; left:8px; z-index:2;
+    position:absolute; top:7px; left:7px; z-index:2;
     background:var(--pg-green); color:#fff;
     font-size:10.5px; font-weight:700; padding:2px 8px;
     border-radius:20px; display:flex; align-items:center; gap:2px;
 }
 
-/* Stock pip */
+/* Stock pip — top-right */
 .prod-stock-pip {
-    position:absolute; top:10px; right:10px;
-    width:10px; height:10px; border-radius:50%;
+    position:absolute; top:9px; right:9px;
+    width:9px; height:9px; border-radius:50%;
 }
 .prod-stock-pip.good { background:#22c55e; }
 .prod-stock-pip.low  { background:#f59e0b; }
 .prod-stock-pip.out  { background:#ef4444; }
 
-/* Product image — big square like reference */
+/* Product image — big square */
 .prod-img-wrap {
-    width:110px; height:110px; border-radius:14px;
+    width:90px; height:90px; border-radius:12px;
     background:#f3f4f6; display:flex; align-items:center; justify-content:center;
-    position:relative; overflow:hidden; flex-shrink:0; margin-top:4px;
+    position:relative; overflow:hidden; flex-shrink:0; margin-top:6px;
 }
 .prod-img-wrap img { width:100%; height:100%; object-fit:cover; }
-.prod-img-placeholder { font-size:44px; color:#d1d5db; }
+.prod-img-placeholder { font-size:36px; color:#d1d5db; }
 .prod-out-overlay {
     position:absolute; inset:0; background:rgba(0,0,0,.45);
-    display:flex; align-items:center; justify-content:center; border-radius:14px;
+    display:flex; align-items:center; justify-content:center; border-radius:12px;
 }
 .prod-out-overlay span { color:#fff; font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; }
 
 /* Product info */
-.prod-info { width:100%; text-align:center; padding-bottom:8px; }
+.prod-info { width:100%; text-align:center; padding-bottom:6px; }
 .prod-name {
-    font-size:13px; font-weight:600; color:#111827; line-height:1.35;
-    max-height:2.7em; overflow:hidden;
+    font-size:12.5px; font-weight:600; color:#111827; line-height:1.3;
+    max-height:2.6em; overflow:hidden;
     display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
-    margin-bottom:5px;
+    margin-bottom:4px;
 }
-.prod-price { font-family:var(--pg-price-font); font-size:15px; font-weight:700; color:var(--pg-green); }
-.prod-meta  { font-size:10.5px; color:#9ca3af; margin-top:3px; }
+.prod-price { font-family:var(--pg-price-font); font-size:14px; font-weight:700; color:var(--pg-green); }
+.prod-meta  { font-size:10px; color:#9ca3af; margin-top:2px; }
 .prod-saved-unit { font-size:10px; color:#6b7280; margin-top:2px; }
 
 /* In-cart bar at bottom */
 .prod-in-cart-bar {
-    width:calc(100% + 32px); margin:auto -16px -0px;
+    width:calc(100% + 24px); margin:auto -12px -0px;
     background:var(--pg-green); color:#fff;
     font-size:10px; font-weight:700; text-align:center;
-    padding:5px 0; letter-spacing:.5px; text-transform:uppercase; margin-top:auto;
+    padding:4px 0; letter-spacing:.5px; text-transform:uppercase; margin-top:auto;
 }
 
 /* Empty state */
@@ -1690,11 +1714,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
 /* ─── ORDER PANEL ─── */
 .pos-order-panel {
-    width:390px; flex-shrink:0; background:var(--pg-surface);
+    width:380px; flex-shrink:0; background:var(--pg-surface);
     border-left:1px solid var(--pg-border);
     display:flex; flex-direction:column; overflow:hidden;
 }
 
+/* Customer row */
 .pos-customer-row {
     display:flex; align-items:center; gap:6px;
     padding:10px 14px; border-bottom:1px solid var(--pg-border); flex-shrink:0;
@@ -1718,6 +1743,7 @@ document.addEventListener('DOMContentLoaded', function () {
 .pos-icon-btn.info:hover    { background:#0ea5e9; color:#fff; border-color:#0ea5e9; }
 .pos-icon-btn.danger:hover  { background:var(--pg-red); color:#fff; border-color:var(--pg-red); }
 
+/* Cart area */
 .pos-cart-area { flex:1; overflow-y:auto; }
 .pos-cart-area::-webkit-scrollbar { width:4px; }
 .pos-cart-area::-webkit-scrollbar-thumb { background:#e5e7eb; border-radius:2px; }
@@ -1725,6 +1751,7 @@ document.addEventListener('DOMContentLoaded', function () {
 .pos-cart-empty-icon { font-size:3.2rem; color:#e5e7eb; }
 .pos-cart-empty p { font-size:.9rem; font-weight:600; color:#6b7280; margin:0; }
 
+/* Cart table */
 .pos-cart-table { width:100%; border-collapse:collapse; font-size:.8rem; }
 .pos-cart-table thead tr { background:#f9fafb; border-bottom:2px solid var(--pg-border); }
 .pos-cart-table thead th { padding:7px 10px; font-weight:600; color:#6b7280; text-transform:uppercase; font-size:.68rem; letter-spacing:.5px; }
@@ -1739,6 +1766,7 @@ document.addEventListener('DOMContentLoaded', function () {
 .cart-action-btn.disc:hover { background:#fef3c7; border-color:#f59e0b; color:#d97706; }
 .cart-action-btn.del:hover  { background:#fee2e2; border-color:#ef4444; color:#dc2626; }
 
+/* Discount row */
 .pos-discount-row { padding:9px 14px; border-top:1px solid var(--pg-border); background:#fafafa; display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex-shrink:0; }
 .pos-discount-label { font-size:.78rem; font-weight:600; color:#374151; white-space:nowrap; }
 .pos-discount-inputs { display:flex; gap:4px; align-items:center; flex:1; }
@@ -1749,12 +1777,14 @@ document.addEventListener('DOMContentLoaded', function () {
 .pos-discount-apply:hover { background:#1d4ed8; }
 .pos-discount-applied { font-size:.77rem; font-weight:700; color:var(--pg-red); white-space:nowrap; }
 
+/* Totals */
 .pos-totals { padding:8px 14px; border-top:1px solid var(--pg-border); flex-shrink:0; }
 .pos-total-row { display:flex; justify-content:space-between; align-items:center; font-size:.82rem; color:#6b7280; padding:3px 0; }
 .pos-total-row span:last-child { font-family:var(--pg-price-font); }
 .pos-total-row.grand { margin-top:6px; padding-top:8px; border-top:2px solid #111827; font-size:1rem; font-weight:700; color:#111827; }
 .pos-total-row.grand span:last-child { font-size:1.1rem; color:var(--pg-green); }
 
+/* Payment */
 .pos-payment-group { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; padding:9px 14px; flex-shrink:0; }
 .pos-payment-opt { cursor:pointer; }
 .pos-payment-opt input { display:none; }
@@ -1762,8 +1792,9 @@ document.addEventListener('DOMContentLoaded', function () {
 .pos-payment-opt:hover span { border-color:var(--pg-accent); color:var(--pg-accent); background:#eff6ff; }
 .pos-payment-opt input:checked + span { border-color:var(--pg-green); background:var(--pg-green-light); color:var(--pg-green); }
 
+/* Charge button */
 .pos-charge-btn {
-    margin:0 14px 10px; width:calc(100% - 28px); height:54px;
+    margin:0 14px 8px; width:calc(100% - 28px); height:52px;
     border:none; border-radius:var(--pg-radius);
     background:linear-gradient(135deg,#16a34a,#15803d);
     color:#fff; font-family:'DM Sans',sans-serif; font-weight:700; font-size:1rem;
@@ -1799,17 +1830,13 @@ document.addEventListener('DOMContentLoaded', function () {
 .unit-quick-btn:hover { background:var(--pg-green); border-color:var(--pg-green); color:#fff; }
 
 /* ─── RESPONSIVE ─── */
-@media (max-width:1400px) {
-    .pos-product-grid { grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); }
-}
 @media (max-width:1200px) {
-    .pos-order-panel { width:350px; }
-    .pos-product-grid { grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); }
+    .pos-order-panel { width:340px; }
+    .pos-product-grid { grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); }
 }
 @media (max-width:900px) {
     .pos-order-panel { width:300px; }
-    .pos-product-grid { grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); }
-    .prod-img-wrap { width:90px; height:90px; }
+    .pos-product-grid { grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); }
 }
 @media (max-width:768px) {
     .pos-body { flex-direction:column; }
