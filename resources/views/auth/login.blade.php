@@ -2,15 +2,14 @@
 <html lang="en" data-layout="vertical" data-sidebar="dark" data-sidebar-size="lg" data-preloader="disable" data-theme="default" data-topbar="light" data-bs-theme="light">
 <head>
     <meta charset="utf-8">
-    <title>Sign In | {{ $store->store_name ?? 'Frost Hub POS' }}</title>
+    <title>Sign In | {{ $storeName ?? 'Frost Hub' }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta content="Point of Sale System" name="description">
-    <meta content="Qudroid Systems" name="author">
+    <meta content="Smart Inventory Management POS" name="description">
+    <meta content="Themesbrand" name="author">
 
     @php
         $store = \App\Models\StoreSetting::getSettings();
-        $storeName = $store->store_name ?? 'Frost Hub POS';
-        $storeLogo = $store->getLogoUrlAttribute() ?? asset('theme/layouts/assets/images/logo-dark.png');
+        $storeName = $store?->store_name ?? 'Frost Hub';
     @endphp
 
     <!-- App favicon -->
@@ -23,29 +22,25 @@
         <link rel="icon" type="image/png" href="{{ asset('theme/layouts/assets/images/logo-dark.png') }}">
     @endif
 
-    <!-- Fonts -->
+    <!-- Fonts css load -->
     <link rel="preconnect" href="https://fonts.googleapis.com/">
     <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin>
     <link id="fontsLink" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
 
     <!-- Layout config Js -->
     <script src="{{ asset('theme/layouts/assets/js/layout.js')}}"></script>
-
     <!-- Bootstrap Css -->
     <link href="{{ asset('theme/layouts/assets/css/bootstrap.min.css')}}" rel="stylesheet" type="text/css">
-
     <!-- Icons Css -->
     <link href="{{ asset('theme/layouts/assets/css/icons.min.css')}}" rel="stylesheet" type="text/css">
-
     <!-- App Css-->
     <link href="{{ asset('theme/layouts/assets/css/app.min.css')}}" rel="stylesheet" type="text/css">
-
     <!-- custom Css-->
     <link href="{{ asset('theme/layouts/assets/css/custom.min.css')}}" rel="stylesheet" type="text/css">
 
     <style>
         /* =====================================================
-           APPLE OS STYLE LOGIN PAGE - POS VERSION
+           APPLE OS STYLE LOGIN PAGE FOR POS
            ===================================================== */
 
         /* Smooth page entrance animation */
@@ -125,26 +120,14 @@
             50% { transform: scale(1.05); opacity: 0.9; }
         }
 
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-        }
-
         /* Page container animation */
         .auth-page-wrapper {
             animation: pageFadeInUp 0.6s cubic-bezier(0.2, 0.9, 0.4, 1.1) forwards;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            position: relative;
-            overflow: hidden;
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
         }
 
-        /* Animated background bubbles */
-        .bg-bubble {
-            position: absolute;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.1);
-            animation: float 6s ease-in-out infinite;
-            pointer-events: none;
+        .dark .auth-page-wrapper {
+            background: linear-gradient(135deg, #0c4a6e 0%, #082f49 100%);
         }
 
         /* Card entrance animation */
@@ -154,18 +137,17 @@
             overflow: hidden;
             backdrop-filter: blur(20px);
             background: rgba(255, 255, 255, 0.98);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
         }
 
         /* Left panel animation */
         .auth-card {
             animation: slideInLeft 0.6s cubic-bezier(0.2, 0.9, 0.4, 1.1) forwards;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
             border-radius: 0 !important;
         }
 
         /* Right panel animation */
-        .col-xxl-7 {
+        .col-xxl-6 {
             animation: slideInRight 0.6s cubic-bezier(0.2, 0.9, 0.4, 1.1) forwards;
             animation-delay: 0.1s;
             opacity: 0;
@@ -183,9 +165,9 @@
         }
 
         .apple-input:focus {
-            border-color: #667eea !important;
+            border-color: #4f8ef7 !important;
             background: #ffffff !important;
-            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1), 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+            box-shadow: 0 0 0 4px rgba(79, 142, 247, 0.1), 0 2px 8px rgba(0, 0, 0, 0.05) !important;
             outline: none !important;
         }
 
@@ -196,7 +178,7 @@
 
         /* Apple-style button */
         .apple-button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            background: #4f8ef7 !important;
             border: none !important;
             border-radius: 12px !important;
             padding: 14px 20px !important;
@@ -208,8 +190,9 @@
         }
 
         .apple-button:hover {
+            background: #3b7ae3 !important;
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35);
+            box-shadow: 0 4px 12px rgba(79, 142, 247, 0.35);
         }
 
         .apple-button:active {
@@ -242,8 +225,8 @@
         }
 
         .form-check-input:checked {
-            background-color: #667eea !important;
-            border-color: #667eea !important;
+            background-color: #4f8ef7 !important;
+            border-color: #4f8ef7 !important;
         }
 
         /* Error message styling */
@@ -258,7 +241,6 @@
             border-radius: 0 12px 12px 0 !important;
             padding: 0 16px !important;
             transition: opacity 0.2s ease;
-            z-index: 10;
         }
 
         .password-addon:hover {
@@ -327,8 +309,8 @@
 
         .auth-user-list li {
             position: absolute;
-            width: 60px;
-            height: 60px;
+            width: 50px;
+            height: 50px;
             transform-origin: center center;
             cursor: pointer;
             transition: transform 0.3s ease;
@@ -371,8 +353,8 @@
 
         /* Avatar styling */
         .avatar-sm {
-            width: 60px;
-            height: 60px;
+            width: 50px;
+            height: 50px;
         }
 
         .avatar-title {
@@ -382,21 +364,26 @@
             border: 2px solid white;
             transition: box-shadow 0.3s ease;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(4px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
 
         .avatar-title i {
-            font-size: 32px;
+            font-size: 24px;
             color: white;
+        }
+
+        /* Tooltip styling */
+        .avatar-tooltip {
+            background-color: #1e293b;
+            color: #fff;
+            border-radius: 8px;
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 500;
         }
 
         /* Store logo styling */
         .store-login-logo {
-            height: 70px;
+            height: 55px;
             width: auto;
             border-radius: 14px;
             object-fit: contain;
@@ -442,73 +429,51 @@
         }
 
         /* Responsive adjustments */
-        @media (max-width: 768px) {
-            .auth-effect-main { width: 220px; height: 220px; }
-            .auth-user-list li { width: 45px; height: 45px; }
-            .auth-user-list li:nth-child(1) { transform: translate(90px, 0); }
-            .auth-user-list li:nth-child(2) { transform: rotate(72deg) translate(88px, 0); }
-            .auth-user-list li:nth-child(3) { transform: rotate(144deg) translate(92px, 0); }
-            .auth-user-list li:nth-child(4) { transform: rotate(216deg) translate(89px, 0); }
-            .auth-user-list li:nth-child(5) { transform: rotate(288deg) translate(91px, 0); }
-            @keyframes orbitClockwise {
-                from { transform: rotate(0deg) translate(90px, 0) rotate(0deg); }
-                to { transform: rotate(360deg) translate(90px, 0) rotate(-360deg); }
-            }
-            @keyframes orbitCounterClockwise {
-                from { transform: rotate(0deg) translate(90px, 0) rotate(0deg); }
-                to { transform: rotate(-360deg) translate(90px, 0) rotate(360deg); }
-            }
-            .avatar-title i { font-size: 24px; }
-            .store-login-logo { height: 50px; }
-        }
-
         @media (max-width: 576px) {
-            .auth-effect-main { width: 180px; height: 180px; }
+            .auth-effect-main { width: 200px; height: 200px; }
             .auth-user-list li { width: 40px; height: 40px; }
-            .auth-user-list li:nth-child(1) { transform: translate(70px, 0); }
-            .auth-user-list li:nth-child(2) { transform: rotate(72deg) translate(68px, 0); }
-            .auth-user-list li:nth-child(3) { transform: rotate(144deg) translate(72px, 0); }
-            .auth-user-list li:nth-child(4) { transform: rotate(216deg) translate(69px, 0); }
-            .auth-user-list li:nth-child(5) { transform: rotate(288deg) translate(71px, 0); }
+            .auth-user-list li:nth-child(1) { transform: translate(80px, 0); }
+            .auth-user-list li:nth-child(2) { transform: rotate(72deg) translate(78px, 0); }
+            .auth-user-list li:nth-child(3) { transform: rotate(144deg) translate(82px, 0); }
+            .auth-user-list li:nth-child(4) { transform: rotate(216deg) translate(79px, 0); }
+            .auth-user-list li:nth-child(5) { transform: rotate(288deg) translate(81px, 0); }
             @keyframes orbitClockwise {
-                from { transform: rotate(0deg) translate(70px, 0) rotate(0deg); }
-                to { transform: rotate(360deg) translate(70px, 0) rotate(-360deg); }
+                from { transform: rotate(0deg) translate(80px, 0) rotate(0deg); }
+                to { transform: rotate(360deg) translate(80px, 0) rotate(-360deg); }
             }
             @keyframes orbitCounterClockwise {
-                from { transform: rotate(0deg) translate(70px, 0) rotate(0deg); }
-                to { transform: rotate(-360deg) translate(70px, 0) rotate(360deg); }
+                from { transform: rotate(0deg) translate(80px, 0) rotate(0deg); }
+                to { transform: rotate(-360deg) translate(80px, 0) rotate(360deg); }
             }
+            .store-login-logo { height: 40px; }
         }
     </style>
 </head>
 
 <body>
     <section class="auth-page-wrapper position-relative d-flex align-items-center justify-content-center min-vh-100">
-        <!-- Animated background bubbles -->
-        <div class="bg-bubble" style="width: 300px; height: 300px; top: -100px; left: -100px; animation-delay: 0s;"></div>
-        <div class="bg-bubble" style="width: 200px; height: 200px; bottom: -50px; right: -50px; animation-delay: 2s;"></div>
-        <div class="bg-bubble" style="width: 150px; height: 150px; top: 50%; left: 20%; animation-delay: 4s;"></div>
-
-        <div class="container position-relative" style="z-index: 10;">
+        <div class="container">
             <div class="row justify-content-center">
                 <div class="col-lg-11">
                     <div class="card mb-0 border-0 shadow-lg">
                         <div class="row g-0 align-items-center">
-
-                            <!-- Left: Hero Section -->
                             <div class="col-xxl-5">
                                 <div class="card auth-card bg-secondary h-100 border-0 shadow-none d-none d-sm-block mb-0">
                                     <div class="card-body py-5 d-flex justify-content-between flex-column">
                                         <div class="text-center">
-                                            <h3 class="text-white" style="animation: fadeInScale 0.6s ease;">Welcome to POS System</h3>
-                                            <p class="text-white opacity-75 fs-base">Fast, reliable, and easy to use</p>
+                                            <h3 class="text-white" style="animation: fadeInScale 0.6s ease;">Smart POS Management</h3>
+                                            <p class="text-white opacity-75 fs-base">Make your inventory operations SEAMLESS...</p>
                                         </div>
 
                                         <div class="auth-effect-main my-5 position-relative rounded-circle d-flex align-items-center justify-content-center mx-auto">
                                             <div class="effect-circle-1 position-relative mx-auto rounded-circle d-flex align-items-center justify-content-center" style="animation: pulse 2s infinite;">
                                                 <div class="effect-circle-2 position-relative mx-auto rounded-circle d-flex align-items-center justify-content-center">
-                                                    <div class="effect-circle-3 mx-auto rounded-circle position-relative text-white fs-4xl d-flex align-items-center justify-content-center" style="background: rgba(255,255,255,0.1); backdrop-filter: blur(4px); padding: 20px;">
-                                                        <span class="text-white text-center" style="font-weight: 600; font-size: 14px;">POS<br>System</span>
+                                                    <div class="effect-circle-3 mx-auto rounded-circle position-relative text-white fs-4xl d-flex align-items-center justify-content-center" style="background: rgba(255,255,255,0.1); backdrop-filter: blur(4px);">
+                                                        @if($store && $store->logo)
+                                                            <img src="{{ $store->getLogoUrlAttribute() }}" alt="{{ $storeName }}" style="height: 60px; width: auto; border-radius: 12px;">
+                                                        @else
+                                                            <span class="text-primary ms-1" style="font-weight: 600;">{{ $storeName }}</span>
+                                                        @endif
                                                     </div>
                                                 </div>
                                             </div>
@@ -516,36 +481,36 @@
                                             <ul class="auth-user-list list-unstyled">
                                                 <li>
                                                     <div class="avatar-sm d-inline-block">
-                                                        <div class="avatar-title bg-white bg-opacity-20 shadow-lg overflow-hidden rounded-circle">
-                                                            <i class="ri-shopping-cart-2-fill"></i>
+                                                        <div class="avatar-title bg-white bg-opacity-20 shadow-lg overflow-hidden rounded-circle d-flex align-items-center justify-content-center">
+                                                            <i class="ri-user-3-fill fs-2xl text-white"></i>
                                                         </div>
                                                     </div>
                                                 </li>
                                                 <li>
                                                     <div class="avatar-sm d-inline-block">
-                                                        <div class="avatar-title bg-white bg-opacity-20 shadow-lg overflow-hidden rounded-circle">
-                                                            <i class="ri-barcode-box-fill"></i>
+                                                        <div class="avatar-title bg-white bg-opacity-20 shadow-lg overflow-hidden rounded-circle d-flex align-items-center justify-content-center">
+                                                            <i class="ri-user-smile-fill fs-2xl text-white"></i>
                                                         </div>
                                                     </div>
                                                 </li>
                                                 <li>
                                                     <div class="avatar-sm d-inline-block">
-                                                        <div class="avatar-title bg-white bg-opacity-20 shadow-lg overflow-hidden rounded-circle">
-                                                            <i class="ri-cash-line"></i>
+                                                        <div class="avatar-title bg-white bg-opacity-20 shadow-lg overflow-hidden rounded-circle d-flex align-items-center justify-content-center">
+                                                            <i class="ri-user-star-fill fs-2xl text-white"></i>
                                                         </div>
                                                     </div>
                                                 </li>
                                                 <li>
                                                     <div class="avatar-sm d-inline-block">
-                                                        <div class="avatar-title bg-white bg-opacity-20 shadow-lg overflow-hidden rounded-circle">
-                                                            <i class="ri-printer-fill"></i>
+                                                        <div class="avatar-title bg-white bg-opacity-20 shadow-lg overflow-hidden rounded-circle d-flex align-items-center justify-content-center">
+                                                            <i class="ri-user-heart-fill fs-2xl text-white"></i>
                                                         </div>
                                                     </div>
                                                 </li>
                                                 <li>
                                                     <div class="avatar-sm d-inline-block">
-                                                        <div class="avatar-title bg-white bg-opacity-20 shadow-lg overflow-hidden rounded-circle">
-                                                            <i class="ri-user-settings-fill"></i>
+                                                        <div class="avatar-title bg-white bg-opacity-20 shadow-lg overflow-hidden rounded-circle d-flex align-items-center justify-content-center">
+                                                            <i class="ri-user-settings-fill fs-2xl text-white"></i>
                                                         </div>
                                                     </div>
                                                 </li>
@@ -554,8 +519,7 @@
 
                                         <div class="text-center">
                                             <p class="text-white opacity-75 mb-0 mt-3">
-                                                © <script>document.write(new Date().getFullYear())</script> {{ $storeName }}. <br>
-                                                Created with <i class="mdi mdi-heart text-danger"></i> by Qudroid Systems
+                                                © <script>document.write(new Date().getFullYear())</script> {{ $storeName }}. Created with <i class="mdi mdi-heart text-danger"></i> by Qudroid Systems
                                             </p>
                                         </div>
                                     </div>
@@ -563,8 +527,7 @@
                             </div>
                             <!--end col-->
 
-                            <!-- Right: Login Form -->
-                            <div class="col-xxl-7 mx-auto">
+                            <div class="col-xxl-6 mx-auto">
                                 <div class="card mb-0 border-0 shadow-none mb-0" style="background: transparent;">
                                     <div class="card-body p-sm-5 m-lg-4">
                                         <!-- Store Logo on Login Form -->
@@ -582,8 +545,8 @@
                                         </div>
 
                                         <div class="text-center mt-2">
-                                            <h5 class="fs-2xl fw-semibold" style="animation: fadeInScale 0.5s ease;">{{ $storeName }}</h5>
-                                            <p class="text-muted">Sign in to your account</p>
+                                            <h5 class="fs-2xl fw-semibold" style="animation: fadeInScale 0.5s ease;">{{ $storeName }} Portal</h5>
+                                            <p class="text-muted">Sign in to continue to POS</p>
                                         </div>
 
                                         <div class="p-2 mt-3">
@@ -674,14 +637,16 @@
 
     <script>
         // =====================================================
-        // APPLE OS STYLE LOGIN PAGE - POS VERSION
+        // APPLE OS STYLE LOGIN PAGE FOR POS
         // =====================================================
 
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize Bootstrap tooltips (if any)
+            // Initialize Bootstrap tooltips
             var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
             var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-                return new bootstrap.Tooltip(tooltipTriggerEl);
+                return new bootstrap.Tooltip(tooltipTriggerEl, {
+                    template: '<div class="tooltip avatar-tooltip" role="tooltip"><div class="tooltip-inner"></div></div>'
+                });
             });
 
             // Avatar hover pause animation
@@ -719,6 +684,9 @@
             function shakeElement(element) {
                 if (!element) return;
                 element.classList.add('shake-field');
+                if (window.navigator && window.navigator.vibrate) {
+                    window.navigator.vibrate(100);
+                }
                 setTimeout(() => {
                     element.classList.remove('shake-field');
                 }, 400);
@@ -790,11 +758,14 @@
                 });
             }
 
-            // Loading state on form submit
+            // Add loading state on form submit
             if (loginForm && loginButton) {
                 loginForm.addEventListener('submit', function() {
                     loginButton.classList.add('loading');
-                    loginButton.disabled = true;
+                    const buttonSpan = loginButton.querySelector('span');
+                    if (buttonSpan) {
+                        buttonSpan.style.opacity = '0';
+                    }
                 });
             }
         });
@@ -804,7 +775,7 @@
             const colors = {
                 success: '#10b981',
                 error: '#ef4444',
-                info: '#667eea',
+                info: '#4f8ef7',
                 warning: '#f59e0b'
             };
 
