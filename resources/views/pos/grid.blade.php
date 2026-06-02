@@ -1116,7 +1116,6 @@ document.addEventListener('DOMContentLoaded', function () {
             taxAmountEl.textContent = formatCurrency(0);
             grandTotalEl.textContent = formatCurrency(0);
 
-            // Update charge button total - get fresh reference
             const chargeTotalSpan = document.getElementById('chargeBtnTotal');
             if (chargeTotalSpan) chargeTotalSpan.textContent = formatCurrency(0);
 
@@ -1146,7 +1145,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>
+                <tr>
                     <div class="cart-item-name">${escHtml(item.title)}</div>
                     ${item.discount_value > 0 ? `<span class="cart-disc-badge">-${formatNum(item.discount_value,2)}${item.discount_type==='percent'?'%':'₦'}</span>` : ''}
                 </td>
@@ -1202,7 +1201,6 @@ document.addEventListener('DOMContentLoaded', function () {
         taxAmountEl.textContent    = formatCurrency(taxAmt);
         grandTotalEl.textContent   = formatCurrency(grand);
 
-        // Update charge button total - get fresh reference
         const chargeTotalSpan = document.getElementById('chargeBtnTotal');
         if (chargeTotalSpan) chargeTotalSpan.textContent = formatCurrency(grand);
 
@@ -1369,7 +1367,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         isProcessingOrder = true;
         const btn = document.getElementById('completeOrder');
-        const originalBtnText = btn.innerHTML;
+        const originalButtonHTML = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing…';
 
@@ -1385,7 +1383,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }));
         const disc = window.currentDiscount || { type: 'percent', value: 0, amount: 0 };
 
-        // Show loading toast
         Swal.fire({
             title: 'Processing order...',
             text: 'Please wait',
@@ -1413,6 +1410,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     thankYouAudio.currentTime = 0;
                     thankYouAudio.play().catch(() => {});
                 }
+
+                // Restore button BEFORE showing the receipt prompt
+                btn.disabled = false;
+                btn.innerHTML = originalButtonHTML;
+                isProcessingOrder = false;
 
                 const result = await Swal.fire({
                     title: 'Order Complete!',
@@ -1448,11 +1450,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     resetAfterOrder();
                 }
             } else {
-                await Swal.fire('Error', res.data.message || 'Failed to complete order', 'error');
-                // Reset button state but keep cart
                 btn.disabled = false;
-                btn.innerHTML = originalBtnText;
+                btn.innerHTML = originalButtonHTML;
                 isProcessingOrder = false;
+                await Swal.fire('Error', res.data.message || 'Failed to complete order', 'error');
             }
         } catch (e) {
             Swal.close();
@@ -1464,9 +1465,8 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             await Swal.fire('Error', msg, 'error');
 
-            // Reset button state
             btn.disabled = false;
-            btn.innerHTML = originalBtnText;
+            btn.innerHTML = originalButtonHTML;
             isProcessingOrder = false;
         }
     }
@@ -1480,15 +1480,20 @@ document.addEventListener('DOMContentLoaded', function () {
         discountValueEl.value = '0';
         discountTypeEl.value = 'percent';
 
-        // Clear search cache so stock counts stay fresh
         searchCache.clear();
 
-        // Force complete UI refresh
         renderCartAndTotals();
         renderGrid();
 
-        // Reset processing flag
         isProcessingOrder = false;
+
+        const chargeBtn = document.getElementById('completeOrder');
+        if (chargeBtn) {
+            chargeBtn.disabled = false;
+            if (chargeBtn.innerHTML.includes('Processing')) {
+                chargeBtn.innerHTML = '<i class="bi bi-printer-fill me-2"></i><span>Charge</span><span class="pos-charge-total" id="chargeBtnTotal">₦0.00</span>';
+            }
+        }
 
         input.value = '';
         if (focusInput) input.focus();
