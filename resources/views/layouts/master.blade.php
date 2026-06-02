@@ -125,20 +125,13 @@
         #scrollbar::-webkit-scrollbar-thumb:hover {
             background: rgba(255, 255, 255, 0.3);
         }
-        /* Ensure sidebar content scrolls properly */
-        .navbar-menu .container-fluid {
-            padding: 0;
-        }
-        #navbar-nav {
-            padding-bottom: 20px;
-        }
+        .navbar-menu .container-fluid { padding: 0; }
+        #navbar-nav { padding-bottom: 20px; }
 
         /* =====================================================
            SIDEBAR: SMOOTH ACCORDION
            ===================================================== */
-        #navbar-nav .menu-dropdown {
-            overflow: hidden;
-        }
+        #navbar-nav .menu-dropdown { overflow: hidden; }
 
         /* Chevron rotation */
         #navbar-nav .nav-link.menu-link .ri-arrow-down-s-line {
@@ -222,16 +215,12 @@
             visibility: visible;
             transform: translateY(0);
         }
-        #back-to-top:hover {
-            transform: translateY(-3px) !important;
-        }
+        #back-to-top:hover { transform: translateY(-3px) !important; }
 
         /* =====================================================
            PAGE CONTENT FADE-IN
            ===================================================== */
-        .page-content {
-            animation: pageFadeIn 0.35s ease;
-        }
+        .page-content { animation: pageFadeIn 0.35s ease; }
         @keyframes pageFadeIn {
             from { opacity: 0; transform: translateY(6px); }
             to { opacity: 1; transform: translateY(0); }
@@ -251,29 +240,19 @@
         /* =====================================================
            CARD HOVER LIFT
            ===================================================== */
-        .card {
-            transition: box-shadow 0.25s ease, transform 0.25s ease;
-        }
-        .card:hover {
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-        }
+        .card { transition: box-shadow 0.25s ease, transform 0.25s ease; }
+        .card:hover { box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08); }
 
         /* =====================================================
            BUTTON MICRO-INTERACTION
            ===================================================== */
-        .btn {
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
-        }
-        .btn:active {
-            transform: scale(0.97);
-        }
+        .btn { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+        .btn:active { transform: scale(0.97); }
 
         /* =====================================================
            MENU TITLE FADE-IN (stagger)
            ===================================================== */
-        #navbar-nav > li {
-            animation: navItemFadeIn 0.4s ease both;
-        }
+        #navbar-nav > li { animation: navItemFadeIn 0.4s ease both; }
         #navbar-nav > li:nth-child(1)  { animation-delay: 0.02s; }
         #navbar-nav > li:nth-child(2)  { animation-delay: 0.04s; }
         #navbar-nav > li:nth-child(3)  { animation-delay: 0.06s; }
@@ -926,42 +905,60 @@
                                     <kbd style="font-size:10px; padding:2px 6px; border-radius:4px; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.2); opacity:0.7;">K</kbd>
                                 </div>
                             </button>
-                            <div class="search-tooltip"
-                                 style="position:absolute; bottom:-35px; left:0; background:rgba(0,0,0,0.85); color:#fff; font-size:11px; padding:4px 10px; border-radius:6px; white-space:nowrap; opacity:0; transition:opacity 0.2s; pointer-events:none; z-index:100; backdrop-filter:blur(4px);">
-                                Press <kbd style="background:rgba(255,255,255,0.2); padding:2px 5px; border-radius:4px; margin:0 2px;">⌘K</kbd> or
-                                <kbd style="background:rgba(255,255,255,0.2); padding:2px 5px; border-radius:4px; margin:0 2px;">Ctrl+K</kbd> to search
-                            </div>
                         </div>
                     </div>
 
                     <div class="d-flex align-items-center">
+                        <!-- ===== THEME TOGGLE BUTTON ===== -->
                         <div class="dropdown topbar-head-dropdown ms-1 header-item">
-                            <button type="button" class="btn btn-icon btn-topbar btn-ghost-dark rounded-circle mode-layout" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <i class="bi bi-sun align-middle fs-3xl"></i>
+                            <button type="button"
+                                    id="theme-mode-btn"
+                                    class="btn btn-icon btn-topbar btn-ghost-dark rounded-circle"
+                                    data-bs-toggle="dropdown"
+                                    aria-haspopup="true"
+                                    aria-expanded="false">
+                                <i id="theme-icon" class="bi bi-sun align-middle fs-3xl"></i>
                             </button>
                             <div class="dropdown-menu p-2 dropdown-menu-end" id="light-dark-mode">
-                                <a href="#!" class="dropdown-item" data-mode="light"><i class="bi bi-sun align-middle me-2"></i> Default (light mode)</a>
-                                <a href="#!" class="dropdown-item" data-mode="dark"><i class="bi bi-moon align-middle me-2"></i> Dark</a>
-                                <a href="#!" class="dropdown-item" data-mode="auto"><i class="bi bi-moon-stars align-middle me-2"></i> Auto (system default)</a>
+                                <a href="#!" class="dropdown-item" data-mode="light">
+                                    <i class="bi bi-sun align-middle me-2"></i> Default (light mode)
+                                </a>
+                                <a href="#!" class="dropdown-item" data-mode="dark">
+                                    <i class="bi bi-moon align-middle me-2"></i> Dark
+                                </a>
+                                <a href="#!" class="dropdown-item" data-mode="auto">
+                                    <i class="bi bi-moon-stars align-middle me-2"></i> Auto (system default)
+                                </a>
                             </div>
                         </div>
 
+                        <!-- ===== USER PROFILE DROPDOWN ===== -->
                         <div class="dropdown ms-sm-3 header-item topbar-user">
-                            <button type="button" class="btn shadow-none" id="page-header-user-dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <button type="button"
+                                    class="btn shadow-none"
+                                    id="page-header-user-dropdown"
+                                    data-bs-toggle="dropdown"
+                                    aria-haspopup="true"
+                                    aria-expanded="false">
                                 <span class="d-flex align-items-center">
                                     @php
-                                        use App\Models\User;
                                         $userdata = Auth::user();
                                     @endphp
 
                                     @if($userdata)
-                                        <img class="rounded-circle header-profile-user-enhanced" src="{{ $userdata->profile_image ? asset('storage/' . $userdata->profile_image) : asset('theme/layouts/assets/images/users/user-dummy-img.jpg') }}" alt="{{ $userdata->name }}" style="width:42px; height:42px; object-fit:cover;">
+                                        <img class="rounded-circle header-profile-user-enhanced"
+                                             src="{{ $userdata->profile_image ? asset('storage/' . $userdata->profile_image) : asset('theme/layouts/assets/images/users/user-dummy-img.jpg') }}"
+                                             alt="{{ $userdata->name }}"
+                                             style="width:42px; height:42px; object-fit:cover;">
                                         <span class="text-start ms-xl-2">
                                             <span class="d-none d-xl-inline-block ms-1 fw-medium user-name-text">{{ $userdata->name }}</span>
                                             <span class="d-none d-xl-block ms-1 fs-sm user-name-sub-text">{{ $userdata->roles->first()->name ?? 'User' }}</span>
                                         </span>
                                     @else
-                                        <img class="rounded-circle header-profile-user-enhanced" src="{{ asset('theme/layouts/assets/images/users/user-dummy-img.jpg') }}" alt="User" style="width:42px; height:42px; object-fit:cover;">
+                                        <img class="rounded-circle header-profile-user-enhanced"
+                                             src="{{ asset('theme/layouts/assets/images/users/user-dummy-img.jpg') }}"
+                                             alt="User"
+                                             style="width:42px; height:42px; object-fit:cover;">
                                         <span class="text-start ms-xl-2">
                                             <span class="d-none d-xl-inline-block ms-1 fw-medium user-name-text">Guest</span>
                                             <span class="d-none d-xl-block ms-1 fs-sm user-name-sub-text">Not logged in</span>
@@ -969,6 +966,7 @@
                                     @endif
                                 </span>
                             </button>
+
                             <div class="dropdown-menu dropdown-menu-end">
                                 @if($userdata)
                                     <h6 class="dropdown-header">Welcome {{ $userdata->name }}!</h6>
@@ -976,9 +974,11 @@
                                         <i class="mdi mdi-account-circle text-muted fs-lg align-middle me-1"></i>
                                         <span class="align-middle">Profile</span>
                                     </a>
+                                    <div class="dropdown-divider"></div>
                                     <form method="POST" action="{{ route('logout') }}">
                                         @csrf
-                                        <a class="dropdown-item" href="{{ route('logout') }}" onclick="event.preventDefault(); this.closest('form').submit();">
+                                        <a class="dropdown-item" href="{{ route('logout') }}"
+                                           onclick="event.preventDefault(); this.closest('form').submit();">
                                             <i class="mdi mdi-logout text-muted fs-lg align-middle me-1"></i>
                                             <span class="align-middle" data-key="t-logout">Logout</span>
                                         </a>
@@ -1020,11 +1020,20 @@
     </button>
 
     <!-- Preloader -->
-    <div id="preloader"><div id="status"><div class="spinner-border text-primary avatar-sm" role="status"><span class="visually-hidden">Loading...</span></div></div></div>
+    <div id="preloader">
+        <div id="status">
+            <div class="spinner-border text-primary avatar-sm" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </div>
 
     <!-- Customizer -->
     <div class="customizer-setting d-none d-md-block">
-        <div class="btn btn-info p-2 text-uppercase rounded-end-0 shadow-lg" data-bs-toggle="offcanvas" data-bs-target="#theme-settings-offcanvas" aria-controls="theme-settings-offcanvas">
+        <div class="btn btn-info p-2 text-uppercase rounded-end-0 shadow-lg"
+             data-bs-toggle="offcanvas"
+             data-bs-target="#theme-settings-offcanvas"
+             aria-controls="theme-settings-offcanvas">
             <i class="bi bi-gear mb-1"></i> Customizer
         </div>
     </div>
@@ -1032,8 +1041,12 @@
     <!-- Theme Settings Offcanvas -->
     <div class="offcanvas offcanvas-end border-0" tabindex="-1" id="theme-settings-offcanvas">
         <div class="d-flex align-items-center bg-primary bg-gradient p-3 offcanvas-header">
-            <div class="me-2"><h5 class="mb-1 text-white">Theme Customizer</h5><p class="text-white text-opacity-75 mb-0">Customize your experience</p></div>
-            <button type="button" class="btn-close btn-close-white ms-auto" id="customizerclose-btn" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+            <div class="me-2">
+                <h5 class="mb-1 text-white">Theme Customizer</h5>
+                <p class="text-white text-opacity-75 mb-0">Customize your experience</p>
+            </div>
+            <button type="button" class="btn-close btn-close-white ms-auto" id="customizerclose-btn"
+                    data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
         <div class="offcanvas-body p-0">
             <div data-simplebar class="h-100">
@@ -1187,119 +1200,264 @@
         </div>
     </div>
 
-    <!-- Scripts -->
+    <!-- ======================================================
+         CORE SCRIPTS
+         ====================================================== -->
     <script src="{{ asset('theme/layouts/assets/libs/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ asset('theme/layouts/assets/libs/simplebar/simplebar.min.js') }}"></script>
     <script src="{{ asset('theme/layouts/assets/js/plugins.js') }}"></script>
 
+    <!-- ======================================================
+         MAIN INITIALISATION SCRIPT
+         ====================================================== -->
     <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // Initialize SimpleBar for sidebar scrolling
-        var scrollbarElement = document.getElementById('scrollbar');
-        if (scrollbarElement && typeof SimpleBar !== 'undefined') {
-            new SimpleBar(scrollbarElement);
+
+        // --------------------------------------------------
+        // 1. BOOTSTRAP DROPDOWNS — force-init every toggle
+        //    (fixes user dropdown + theme dropdown not opening)
+        // --------------------------------------------------
+        document.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(function (el) {
+            // Bootstrap auto-inits, but re-instantiating is safe and ensures
+            // nested-span buttons that Bootstrap sometimes misses are registered.
+            try { new bootstrap.Dropdown(el); } catch (e) {}
+        });
+
+        // --------------------------------------------------
+        // 2. SIDEBAR HAMBURGER TOGGLE
+        //    layout.js listens on #vertical-hover, NOT on
+        //    #topnav-hamburger-icon, so we proxy the click.
+        // --------------------------------------------------
+        var hamburger     = document.getElementById('topnav-hamburger-icon');
+        var vertHover     = document.getElementById('vertical-hover');
+        var layoutWrapper = document.getElementById('layout-wrapper');
+        var overlay       = document.querySelector('.vertical-overlay');
+
+        if (hamburger) {
+            hamburger.addEventListener('click', function (e) {
+                e.stopPropagation();
+
+                // Let layout.js handle desktop collapse via its own button
+                if (vertHover) { vertHover.click(); }
+
+                // Toggle mobile open class (used by CSS for the overlay / slide-in)
+                document.body.classList.toggle('vertical-sidebar-enable');
+            });
         }
 
-        // NProgress
+        // Close sidebar when the dark overlay is tapped on mobile
+        if (overlay) {
+            overlay.addEventListener('click', function () {
+                document.body.classList.remove('vertical-sidebar-enable');
+                // Trigger layout.js close if sidebar is open
+                if (document.body.classList.contains('sidebar-enable') || vertHover) {
+                    if (vertHover) { vertHover.click(); }
+                }
+            });
+        }
+
+        // --------------------------------------------------
+        // 3. THEME TOGGLE (light / dark / auto)
+        //    Reads localStorage on load; updates html attrs
+        //    and the topbar icon on every change.
+        // --------------------------------------------------
+        var THEME_KEY = 'data-bs-theme';
+
+        function applyTheme(mode) {
+            var resolved = mode;
+            if (mode === 'auto') {
+                resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+
+            // Set Bootstrap dark-mode attribute
+            document.documentElement.setAttribute('data-bs-theme', resolved);
+            // Keep the theme's own topbar attribute in sync
+            document.documentElement.setAttribute('data-topbar', resolved === 'dark' ? 'dark' : 'light');
+            // Keep data-sidebar in sync (optional — remove if you want independent sidebar colour)
+            document.documentElement.setAttribute('data-sidebar', resolved === 'dark' ? 'dark' : 'light');
+
+            // Update topbar sun/moon icon
+            var icon = document.getElementById('theme-icon');
+            if (icon) {
+                icon.className = resolved === 'dark'
+                    ? 'bi bi-moon align-middle fs-3xl'
+                    : 'bi bi-sun align-middle fs-3xl';
+            }
+
+            // Keep customizer radios in sync
+            document.querySelectorAll('input[name="data-bs-theme"]').forEach(function (radio) {
+                radio.checked = (radio.value === resolved);
+            });
+        }
+
+        // Restore saved preference (or default to light)
+        var savedTheme = localStorage.getItem(THEME_KEY) || 'light';
+        applyTheme(savedTheme);
+
+        // Topbar dropdown items  (data-mode="light|dark|auto")
+        document.querySelectorAll('[data-mode]').forEach(function (el) {
+            el.addEventListener('click', function (e) {
+                e.preventDefault();
+                var mode = this.getAttribute('data-mode');
+                localStorage.setItem(THEME_KEY, mode);
+                applyTheme(mode);
+            });
+        });
+
+        // Customizer radio inputs  (name="data-bs-theme")
+        document.querySelectorAll('input[name="data-bs-theme"]').forEach(function (radio) {
+            radio.addEventListener('change', function () {
+                localStorage.setItem(THEME_KEY, this.value);
+                applyTheme(this.value);
+            });
+        });
+
+        // Respect OS-level preference changes when mode is "auto"
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
+            if (localStorage.getItem(THEME_KEY) === 'auto') { applyTheme('auto'); }
+        });
+
+        // --------------------------------------------------
+        // 4. SIMPLEBAR (sidebar scroll)
+        // --------------------------------------------------
+        var scrollbarEl = document.getElementById('scrollbar');
+        if (scrollbarEl && typeof SimpleBar !== 'undefined') {
+            new SimpleBar(scrollbarEl);
+        }
+
+        // --------------------------------------------------
+        // 5. NPROGRESS — page-navigation progress bar
+        // --------------------------------------------------
         if (typeof NProgress !== 'undefined') {
             NProgress.configure({ showSpinner: false, speed: 400, minimum: 0.1 });
             document.querySelectorAll('a[href]').forEach(function (a) {
                 var href = a.getAttribute('href');
-                if (href && !href.startsWith('#') && !href.startsWith('javascript') && !href.startsWith('mailto') && !href.startsWith('tel') && !a.hasAttribute('data-bs-toggle') && !a.hasAttribute('data-bs-dismiss') && a.getAttribute('target') !== '_blank') {
+                if (href
+                    && !href.startsWith('#')
+                    && !href.startsWith('javascript')
+                    && !href.startsWith('mailto')
+                    && !href.startsWith('tel')
+                    && !a.hasAttribute('data-bs-toggle')
+                    && !a.hasAttribute('data-bs-dismiss')
+                    && a.getAttribute('target') !== '_blank') {
                     a.addEventListener('click', function () { NProgress.start(); });
                 }
             });
             window.addEventListener('pageshow', function () { NProgress.done(); });
-            window.addEventListener('load', function () { NProgress.done(); });
+            window.addEventListener('load',     function () { NProgress.done(); });
         }
 
-        // Active Link Detection
+        // --------------------------------------------------
+        // 6. ACTIVE LINK DETECTION
+        // --------------------------------------------------
         (function () {
             var currentPath = window.location.pathname;
-            var childLinks = document.querySelectorAll('#navbar-nav .nav-sm a.nav-link');
-            childLinks.forEach(function (link) {
+            document.querySelectorAll('#navbar-nav .nav-sm a.nav-link').forEach(function (link) {
                 try {
                     var linkPath = new URL(link.href, window.location.origin).pathname;
-                    var isActive = linkPath === currentPath || (linkPath.length > 1 && currentPath.startsWith(linkPath));
+                    var isActive = linkPath === currentPath
+                        || (linkPath.length > 1 && currentPath.startsWith(linkPath));
                     if (!isActive) return;
+
                     link.classList.add('nav-active-child');
                     var parentCollapse = link.closest('.collapse');
                     if (parentCollapse) {
                         parentCollapse.classList.add('show');
-                        var collapseId = parentCollapse.getAttribute('id');
-                        var parentToggle = document.querySelector('[data-bs-target="#' + collapseId + '"], [href="#' + collapseId + '"]');
-                        if (parentToggle) {
-                            parentToggle.setAttribute('aria-expanded', 'true');
-                            parentToggle.classList.remove('collapsed');
-                            parentToggle.classList.add('nav-active-parent');
+                        var id = parentCollapse.getAttribute('id');
+                        var toggle = document.querySelector(
+                            '[data-bs-target="#' + id + '"], [href="#' + id + '"]'
+                        );
+                        if (toggle) {
+                            toggle.setAttribute('aria-expanded', 'true');
+                            toggle.classList.remove('collapsed');
+                            toggle.classList.add('nav-active-parent');
                         }
                     }
                 } catch (e) {}
             });
         })();
 
-        // Ripple Effect
+        // --------------------------------------------------
+        // 7. RIPPLE EFFECT on sidebar links
+        // --------------------------------------------------
         document.querySelectorAll('#navbar-nav .nav-link').forEach(function (link) {
             link.addEventListener('click', function (e) {
                 if (link.hasAttribute('data-bs-toggle')) return;
                 var ripple = document.createElement('span');
                 ripple.classList.add('nav-ripple');
-                var rect = link.getBoundingClientRect();
-                var size = Math.max(rect.width, rect.height);
-                var x = e.clientX - rect.left - size / 2;
-                var y = e.clientY - rect.top - size / 2;
+                var rect  = link.getBoundingClientRect();
+                var size  = Math.max(rect.width, rect.height);
+                var x     = e.clientX - rect.left  - size / 2;
+                var y     = e.clientY - rect.top   - size / 2;
                 ripple.style.cssText = 'width:' + size + 'px;height:' + size + 'px;left:' + x + 'px;top:' + y + 'px;';
                 link.appendChild(ripple);
                 setTimeout(function () { if (ripple.parentNode) ripple.parentNode.removeChild(ripple); }, 650);
             });
         });
 
-        // Back to Top
+        // --------------------------------------------------
+        // 8. BACK TO TOP
+        // --------------------------------------------------
         var backToTop = document.getElementById('back-to-top');
         if (backToTop) {
-            window.addEventListener('scroll', function () { backToTop.classList.toggle('show', window.scrollY > 300); }, { passive: true });
-            backToTop.addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+            window.addEventListener('scroll', function () {
+                backToTop.classList.toggle('show', window.scrollY > 300);
+            }, { passive: true });
+            backToTop.addEventListener('click', function () {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
         }
 
-        // Reset Layout
+        // --------------------------------------------------
+        // 9. CUSTOMIZER — reset button
+        // --------------------------------------------------
         var resetBtn = document.getElementById('reset-layout');
         if (resetBtn) {
-            resetBtn.addEventListener('click', function () { localStorage.clear(); location.reload(); });
+            resetBtn.addEventListener('click', function () {
+                localStorage.clear();
+                location.reload();
+            });
         }
 
-        // Form Submission NProgress
+        // --------------------------------------------------
+        // 10. FORM SUBMISSION progress
+        // --------------------------------------------------
         document.querySelectorAll('form').forEach(function (form) {
             if (form.getAttribute('action') && !form.dataset.noProgress) {
-                form.addEventListener('submit', function () { if (typeof NProgress !== 'undefined') NProgress.start(); });
+                form.addEventListener('submit', function () {
+                    if (typeof NProgress !== 'undefined') NProgress.start();
+                });
             }
         });
     });
     </script>
 
-    <!-- SPOTLIGHT SEARCH JAVASCRIPT -->
+    <!-- ======================================================
+         SPOTLIGHT SEARCH
+         ====================================================== -->
     <script>
     (function () {
         var STATIC_PAGES = [
-            { title: 'Dashboard', url: '{{ route("dashboard") }}', icon: 'mdi-gauge', category: 'Main' },
-            { title: 'Users', url: '{{ route("users.index") }}', icon: 'mdi-account-group', category: 'Users & Privileges' },
-            { title: 'Roles', url: '{{ route("roles.index") }}', icon: 'mdi-shield-account', category: 'Users & Privileges' },
-            { title: 'Permissions', url: '{{ route("permissions.index") }}', icon: 'mdi-lock', category: 'Users & Privileges' },
-            { title: 'Products', url: '{{ route("products.index") }}', icon: 'mdi-package-variant', category: 'Inventory' },
-            { title: 'Categories', url: '{{ route("categories.index") }}', icon: 'mdi-view-list', category: 'Inventory' },
-            { title: 'Brands', url: '{{ route("brands.index") }}', icon: 'mdi-tag', category: 'Inventory' },
-            { title: 'Banners', url: '{{ route("banners.index") }}', icon: 'mdi-image', category: 'Marketing' },
-            { title: 'POS', url: '{{ route("pos.index") }}', icon: 'mdi-cart', category: 'Sales' },
-            { title: 'Grid POS', url: '{{ route("pos.grid") }}', icon: 'mdi-cart', category: 'Sales' },
-            { title: 'Orders', url: '{{ route("orders.index") }}', icon: 'mdi-cart-check', category: 'Sales' },
-            { title: 'Customers', url: '{{ route("customers.index") }}', icon: 'mdi-account', category: 'Sales' },
-            { title: 'Inventory', url: '{{ route("inventory.index") }}', icon: 'mdi-warehouse', category: 'Inventory' },
-            { title: 'Stock Levels', url: '{{ route("inventory.stock-levels") }}', icon: 'mdi-chart-line', category: 'Inventory' },
-            { title: 'Stock Locations', url: '{{ route("stock-locations.index") }}', icon: 'mdi-map-marker', category: 'Inventory' },
-            { title: 'Low Stock Alerts', url: '{{ route("inventory.low-stock-alerts") }}', icon: 'mdi-alert', category: 'Inventory' },
-            { title: 'Sales', url: '{{ route("sales.index") }}', icon: 'mdi-chart-line', category: 'Sales' },
-            { title: 'Sales Person Dashboard', url: '{{ route("salesperson.dashboard") }}', icon: 'mdi-account-tie', category: 'Sales' },
-            { title: 'My Commissions', url: '{{ route("salesperson.commissions") }}', icon: 'mdi-cash-multiple', category: 'Sales' },
-            { title: 'Store Settings', url: '{{ route("settings.store.index") }}', icon: 'mdi-cog', category: 'Settings' },
+            { title: 'Dashboard',               url: '{{ route("dashboard") }}',                    icon: 'mdi-gauge',           category: 'Main' },
+            { title: 'Users',                   url: '{{ route("users.index") }}',                  icon: 'mdi-account-group',   category: 'Users & Privileges' },
+            { title: 'Roles',                   url: '{{ route("roles.index") }}',                  icon: 'mdi-shield-account',  category: 'Users & Privileges' },
+            { title: 'Permissions',             url: '{{ route("permissions.index") }}',            icon: 'mdi-lock',            category: 'Users & Privileges' },
+            { title: 'Products',                url: '{{ route("products.index") }}',               icon: 'mdi-package-variant', category: 'Inventory' },
+            { title: 'Categories',              url: '{{ route("categories.index") }}',             icon: 'mdi-view-list',       category: 'Inventory' },
+            { title: 'Brands',                  url: '{{ route("brands.index") }}',                 icon: 'mdi-tag',             category: 'Inventory' },
+            { title: 'Banners',                 url: '{{ route("banners.index") }}',                icon: 'mdi-image',           category: 'Marketing' },
+            { title: 'POS',                     url: '{{ route("pos.index") }}',                    icon: 'mdi-cart',            category: 'Sales' },
+            { title: 'Grid POS',                url: '{{ route("pos.grid") }}',                     icon: 'mdi-cart',            category: 'Sales' },
+            { title: 'Orders',                  url: '{{ route("orders.index") }}',                 icon: 'mdi-cart-check',      category: 'Sales' },
+            { title: 'Customers',               url: '{{ route("customers.index") }}',              icon: 'mdi-account',         category: 'Sales' },
+            { title: 'Inventory',               url: '{{ route("inventory.index") }}',              icon: 'mdi-warehouse',       category: 'Inventory' },
+            { title: 'Stock Levels',            url: '{{ route("inventory.stock-levels") }}',       icon: 'mdi-chart-line',      category: 'Inventory' },
+            { title: 'Stock Locations',         url: '{{ route("stock-locations.index") }}',        icon: 'mdi-map-marker',      category: 'Inventory' },
+            { title: 'Low Stock Alerts',        url: '{{ route("inventory.low-stock-alerts") }}',   icon: 'mdi-alert',           category: 'Inventory' },
+            { title: 'Sales',                   url: '{{ route("sales.index") }}',                  icon: 'mdi-chart-line',      category: 'Sales' },
+            { title: 'Sales Person Dashboard',  url: '{{ route("salesperson.dashboard") }}',        icon: 'mdi-account-tie',     category: 'Sales' },
+            { title: 'My Commissions',          url: '{{ route("salesperson.commissions") }}',      icon: 'mdi-cash-multiple',   category: 'Sales' },
+            { title: 'Store Settings',          url: '{{ route("settings.store.index") }}',         icon: 'mdi-cog',             category: 'Settings' },
             @auth
             { title: 'My Profile', url: '{{ route("user.overview", Auth::user()) }}', icon: 'mdi-account-circle', category: 'User' },
             @else
@@ -1312,80 +1470,91 @@
             'Marketing': '#2a9d8f', 'Sales': '#10b981', 'Settings': '#6a0572', 'User': '#e9c46a'
         };
 
-        var overlay = document.getElementById('spotlight-overlay');
-        var input = document.getElementById('spotlight-input');
-        var emptyState = document.getElementById('spotlight-empty');
-        var loadingEl = document.getElementById('spotlight-loading');
-        var list = document.getElementById('spotlight-list');
-        var trigger = document.getElementById('spotlight-trigger');
-        var escBtn = document.getElementById('spotlight-esc');
+        var overlay       = document.getElementById('spotlight-overlay');
+        var input         = document.getElementById('spotlight-input');
+        var emptyState    = document.getElementById('spotlight-empty');
+        var loadingEl     = document.getElementById('spotlight-loading');
+        var list          = document.getElementById('spotlight-list');
+        var trigger       = document.getElementById('spotlight-trigger');
+        var escBtn        = document.getElementById('spotlight-esc');
 
         var debounceTimer = null;
-        var activeIndex = -1;
+        var activeIndex   = -1;
         var currentResults = [];
 
         function openSpotlight() {
             if (!overlay) return;
             overlay.style.display = 'flex';
             overlay.style.animation = 'spotlightOverlayFadeIn 0.25s ease forwards';
-            setTimeout(function() { if (input) input.focus(); }, 100);
+            setTimeout(function () { if (input) input.focus(); }, 100);
         }
 
         function closeSpotlight() {
             if (overlay) overlay.style.animation = 'spotlightOverlayFadeOut 0.2s ease forwards';
-            setTimeout(function() {
+            setTimeout(function () {
                 if (overlay) overlay.style.display = 'none';
-                if (input) input.value = '';
+                if (input)   input.value = '';
                 showEmptyState();
             }, 200);
         }
 
         function showEmptyState() {
             if (emptyState) emptyState.style.display = 'block';
-            if (loadingEl) loadingEl.style.display = 'none';
-            if (list) { list.style.display = 'none'; list.innerHTML = ''; }
+            if (loadingEl)  loadingEl.style.display  = 'none';
+            if (list)       { list.style.display = 'none'; list.innerHTML = ''; }
             currentResults = [];
-            activeIndex = -1;
+            activeIndex    = -1;
         }
 
         function showLoading() {
             if (emptyState) emptyState.style.display = 'none';
-            if (loadingEl) loadingEl.style.display = 'block';
-            if (list) list.style.display = 'none';
+            if (loadingEl)  loadingEl.style.display  = 'block';
+            if (list)       list.style.display        = 'none';
         }
 
         function performSearch(query) {
-            if (!query || query.trim().length === 0) { showEmptyState(); return; }
+            if (!query || !query.trim()) { showEmptyState(); return; }
             showLoading();
-            var staticResults = STATIC_PAGES.filter(function(p) { return p.title.toLowerCase().includes(query.toLowerCase()) || p.category.toLowerCase().includes(query.toLowerCase()); }).slice(0, 15);
+
+            var q = query.toLowerCase();
+            var staticResults = STATIC_PAGES.filter(function (p) {
+                return p.title.toLowerCase().includes(q) || p.category.toLowerCase().includes(q);
+            }).slice(0, 15);
             renderResults(staticResults);
 
             clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(function() {
+            debounceTimer = setTimeout(function () {
                 if (query.length < 2) return;
                 fetch('/api/search?q=' + encodeURIComponent(query) + '&_token={{ csrf_token() }}', {
                     headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
-                }).then(function(r) { return r.ok ? r.json() : { results: [] }; }).then(function(data) {
-                    if (input.value.trim() !== query) return;
-                    var dynamicResults = data.results || [];
-                    var merged = staticResults.concat(dynamicResults);
-                    var seen = {};
-                    var deduped = merged.filter(function(r) { if (seen[r.url]) return false; seen[r.url] = true; return true; });
-                    renderResults(deduped);
-                }).catch(function() {});
+                })
+                .then(function (r) { return r.ok ? r.json() : { results: [] }; })
+                .then(function (data) {
+                    if (!input || input.value.trim() !== query) return;
+                    var dynamic = data.results || [];
+                    var merged  = staticResults.concat(dynamic);
+                    var seen    = {};
+                    renderResults(merged.filter(function (r) {
+                        if (seen[r.url]) return false;
+                        seen[r.url] = true;
+                        return true;
+                    }));
+                })
+                .catch(function () {});
             }, 280);
         }
 
         function renderResults(results) {
-            if (loadingEl) loadingEl.style.display = 'none';
+            if (loadingEl)  loadingEl.style.display  = 'none';
             if (emptyState) emptyState.style.display = 'none';
-            if (list) { list.innerHTML = ''; list.style.display = 'block'; }
-            activeIndex = -1;
+            if (list)       { list.innerHTML = ''; list.style.display = 'block'; }
+            activeIndex    = -1;
             currentResults = results;
 
             if (!results.length) {
                 if (emptyState) {
-                    emptyState.innerHTML = '<i class="mdi mdi-magnify-close" style="font-size:42px; display:block; margin-bottom:16px; opacity:0.4;"></i><span style="font-size:15px;">No results found for "' + (input ? input.value : '') + '"</span>';
+                    emptyState.innerHTML = '<i class="mdi mdi-magnify-close" style="font-size:42px;display:block;margin-bottom:16px;opacity:0.4;"></i>'
+                        + '<span style="font-size:15px;">No results found for "' + (input ? input.value : '') + '"</span>';
                     emptyState.style.display = 'block';
                 }
                 if (list) list.style.display = 'none';
@@ -1393,74 +1562,82 @@
             }
 
             var grouped = {};
-            results.forEach(function(r) { if (!grouped[r.category]) grouped[r.category] = []; grouped[r.category].push(r); });
+            results.forEach(function (r) {
+                if (!grouped[r.category]) grouped[r.category] = [];
+                grouped[r.category].push(r);
+            });
 
-            var idx = 0;
-            Object.keys(grouped).forEach(function(cat) {
+            Object.keys(grouped).forEach(function (cat) {
                 var header = document.createElement('li');
-                header.style.cssText = 'padding:12px 24px 6px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:rgba(255,255,255,0.35);';
+                header.style.cssText = 'padding:12px 24px 6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:rgba(255,255,255,0.35);';
                 header.textContent = cat;
                 list.appendChild(header);
 
-                grouped[cat].forEach(function(r) {
+                grouped[cat].forEach(function (r) {
+                    var accentColor = CAT_COLORS[r.category] || '#4f8ef7';
                     var li = document.createElement('li');
                     li.className = 'spotlight-result-item';
-                    li.style.cssText = 'display:flex; align-items:center; gap:14px; padding:12px 24px; cursor:pointer; transition:all 0.2s ease; border-radius:10px; margin:4px 12px;';
+                    li.style.cssText = 'display:flex;align-items:center;gap:14px;padding:12px 24px;cursor:pointer;transition:all 0.2s ease;border-radius:10px;margin:4px 12px;';
 
-                    var accentColor = CAT_COLORS[r.category] || '#4f8ef7';
                     var iconWrap = document.createElement('span');
-                    iconWrap.style.cssText = 'width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; background:' + accentColor + '22;';
+                    iconWrap.style.cssText = 'width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + accentColor + '22;';
                     var icon = document.createElement('i');
                     icon.className = (r.icon || 'mdi-chevron-right') + ' mdi';
-                    icon.style.cssText = 'font-size:18px; color:' + accentColor + ';';
+                    icon.style.cssText = 'font-size:18px;color:' + accentColor + ';';
                     iconWrap.appendChild(icon);
 
                     var textWrap = document.createElement('span');
-                    textWrap.style.cssText = 'flex:1; min-width:0;';
+                    textWrap.style.cssText = 'flex:1;min-width:0;';
                     var title = document.createElement('span');
-                    title.style.cssText = 'display:block; font-size:15px; font-weight:500; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
+                    title.style.cssText = 'display:block;font-size:15px;font-weight:500;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
                     title.textContent = r.title;
                     var sub = document.createElement('span');
-                    sub.style.cssText = 'display:block; font-size:12px; color:rgba(255,255,255,0.4); margin-top:2px;';
+                    sub.style.cssText = 'display:block;font-size:12px;color:rgba(255,255,255,0.4);margin-top:2px;';
                     sub.textContent = r.subtitle || r.category;
                     textWrap.appendChild(title);
                     textWrap.appendChild(sub);
 
                     var arrow = document.createElement('i');
                     arrow.className = 'mdi mdi-arrow-right';
-                    arrow.style.cssText = 'font-size:16px; color:rgba(255,255,255,0.25); flex-shrink:0; transition:transform 0.2s ease;';
+                    arrow.style.cssText = 'font-size:16px;color:rgba(255,255,255,0.25);flex-shrink:0;transition:transform 0.2s ease;';
 
                     li.appendChild(iconWrap);
                     li.appendChild(textWrap);
                     li.appendChild(arrow);
-                    li.addEventListener('click', function() { window.location.href = r.url; });
+                    li.addEventListener('click', function () { window.location.href = r.url; });
+                    li.addEventListener('mouseenter', function () { arrow.style.transform = 'translateX(4px)'; });
+                    li.addEventListener('mouseleave', function () { arrow.style.transform = ''; });
                     list.appendChild(li);
-                    idx++;
                 });
             });
         }
 
         if (trigger) trigger.addEventListener('click', openSpotlight);
-        if (escBtn) escBtn.addEventListener('click', closeSpotlight);
-        if (overlay) overlay.addEventListener('click', function(e) { if (e.target === overlay) closeSpotlight(); });
+        if (escBtn)  escBtn.addEventListener('click', closeSpotlight);
+        if (overlay) overlay.addEventListener('click', function (e) { if (e.target === overlay) closeSpotlight(); });
 
-        document.addEventListener('keydown', function(e) {
-            if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); overlay && overlay.style.display === 'flex' ? closeSpotlight() : openSpotlight(); }
+        document.addEventListener('keydown', function (e) {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault();
+                overlay && overlay.style.display === 'flex' ? closeSpotlight() : openSpotlight();
+            }
             if (e.key === 'Escape' && overlay && overlay.style.display === 'flex') closeSpotlight();
         });
 
         if (input) {
-            input.addEventListener('keydown', function(e) {
-                if (e.key === 'ArrowDown') { e.preventDefault(); }
-                else if (e.key === 'ArrowUp') { e.preventDefault(); }
-                else if (e.key === 'Enter' && activeIndex >= 0 && currentResults[activeIndex]) { window.location.href = currentResults[activeIndex].url; }
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' && activeIndex >= 0 && currentResults[activeIndex]) {
+                    window.location.href = currentResults[activeIndex].url;
+                }
             });
-            input.addEventListener('input', function() { performSearch(this.value.trim()); });
+            input.addEventListener('input', function () { performSearch(this.value.trim()); });
         }
     })();
     </script>
 
-    <!-- Route-specific JS includes -->
+    <!-- ======================================================
+         ROUTE-SPECIFIC JS INCLUDES
+         ====================================================== -->
     @if (Route::is('dashboard'))
         @include('layouts.pages-assets.js.dashboard-list-js')
     @endif
