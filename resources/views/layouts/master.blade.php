@@ -33,6 +33,13 @@
     <link href="{{ asset('theme/layouts/assets/fonts/materialdesignicons-webfont.woff2') }}?v=6.5.95" rel="stylesheet" type="font/woff2">
     <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.0.3/src/bold/style.css">
 
+    <!-- Layout CSS -->
+    <script src="{{ asset('theme/layouts/assets/js/layout.js') }}"></script>
+    <link href="{{ asset('theme/layouts/assets/css/bootstrap.min.css') }}" rel="stylesheet">
+    <link href="{{ asset('theme/layouts/assets/css/icons.min.css') }}" rel="stylesheet">
+    <link href="{{ asset('theme/layouts/assets/css/app.min.css') }}" rel="stylesheet">
+    <link href="{{ asset('theme/layouts/assets/css/custom.min.css') }}" rel="stylesheet">
+
     <!-- NProgress -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.css"/>
     <script src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js"></script>
@@ -96,10 +103,6 @@
         #scrollbar::-webkit-scrollbar-track { background: transparent; }
         #scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
         #scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.28); }
-        .bg-light::-webkit-scrollbar { width: 6px; }
-        .bg-light::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
-        .bg-light::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
-        .bg-light::-webkit-scrollbar-thumb:hover { background: #555; }
 
         /* =====================================================
            SIDEBAR: SMOOTH ACCORDION
@@ -399,14 +402,14 @@
                     <span class="logo-sm">
                         @if($store && $store->logo)
                             <img src="{{ $store->getLogoUrlAttribute() }}" alt="{{ $storeName }}" height="22">
-                        else
+                        @else
                             <img src="{{ asset('theme/layouts/assets/images/logo-sm.png') }}" alt="Logo" height="22">
                         @endif
                     </span>
                     <span class="logo-lg">
                         @if($store && $store->logo)
                             <img src="{{ $store->getLogoUrlAttribute() }}" alt="{{ $storeName }}" height="60">
-                        else
+                        @else
                             <img src="{{ asset('theme/layouts/assets/images/logo-dark.png') }}" alt="Logo" height="60">
                         @endif
                     </span>
@@ -416,14 +419,14 @@
                     <span class="logo-sm">
                         @if($store && $store->logo)
                             <img src="{{ $store->getLogoUrlAttribute() }}" alt="{{ $storeName }}" height="22">
-                        else
+                        @else
                             <img src="{{ asset('theme/layouts/assets/images/logo-sm.png') }}" alt="Logo" height="22">
                         @endif
                     </span>
                     <span class="logo-lg">
                         @if($store && $store->logo)
                             <img src="{{ $store->getLogoUrlAttribute() }}" alt="{{ $storeName }}" height="60">
-                        else
+                        @else
                             <img src="{{ asset('theme/layouts/assets/images/logo-light.png') }}" alt="Logo" height="60">
                         @endif
                     </span>
@@ -438,7 +441,7 @@
                 <div class="container-fluid">
                     <div id="two-column-menu"></div>
                     <ul class="navbar-nav" id="navbar-nav">
-                        @yield('sidebar')
+                        @include('layouts.sidebar')
                     </ul>
                 </div>
             </div>
@@ -845,6 +848,7 @@
             { title: 'Brands', url: '{{ route("brands.index") }}', icon: 'mdi-tag', category: 'Inventory' },
             { title: 'Banners', url: '{{ route("banners.index") }}', icon: 'mdi-image', category: 'Marketing' },
             { title: 'POS', url: '{{ route("pos.index") }}', icon: 'mdi-cart', category: 'Sales' },
+            { title: 'Grid POS', url: '{{ route("pos.grid") }}', icon: 'mdi-cart', category: 'Sales' },
             { title: 'Orders', url: '{{ route("orders.index") }}', icon: 'mdi-cart-check', category: 'Sales' },
             { title: 'Customers', url: '{{ route("customers.index") }}', icon: 'mdi-account', category: 'Sales' },
             { title: 'Inventory', url: '{{ route("inventory.index") }}', icon: 'mdi-warehouse', category: 'Inventory' },
@@ -853,8 +857,9 @@
             { title: 'Low Stock Alerts', url: '{{ route("inventory.low-stock-alerts") }}', icon: 'mdi-alert', category: 'Inventory' },
             { title: 'Sales', url: '{{ route("sales.index") }}', icon: 'mdi-chart-line', category: 'Sales' },
             { title: 'Sales Person Dashboard', url: '{{ route("salesperson.dashboard") }}', icon: 'mdi-account-tie', category: 'Sales' },
+            { title: 'My Commissions', url: '{{ route("salesperson.commissions") }}', icon: 'mdi-cash-multiple', category: 'Sales' },
             { title: 'Store Settings', url: '{{ route("settings.store.index") }}', icon: 'mdi-cog', category: 'Settings' },
-            { title: 'My Account', url: '{{ route("user.overview", ["id" => Auth::id()]) }}', icon: 'mdi-account-circle', category: 'User' },
+            { title: 'My Profile', url: '{{ route("user.overview", ["id" => Auth::id()]) }}', icon: 'mdi-account-circle', category: 'User' },
         ];
 
         var CAT_COLORS = {

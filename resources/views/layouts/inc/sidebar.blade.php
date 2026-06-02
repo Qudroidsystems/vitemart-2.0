@@ -1,1090 +1,405 @@
-<!--begin::Sidebar-->
-<div id="kt_app_sidebar" class="app-sidebar  flex-column "
-  data-kt-drawer="true" data-kt-drawer-name="app-sidebar" data-kt-drawer-activate="{default: true, lg: false}" data-kt-drawer-overlay="true" data-kt-drawer-width="225px" data-kt-drawer-direction="start" data-kt-drawer-toggle="#kt_app_sidebar_mobile_toggle"
-  >
-  <!--begin::Logo-->
-  <div class="app-sidebar-logo px-6" id="kt_app_sidebar_logo">
-    <!--begin::Logo image-->
-    <a href="../index.html">
-    <img alt="Logo" src="{{ asset('html/assets/assets/media/logos/rsslogo.png') }}"
-      class="h-65px app-sidebar-logo-default" style="margin-left: 70px"/>
-    </a>
-    <!--end::Logo image-->
-    <!--begin::Sidebar toggle-->
-    <!--begin::Minimized sidebar setup:
-      if (isset($_COOKIE["sidebar_minimize_state"]) && $_COOKIE["sidebar_minimize_state"] === "on") {
-          1. "src/js/layout/sidebar.js" adds "sidebar_minimize_state" cookie value to save the sidebar minimize state.
-          2. Set data-kt-app-sidebar-minimize="on" attribute for body tag.
-          3. Set data-kt-toggle-state="active" attribute to the toggle element with "kt_app_sidebar_toggle" id.
-          4. Add "active" class to to sidebar toggle element with "kt_app_sidebar_toggle" id.
-      }
-      -->
-    <div
-      id="kt_app_sidebar_toggle"
-      class="app-sidebar-toggle btn btn-icon btn-shadow btn-sm btn-color-muted btn-active-color-primary body-bg h-30px w-30px position-absolute top-50 start-100 translate-middle rotate "
-      data-kt-toggle="true"
-      data-kt-toggle-state="active"
-      data-kt-toggle-target="body"
-      data-kt-toggle-name="app-sidebar-minimize"
-      >
-      <i class="ki-duotone ki-double-left fs-2 rotate-180"><span class="path1"></span><span class="path2"></span></i>        
-    </div>
-    <!--end::Sidebar toggle-->
-  </div>
-  <!--end::Logo-->
-  <!--begin::sidebar menu-->
-  <div class="app-sidebar-menu overflow-hidden flex-column-fluid">
-    <!--begin::Menu wrapper-->
-    <div
-      id="kt_app_sidebar_menu_wrapper"
-      class="app-sidebar-wrapper hover-scroll-overlay-y my-5"
-      data-kt-scroll="true"
-      data-kt-scroll-activate="true"
-      data-kt-scroll-height="auto"
-      data-kt-scroll-dependencies="#kt_app_sidebar_logo, #kt_app_sidebar_footer"
-      data-kt-scroll-wrappers="#kt_app_sidebar_menu"
-      data-kt-scroll-offset="5px"
-      data-kt-scroll-save-state="true"
-      >
-      <!-- begin::Menu-->
-      <div class="menu menu-column menu-rounded menu-sub-indention px-3"
-        id="#kt_app_sidebar_menu"
-        data-kt-menu="true"
-        data-kt-menu-expand="false">
-        <!--begin:Menu item-->
-        <div  data-kt-menu-trigger="click"  class="menu-item {{
-          request()->is('dashboard')
-          ? ' here show menu-accordion' : '' }}" >
-          <!--begin:Menu link-->
-          <span class="menu-link" >
-          <span  class="menu-icon" >
-          <i class="ki-duotone ki-element-11 fs-2">
-          <span class="path1">
-          </span><span class="path2">
-          </span><span class="path3">
-          </span><span class="path4">
-          </span></i></span>
-          <span  class="menu-title" >
-          Dashboards
-          </span>
-          <span  class="menu-arrow" >
-          </span></span>
-          <!--end:Menu link-->
-          <!--begin:Menu sub-->
-          <div  class="menu-sub menu-sub-accordion" >
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link"  href="/dashboard" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span>
-              </span>
-              <span  class="menu-title" >
-              Dashboard
-              </span>
-              </a>
-              <!--end:Menu link-->
-            </div>
-            <!--end:Menu item-->
-          </div>
-          <!--end:Menu sub-->
-        </div>
-        <!--end:Menu item-->
-        <!--begin:Menu item-->
-        <div  class="menu-item pt-5" >
-          <!--begin:Menu content-->
-          <div  class="menu-content" >
-            <span class="menu-heading fw-bold text-uppercase fs-7">
-            USERS & PRIVILEGES
-            </span>
-          </div>
-          <!--end:Menu content-->
-        </div>
-        <!--end:Menu item-->
-        <!--begin:Menu item-->
-        <div  data-kt-menu-trigger="click"  class="menu-item {{
-          request()->is('users*') ||
-          request()->is('roles*') ||
-          request()->is('permissions*')
-          ? ' here show menu-accordion' : '' }}" >
-          <!--begin:Menu link-->
-          <span class="menu-link" >
-          <span  class="menu-icon" >
-          <i class="ki-duotone ki-element-11 fs-2">
-          <span class="path1">
-          </span><span class="path2">
-          </span><span class="path3">
-          </span><span class="path4">
-          </span></i></span>
-          <span  class="menu-title" >
-          User Management
-          </span>
-          <span  class="menu-arrow" >
-          </span></span>
-          <!--end:Menu link-->
-          <!--begin:Menu sub-->
-          <div  class="menu-sub menu-sub-accordion" >
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link  {{ request()->is('users*')
-                ? ' active' : '' }}"  href="{{ route('users.index') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span>
-              </span>
-              <span  class="menu-title" >
-              All Users List
-              </span>
-              </a>
-              <!--end:Menu link-->
-            </div>
-            <!--end:Menu item-->
-            @can('role-list')
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link {{ request()->is('roles*')
-                ? ' active' : '' }}"
-                href="{{ route('roles.index') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span>
-              </span>
-              <span  class="menu-title" >
-              Roles List
-              </span>
-              </a>
-              <!--end:Menu link-->
-            </div>
-            <!--end:Menu item-->
-            @endcan
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link {{ request()->is('permissions*')
-                ? ' active' : '' }}"
-                href="{{ route('permissions.index') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span></span>
-              <span  class="menu-title" >
-              Permissions List
-              </span>
-              </a>
-              <!--end:Menu link-->
-            </div>
-            <!--end:Menu item-->
-          </div>
-          <!--end:Menu sub-->
-        </div>
-        <!--end:Menu item-->
-        <!--begin:Menu item-->
-        <div  class="menu-item pt-5" >
-          <!--begin:Menu content-->
-          <div  class="menu-content" >
-            <span class="menu-heading fw-bold text-uppercase fs-7">
-            APPS MANAGEMENT
-            </span>
-          </div>
-          <!--end:Menu content-->
-        </div>
-        <!--end:Menu item-->
-        <!--begin:Menu item-->
-        <div  data-kt-menu-trigger="click"  class="menu-item {{
-          request()->is('overview*') ||
-          request()->is('settings*')
-          ? ' here show menu-accordion' : '' }}" >
-          <!--begin:Menu link-->
-          <span class="menu-link" >
-          <span  class="menu-icon" >
-          <i class="ki-duotone ki-element-11 fs-2">
-          <span class="path1">
-          </span><span class="path2">
-          </span><span class="path3">
-          </span><span class="path4">
-          </span></i></span>
-          <span  class="menu-title" >
-          My Account
-          </span>
-          <span  class="menu-arrow" >
-          </span></span>
-          <!--end:Menu link-->
-          <!--begin:Menu sub-->
-          <div  class="menu-sub menu-sub-accordion" >
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link  {{ request()->is('user.overview')
-                ? ' active' : '' }}"  href="{{ route('user.overview',Auth::user()->id) }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span>
-              </span>
-              <span  class="menu-title" >
-              Overview
-              </span>
-              </a>
-              <!--end:Menu link-->
-            </div>
-            <!--end:Menu item-->
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link {{ request()->is('settings*')
-                ? ' active' : '' }}"
-                href="{{ route('user.settings',Auth::user()->id) }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span>
-              </span>
-              <span  class="menu-title" >
-              Settings
-              </span>
-              </a>
-              <a class="menu-link  {{ request()->is('student*')
-                ? ' active' : '' }}"  href="{{ route('student.index') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span>
-              </span>
-              <span  class="menu-title" >
-              All Students
-              </span>
-              </a>
-              <!--end:Menu link-->
-            </div>
-            <!--end:Menu item-->
-          </div>
-          <!--end:Menu sub-->
-        </div>
-        <!--end:Menu item-->
-        <!--begin:Menu item-->
-        <div  class="menu-item pt-5" >
-          <!--begin:Menu content-->
-          <div  class="menu-content" >
-            <span class="menu-heading fw-bold text-uppercase fs-7">
-            APPS
-            </span>
-          </div>
-          <!--end:Menu content-->
-        </div>
-        <!--end:Menu item-->
-        <!--begin:Menu item-->
-        <div  data-kt-menu-trigger="click"  class="menu-item {{
-          request()->is('student*')
-          ? ' here show menu-accordion' : '' }}" >
-          <!--begin:Menu link-->
-          <span class="menu-link" >
-          <span  class="menu-icon" >
-          <i class="ki-duotone ki-element-11 fs-2">
-          <span class="path1">
-          </span><span class="path2">
-          </span><span class="path3">
-          </span><span class="path4">
-          </span></i></span>
-          <span  class="menu-title" >
-          Students Management
-          </span>
-          <span  class="menu-arrow" >
-          </span></span>
-          <!--end:Menu link-->
-          <!--begin:Menu sub-->
-          <div  class="menu-sub menu-sub-accordion" >
-            @can('student-list')
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link  {{ request()->is('student*')
-                ? ' active' : '' }}"  href="{{ route('student.index') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span>
-              </span>
-              <span  class="menu-title" >
-              All Students
-              </span>
-              </a>
-              <!--end:Menu link-->
-            </div>
-            <!--end:Menu item-->
-            @endcan
-            {{-- @can('parent-list')
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link  {{ request()->is('parent*')
-                ? ' active' : '' }}"  href="{{ route('parent.index') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span>
-              </span>
-              <span  class="menu-title" >
-              Student Details Overview
-              </span>
-              </a>
-              <!--end:Menu link-->
-            </div>
-            <!--end:Menu item-->
-            @endcan
-            @can('parent-list')
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link  {{ request()->is('parent*')
-                ? ' active' : '' }}"  href="{{ route('parent.index') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span>
-              </span>
-              <span  class="menu-title" >
-              Student Details Setting
-              </span>
-              </a>
-              <!--end:Menu link-->
-            </div>
-            <!--end:Menu item-->
-            @endcan --}}
-            @can('student_bulk-upload')
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link  {{ request()->is('student.*')
-                ? ' active' : '' }}"  href="{{ route('student.batchindex') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span>
-              </span>
-              <span  class="menu-title" >
-              Batch Student Upload
-              </span>
-              </a>
-              <!--end:Menu link-->
-            </div>
-            <!--end:Menu item-->
-            @endcan
-          </div>
-          <!--end:Menu sub-->
-        </div>
-        <!--end:Menu item-->
-        <!--begin:Menu item-->
-        <div  data-kt-menu-trigger="click"  class="menu-item {{
-          request()->is('parent*')
-          ? ' here show menu-accordion' : '' }}" >
-          <!--begin:Menu link-->
-          <span class="menu-link" >
-          <span  class="menu-icon" >
-          <i class="ki-duotone ki-element-11 fs-2">
-          <span class="path1">
-          </span><span class="path2">
-          </span><span class="path3">
-          </span><span class="path4">
-          </span></i></span>
-          <span  class="menu-title" >
-          Parents
-          </span>
-          <span  class="menu-arrow" >
-          </span></span>
-          <!--end:Menu link-->
-          <!--begin:Menu sub-->
-          <div  class="menu-sub menu-sub-accordion" >
-            @can('parent-list')
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link  {{ request()->is('parent*')
-                ? ' active' : '' }}"  href="{{ route('parent.index') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span>
-              </span>
-              <span  class="menu-title" >
-              Parent Management
-              </span>
-              </a>
-              <!--end:Menu link-->
-            </div>
-            <!--end:Menu item-->
-            @endcan
-          </div>
-          <!--end:Menu sub-->
-        </div>
-        <!--end:Menu item-->
-        <!--begin:Menu item-->
-        <div  data-kt-menu-trigger="click"  class="menu-item {{
-          request()->is('subjectoperation*')
-          ? ' here show menu-accordion' : '' }}" >
-          <!--begin:Menu link-->
-          <span class="menu-link" >
-          <span  class="menu-icon" >
-          <i class="ki-duotone ki-element-11 fs-2">
-          <span class="path1">
-          </span><span class="path2">
-          </span><span class="path3">
-          </span><span class="path4">
-          </span></i></span>
-          <span  class="menu-title" >
-          Subject Registration
-          </span>
-          <span  class="menu-arrow" >
-          </span></span>
-          <!--end:Menu link-->
-          <!--begin:Menu sub-->
-          <div  class="menu-sub menu-sub-accordion" >
-            @can('subject_operation-list')
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link  {{ request()->is('subjectoperation*')
-                ? ' active' : '' }}"  href="{{ route('subjectoperation.index') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span>
-              </span>
-              <span  class="menu-title" >
-              Student Subjects Reg.
-              </span>
-              </a>
-              <!--end:Menu link-->
-            </div>
-            <!--end:Menu item-->
-            @endcan
-            <!--begin:Menu item-->
-            {{-- 
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link  {{ request()->is('journalvolume*')
-                ? ' active' : '' }}"  href="{{ route('journalvolume.index') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span>
-              </span>
-              <span  class="menu-title" >
-              My Subjects
-              </span>
-              </a>
-              <!--end:Menu link-->
-            </div>
-            --}}
-            <!--end:Menu item-->
-          </div>
-          <!--end:Menu sub-->
-        </div>
-        <!--end:Menu item-->
-        <!--begin:Menu item-->
-        <div  data-kt-menu-trigger="click"  class="menu-item {{
-          request()->is('schoolpayment*') ||  request()->is('analysis*')
-          ? ' here show menu-accordion' : '' }}" >
-          <!--begin:Menu link-->
-          <span class="menu-link" >
-          <span  class="menu-icon" >
-          <i class="ki-duotone ki-element-11 fs-2">
-          <span class="path1">
-          </span><span class="path2">
-          </span><span class="path3">
-          </span><span class="path4">
-          </span></i></span>
-          <span  class="menu-title" >
-          School Payments
-          </span>
-          <span  class="menu-arrow" >
-          </span></span>
-          <!--end:Menu link-->
-          <!--begin:Menu sub-->
-          <div  class="menu-sub menu-sub-accordion" >
-            @can('subject_operation-list')
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link  {{ request()->is('schoolpayment*')
-                ? ' active' : '' }}"  href="{{ route('schoolpayment.index') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span>
-              </span>
-              <span  class="menu-title" >
-              Student Payment.
-              </span>
-              </a>
-              <!--end:Menu link-->
-            </div>
-            <!--end:Menu item-->
-            @endcan
-            {{-- @can('subject_operation-list') --}}
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link  {{ request()->is('analysis*')
-                ? ' active' : '' }}"  href="{{ route('analysis.index') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span>
-              </span>
-              <span  class="menu-title" >
-              Analysis Book.
-              </span>
-              </a>
-              <!--end:Menu link-->
-            </div>
-            <!--end:Menu item-->
-            {{-- @endcan --}}
-          </div>
-          <!--end:Menu sub-->
-        </div>
-        <!--end:Menu item-->
+@php
+    $user = Auth::user();
+@endphp
 
-          <!--begin:Menu item-->
-          <div  data-kt-menu-trigger="click"  class="menu-item {{
-          request()->is('exams*')
-          ? ' here show menu-accordion' : '' }}" >
-          <!--begin:Menu link-->
-          <span class="menu-link" >
-          <span  class="menu-icon" >
-          <i class="ki-duotone ki-element-11 fs-2">
-          <span class="path1">
-          </span><span class="path2">
-          </span><span class="path3">
-          </span><span class="path4">
-          </span></i></span>
-          <span  class="menu-title" >
-            Exams Operations
-          </span>
-          <span  class="menu-arrow" >
-          </span></span>
-          <!--end:Menu link-->
-          <!--begin:Menu sub-->
-          <div  class="menu-sub menu-sub-accordion" >
-            @can('myclass-list')
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link  {{ request()->is('exams*') 
-                ? ' active' : '' }}"  href="{{ route('exams.index') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span>
-              </span>
-              <span  class="menu-title" >
-              Exams 
-              </span>
-              </a>
-              <!--end:Menu link-->
-            </div>
-            <!--end:Menu item-->
-            @endcan
-           
-          </div>
-          <!--end:Menu sub-->
-        </div>
-        <!--end:Menu item-->
+@if($user)
+    <li class="menu-title"><span data-key="t-menu">Menu</span></li>
 
-          <!--begin:Menu item-->
-          <div  data-kt-menu-trigger="click"  class="menu-item {{
-          request()->is('myclass*') ||
-          request()->is('mysubject*')
-          ? ' here show menu-accordion' : '' }}" >
-          <!--begin:Menu link-->
-          <span class="menu-link" >
-          <span  class="menu-icon" >
-          <i class="ki-duotone ki-element-11 fs-2">
-          <span class="path1">
-          </span><span class="path2">
-          </span><span class="path3">
-          </span><span class="path4">
-          </span></i></span>
-          <span  class="menu-title" >
-             CBT
-          </span>
-          <span  class="menu-arrow" >
-          </span></span>
-          <!--end:Menu link-->
-          <!--begin:Menu sub-->
-          <div  class="menu-sub menu-sub-accordion" >
-            @can('myclass-list')
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link  {{ request()->is('cbt*') 
-                ? ' active' : '' }}"  href="{{ route('cbt.index') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span>
-              </span>
-              <span  class="menu-title" >
-                 Exams
-              </span>
-              </a>
-              <!--end:Menu link-->
+    {{-- Dashboard --}}
+    @can('dashboard')
+        <li class="nav-item">
+            <a class="nav-link menu-link {{ request()->routeIs('dashboard') ? 'nav-active-parent' : 'collapsed' }}"
+               href="#sidebarDashboards" data-bs-toggle="collapse" role="button"
+               aria-expanded="{{ request()->routeIs('dashboard') ? 'true' : 'false' }}"
+               aria-controls="sidebarDashboards">
+                <i class="ph-gauge"></i> <span data-key="t-dashboards">Dashboards</span>
+                <i class="ri-arrow-down-s-line ms-auto"></i>
+            </a>
+            <div class="collapse menu-dropdown {{ request()->routeIs('dashboard') ? 'show' : '' }}" id="sidebarDashboards">
+                <ul class="nav nav-sm flex-column">
+                    <li class="nav-item">
+                        <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') ? 'nav-active-child' : '' }}" data-key="t-analytics">
+                            Administration Analytics
+                        </a>
+                    </li>
+                    @can('View inventory dashboard')
+                        <li class="nav-item">
+                            <a href="{{ route('inventory.dashboard') }}" class="nav-link {{ request()->routeIs('inventory.dashboard') ? 'nav-active-child' : '' }}" data-key="t-inventory">
+                                Inventory Dashboard
+                            </a>
+                        </li>
+                    @endcan
+                </ul>
             </div>
-            <!--end:Menu item-->
-            @endcan
-          </div>
-          <!--end:Menu sub-->
+        </li>
+    @endcan
+
+    {{-- USERS & PRIVILEGES --}}
+    @if(auth()->user()->can('View user') || auth()->user()->can('View role') || auth()->user()->can('View permission'))
+        <li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-pages">USERS & PRIVILEGES</span></li>
+    @endif
+
+    @can('View user')
+        <li class="nav-item">
+            <a class="nav-link menu-link {{ request()->routeIs('users.*') ? 'nav-active-parent' : 'collapsed' }}"
+               href="#sidebarusers" data-bs-toggle="collapse" role="button"
+               aria-expanded="{{ request()->routeIs('users.*') ? 'true' : 'false' }}"
+               aria-controls="sidebarusers">
+                <i class="ph-user-circle"></i> <span data-key="t-authentication">User Management</span>
+                <i class="ri-arrow-down-s-line ms-auto"></i>
+            </a>
+            <div class="collapse menu-dropdown {{ request()->routeIs('users.*') ? 'show' : '' }}" id="sidebarusers">
+                <ul class="nav nav-sm flex-column">
+                    <li class="nav-item">
+                        <a href="{{ route('users.index') }}" class="nav-link {{ request()->routeIs('users.index') ? 'nav-active-child' : '' }}" data-key="t-signin">
+                            Users
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </li>
+    @endcan
+
+    @can('View role')
+        <li class="nav-item">
+            <a class="nav-link menu-link {{ request()->routeIs('roles.*') || request()->routeIs('permissions.*') ? 'nav-active-parent' : 'collapsed' }}"
+               href="#sidebarroles" data-bs-toggle="collapse" role="button"
+               aria-expanded="{{ request()->routeIs('roles.*') || request()->routeIs('permissions.*') ? 'true' : 'false' }}"
+               aria-controls="sidebarroles">
+                <i class="ph-address-book"></i> <span data-key="t-pages">Roles & Permissions</span>
+                <i class="ri-arrow-down-s-line ms-auto"></i>
+            </a>
+            <div class="collapse menu-dropdown {{ request()->routeIs('roles.*') || request()->routeIs('permissions.*') ? 'show' : '' }}" id="sidebarroles">
+                <ul class="nav nav-sm flex-column">
+                    @can('View role')
+                        <li class="nav-item">
+                            <a href="{{ route('roles.index') }}" class="nav-link {{ request()->routeIs('roles.*') && !request()->routeIs('permissions.*') ? 'nav-active-child' : '' }}" data-key="t-starter">
+                                Roles
+                            </a>
+                        </li>
+                    @endcan
+                    @can('View permission')
+                        <li class="nav-item">
+                            <a href="{{ route('permissions.index') }}" class="nav-link {{ request()->routeIs('permissions.*') ? 'nav-active-child' : '' }}" data-key="t-profile">
+                                Permissions
+                            </a>
+                        </li>
+                    @endcan
+                </ul>
+            </div>
+        </li>
+    @endcan
+
+    {{-- User Account --}}
+    <li class="nav-item">
+        <a class="nav-link menu-link {{ request()->routeIs('user.overview') ? 'nav-active-parent' : 'collapsed' }}"
+           href="#sidebaraccount" data-bs-toggle="collapse" role="button"
+           aria-expanded="{{ request()->routeIs('user.overview') ? 'true' : 'false' }}"
+           aria-controls="sidebaraccount">
+            <i class="ph-address-book"></i> <span data-key="t-pages">My Account</span>
+            <i class="ri-arrow-down-s-line ms-auto"></i>
+        </a>
+        <div class="collapse menu-dropdown {{ request()->routeIs('user.overview') ? 'show' : '' }}" id="sidebaraccount">
+            <ul class="nav nav-sm flex-column">
+                <li class="nav-item">
+                    <a href="{{ route('user.overview', auth()->id()) }}" class="nav-link {{ request()->routeIs('user.overview') ? 'nav-active-child' : '' }}" data-key="t-starter">
+                        Profile Overview
+                    </a>
+                </li>
+            </ul>
         </div>
-        <!--end:Menu item-->
-        <!--begin:Menu item-->
-        <div  data-kt-menu-trigger="click"  class="menu-item {{
-          request()->is('myclass*') ||
-          request()->is('mysubject*')
-          ? ' here show menu-accordion' : '' }}" >
-          <!--begin:Menu link-->
-          <span class="menu-link" >
-          <span  class="menu-icon" >
-          <i class="ki-duotone ki-element-11 fs-2">
-          <span class="path1">
-          </span><span class="path2">
-          </span><span class="path3">
-          </span><span class="path4">
-          </span></i></span>
-          <span  class="menu-title" >
-          My Classes & subjects
-          </span>
-          <span  class="menu-arrow" >
-          </span></span>
-          <!--end:Menu link-->
-          <!--begin:Menu sub-->
-          <div  class="menu-sub menu-sub-accordion" >
-            @can('myclass-list')
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link  {{ request()->is('myclass*') || request()->is('viewstudent*')
-                ? ' active' : '' }}"  href="{{ route('myclass.index') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span>
-              </span>
-              <span  class="menu-title" >
-              My Classes
-              </span>
-              </a>
-              <!--end:Menu link-->
+    </li>
+
+    {{-- INVENTORY MANAGEMENT --}}
+    @if(auth()->user()->can('View banner') || auth()->user()->can('View category') || auth()->user()->can('View brand') ||
+        auth()->user()->can('View product') || auth()->user()->can('View pos') || auth()->user()->can('View inventory'))
+        <li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-pages">INVENTORY MANAGEMENT</span></li>
+    @endif
+
+    @can('View banner')
+        <li class="nav-item">
+            <a class="nav-link menu-link {{ request()->routeIs('banners.*') ? 'nav-active-parent' : 'collapsed' }}"
+               href="#sidebarbanner" data-bs-toggle="collapse" role="button"
+               aria-expanded="{{ request()->routeIs('banners.*') ? 'true' : 'false' }}"
+               aria-controls="sidebarbanner">
+                <i class="ph-image"></i> <span data-key="t-authentication">Banner Management</span>
+                <i class="ri-arrow-down-s-line ms-auto"></i>
+            </a>
+            <div class="collapse menu-dropdown {{ request()->routeIs('banners.*') ? 'show' : '' }}" id="sidebarbanner">
+                <ul class="nav nav-sm flex-column">
+                    <li class="nav-item">
+                        <a href="{{ route('banners.index') }}" class="nav-link {{ request()->routeIs('banners.index') ? 'nav-active-child' : '' }}" data-key="t-signin">
+                            Banners
+                        </a>
+                    </li>
+                </ul>
             </div>
-            <!--end:Menu item-->
-            @endcan
-            @can('mysubject-list')
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link  {{ request()->is('mysubject*')
-                ? ' active' : '' }}"  href="{{ route('mysubject.index') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span>
-              </span>
-              <span  class="menu-title" >
-              My Subjects
-              </span>
-              </a>
-              <!--end:Menu link-->
+        </li>
+    @endcan
+
+    @can('View category')
+        <li class="nav-item">
+            <a class="nav-link menu-link {{ request()->routeIs('categories.*') ? 'nav-active-parent' : 'collapsed' }}"
+               href="#sidebarcategories" data-bs-toggle="collapse" role="button"
+               aria-expanded="{{ request()->routeIs('categories.*') ? 'true' : 'false' }}"
+               aria-controls="sidebarcategories">
+                <i class="ph-list"></i> <span data-key="t-authentication">Category Management</span>
+                <i class="ri-arrow-down-s-line ms-auto"></i>
+            </a>
+            <div class="collapse menu-dropdown {{ request()->routeIs('categories.*') ? 'show' : '' }}" id="sidebarcategories">
+                <ul class="nav nav-sm flex-column">
+                    <li class="nav-item">
+                        <a href="{{ route('categories.index') }}" class="nav-link {{ request()->routeIs('categories.index') ? 'nav-active-child' : '' }}" data-key="t-signin">
+                            Categories
+                        </a>
+                    </li>
+                </ul>
             </div>
-            <!--end:Menu item-->
-            @endcan
-          </div>
-          <!--end:Menu sub-->
-        </div>
-        <!--end:Menu item-->
-        <!--begin:Menu item-->
-        <div  data-kt-menu-trigger="click"  class="menu-item {{
-          request()->is('myresultroom*') ||
-          request()->is('studentresults*')
-          ? ' here show menu-accordion' : '' }}" >
-          <!--begin:Menu link-->
-          <span class="menu-link" >
-          <span  class="menu-icon" >
-          <i class="ki-duotone ki-element-11 fs-2">
-          <span class="path1">
-          </span><span class="path2">
-          </span><span class="path3">
-          </span><span class="path4">
-          </span></i></span>
-          <span  class="menu-title" >
-          Records and Results
-          </span>
-          <span  class="menu-arrow" >
-          </span></span>
-          <!--end:Menu link-->
-          <!--begin:Menu sub-->
-          <div  class="menu-sub menu-sub-accordion" >
-            @can('myresultroom-list')
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link  {{ request()->is('myresultroom*')
-                ? ' active' : '' }}"  href="{{ route('myresultroom.term') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span>
-              </span>
-              <span  class="menu-title" >
-              My Record sheets
-              </span>
-              </a>
-              <!--end:Menu link-->
+        </li>
+    @endcan
+
+    @can('View brand')
+        <li class="nav-item">
+            <a class="nav-link menu-link {{ request()->routeIs('brands.*') ? 'nav-active-parent' : 'collapsed' }}"
+               href="#sidebarbrand" data-bs-toggle="collapse" role="button"
+               aria-expanded="{{ request()->routeIs('brands.*') ? 'true' : 'false' }}"
+               aria-controls="sidebarbrand">
+                <i class="ph-tag"></i> <span data-key="t-authentication">Brand Management</span>
+                <i class="ri-arrow-down-s-line ms-auto"></i>
+            </a>
+            <div class="collapse menu-dropdown {{ request()->routeIs('brands.*') ? 'show' : '' }}" id="sidebarbrand">
+                <ul class="nav nav-sm flex-column">
+                    <li class="nav-item">
+                        <a href="{{ route('brands.index') }}" class="nav-link {{ request()->routeIs('brands.index') ? 'nav-active-child' : '' }}" data-key="t-signin">
+                            Brands
+                        </a>
+                    </li>
+                </ul>
             </div>
-            <!--end:Menu item-->
-            @endcan
-            @can('studentresults-list')
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link  {{ request()->is('studentresults*')
-                ? ' active' : '' }}"  href="{{ route('studentresults.index') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span>
-              </span>
-              <span  class="menu-title" >
-              Students Results
-              </span>
-              </a>
-              <!--end:Menu link-->
+        </li>
+    @endcan
+
+    @can('View product')
+        <li class="nav-item">
+            <a class="nav-link menu-link {{ request()->routeIs('products.*') ? 'nav-active-parent' : 'collapsed' }}"
+               href="#sidebarproduct" data-bs-toggle="collapse" role="button"
+               aria-expanded="{{ request()->routeIs('products.*') ? 'true' : 'false' }}"
+               aria-controls="sidebarproduct">
+                <i class="ph-package"></i> <span data-key="t-authentication">Product Management</span>
+                <i class="ri-arrow-down-s-line ms-auto"></i>
+            </a>
+            <div class="collapse menu-dropdown {{ request()->routeIs('products.*') ? 'show' : '' }}" id="sidebarproduct">
+                <ul class="nav nav-sm flex-column">
+                    <li class="nav-item">
+                        <a href="{{ route('products.index') }}" class="nav-link {{ request()->routeIs('products.index') ? 'nav-active-child' : '' }}" data-key="t-signin">
+                            Products
+                        </a>
+                    </li>
+                </ul>
             </div>
-            <!--end:Menu item-->
-            @endcan
-          </div>
-          <!--end:Menu sub-->
-        </div>
-        <!--end:Menu item-->
-        <!--begin:Menu item-->
-        <div  class="menu-item pt-5" >
-          <!--begin:Menu content-->
-          <div  class="menu-content" >
-            <span class="menu-heading fw-bold text-uppercase fs-7">
-            SCHOOL BASIC SETTINGS
-            </span>
-          </div>
-          <!--end:Menu content-->
-        </div>
-        <!--end:Menu item-->
-        <!--begin:Menu item-->
-        <div  data-kt-menu-trigger="click"  class="menu-item {{
-          request()->is('session*') ||
-          request()->is('term*')  ||
-          request()->is('schoolhouse*')
-          ? ' here show menu-accordion' : '' }}" >
-          <!--begin:Menu link-->
-          <span class="menu-link" >
-          <span  class="menu-icon" >
-          <i class="ki-duotone ki-element-11 fs-2">
-          <span class="path1">
-          </span><span class="path2">
-          </span><span class="path3">
-          </span><span class="path4">
-          </span></i></span>
-          <span  class="menu-title" >
-          School Session & Term & House
-          </span>
-          <span  class="menu-arrow" >
-          </span></span>
-          <!--end:Menu link-->
-          <!--begin:Menu sub-->
-          <div  class="menu-sub menu-sub-accordion" >
-            @can('session-list')
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link  {{ request()->is('session*')
-                ? ' active' : '' }}"  href="{{ route('session.index') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span>
-              </span>
-              <span  class="menu-title" >
-              School Session
-              </span>
-              </a>
-              <!--end:Menu link-->
+        </li>
+    @endcan
+
+    @can('View pos')
+        <li class="nav-item">
+            <a class="nav-link menu-link {{ request()->routeIs('pos.*') ? 'nav-active-parent' : 'collapsed' }}"
+               href="#sidebarpos" data-bs-toggle="collapse" role="button"
+               aria-expanded="{{ request()->routeIs('pos.*') ? 'true' : 'false' }}"
+               aria-controls="sidebarpos">
+                <i class="ph-shopping-cart"></i> <span data-key="t-authentication">POS Management</span>
+                <i class="ri-arrow-down-s-line ms-auto"></i>
+            </a>
+            <div class="collapse menu-dropdown {{ request()->routeIs('pos.*') ? 'show' : '' }}" id="sidebarpos">
+                <ul class="nav nav-sm flex-column">
+                    <li class="nav-item">
+                        <a href="{{ route('pos.index') }}" class="nav-link {{ request()->routeIs('pos.index') ? 'nav-active-child' : '' }}" data-key="t-signin">
+                            Point of Sale
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ route('pos.grid') }}" class="nav-link {{ request()->routeIs('pos.grid') ? 'nav-active-child' : '' }}" data-key="t-grid-pos">
+                            Grid POS
+                        </a>
+                    </li>
+                </ul>
             </div>
-            <!--end:Menu item-->
-            @endcan
-            @can('term-list')
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link  {{ request()->is('term*')
-                ? ' active' : '' }}"  href="{{ route('term.index') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span>
-              </span>
-              <span  class="menu-title" >
-              School Term
-              </span>
-              </a>
-              <!--end:Menu link-->
+        </li>
+    @endcan
+
+    {{-- Inventory Operations --}}
+    @can('View inventory')
+        <li class="nav-item">
+            <a class="nav-link menu-link {{ request()->routeIs('inventory.*') || request()->routeIs('stock-locations.*') ? 'nav-active-parent' : 'collapsed' }}"
+               href="#sidebarmanageinventory" data-bs-toggle="collapse" role="button"
+               aria-expanded="{{ request()->routeIs('inventory.*') || request()->routeIs('stock-locations.*') ? 'true' : 'false' }}"
+               aria-controls="sidebarmanageinventory">
+                <i class="ph-warehouse"></i> <span data-key="t-authentication">Inventory Operations</span>
+                <i class="ri-arrow-down-s-line ms-auto"></i>
+            </a>
+            <div class="collapse menu-dropdown {{ request()->routeIs('inventory.*') || request()->routeIs('stock-locations.*') ? 'show' : '' }}" id="sidebarmanageinventory">
+                <ul class="nav nav-sm flex-column">
+                    @can('View inventory')
+                        <li class="nav-item">
+                            <a href="{{ route('inventory.index') }}" class="nav-link {{ request()->routeIs('inventory.index') ? 'nav-active-child' : '' }}" data-key="t-signin">
+                                Transactions
+                            </a>
+                        </li>
+                    @endcan
+                    @can('View stock levels')
+                        <li class="nav-item">
+                            <a href="{{ route('inventory.stock-levels') }}" class="nav-link {{ request()->routeIs('inventory.stock-levels') ? 'nav-active-child' : '' }}" data-key="t-signin">
+                                Stock Levels
+                            </a>
+                        </li>
+                    @endcan
+                    @can('Manage stock locations')
+                        <li class="nav-item">
+                            <a href="{{ route('stock-locations.index') }}" class="nav-link {{ request()->routeIs('stock-locations.*') ? 'nav-active-child' : '' }}" data-key="t-signin">
+                                Stock Locations
+                            </a>
+                        </li>
+                    @endcan
+                    @can('View low stock alerts')
+                        <li class="nav-item">
+                            <a href="{{ route('inventory.low-stock-alerts') }}" class="nav-link {{ request()->routeIs('inventory.low-stock-alerts') ? 'nav-active-child' : '' }}" data-key="t-signin">
+                                Low Stock Alerts
+                            </a>
+                        </li>
+                    @endcan
+                    @can('View inventory reports')
+                        <li class="nav-item">
+                            <a href="{{ route('inventory.stock-value-report') }}" class="nav-link {{ request()->routeIs('inventory.stock-value-report') ? 'nav-active-child' : '' }}" data-key="t-signin">
+                                Stock Value Report
+                            </a>
+                        </li>
+                    @endcan
+                </ul>
             </div>
-            <!--end:Menu item-->
-            @endcan
-            @can('schoolhouse-list')
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link {{ request()->is('schoolhouse*')
-                ? ' active' : '' }}"
-                href="{{ route('schoolhouse.index') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span></span>
-              <span  class="menu-title" >
-              School House
-              </span>
-              </a>
-              <!--end:Menu link-->
+        </li>
+    @endcan
+
+    {{-- Orders & Sales --}}
+    @can('View order')
+        <li class="nav-item">
+            <a class="nav-link menu-link {{ request()->routeIs('orders.*') ? 'nav-active-parent' : 'collapsed' }}"
+               href="#sidebarorders" data-bs-toggle="collapse" role="button"
+               aria-expanded="{{ request()->routeIs('orders.*') ? 'true' : 'false' }}"
+               aria-controls="sidebarorders">
+                <i class="ph-shopping-cart-simple"></i> <span data-key="t-authentication">Orders Management</span>
+                <i class="ri-arrow-down-s-line ms-auto"></i>
+            </a>
+            <div class="collapse menu-dropdown {{ request()->routeIs('orders.*') ? 'show' : '' }}" id="sidebarorders">
+                <ul class="nav nav-sm flex-column">
+                    <li class="nav-item">
+                        <a href="{{ route('orders.index') }}" class="nav-link {{ request()->routeIs('orders.index') ? 'nav-active-child' : '' }}" data-key="t-signin">
+                            All Orders
+                        </a>
+                    </li>
+                </ul>
             </div>
-            <!--end:Menu item-->
-            @endcan
-          </div>
-          <!--end:Menu sub-->
-        </div>
-        <!--end:Menu item-->
-        <!--begin:Menu item-->
-        <div  data-kt-menu-trigger="click"  class="menu-item {{
-          request()->is('schoolarm*') ||
-          request()->is('schoolclass*')  ||
-          request()->is('classcategories*') ||
-          request()->is('classteacher*')
-          ? ' here show menu-accordion' : '' }}" >
-          <!--begin:Menu link-->
-          <span class="menu-link" >
-          <span  class="menu-icon" >
-          <i class="ki-duotone ki-element-11 fs-2">
-          <span class="path1">
-          </span><span class="path2">
-          </span><span class="path3">
-          </span><span class="path4">
-          </span></i></span>
-          <span  class="menu-title" >
-          Class Settings
-          </span>
-          <span  class="menu-arrow" >
-          </span></span>
-          <!--end:Menu link-->
-          <!--begin:Menu sub-->
-          <div  class="menu-sub menu-sub-accordion" >
-            @can('school_arm-list')
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link  {{ request()->is('schoolarm*')
-                ? ' active' : '' }}"  href="{{ route('schoolarm.index') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span>
-              </span>
-              <span  class="menu-title" >
-              Class Arm
-              </span>
-              </a>
-              <!--end:Menu link-->
+        </li>
+    @endcan
+
+    @can('View customer')
+        <li class="nav-item">
+            <a class="nav-link menu-link {{ request()->routeIs('customers.*') ? 'nav-active-parent' : 'collapsed' }}"
+               href="#sidebarcustomer" data-bs-toggle="collapse" role="button"
+               aria-expanded="{{ request()->routeIs('customers.*') ? 'true' : 'false' }}"
+               aria-controls="sidebarcustomer">
+                <i class="ph-users"></i> <span data-key="t-authentication">Customers Management</span>
+                <i class="ri-arrow-down-s-line ms-auto"></i>
+            </a>
+            <div class="collapse menu-dropdown {{ request()->routeIs('customers.*') ? 'show' : '' }}" id="sidebarcustomer">
+                <ul class="nav nav-sm flex-column">
+                    <li class="nav-item">
+                        <a href="{{ route('customers.index') }}" class="nav-link {{ request()->routeIs('customers.index') ? 'nav-active-child' : '' }}" data-key="t-signin">
+                            All Customers
+                        </a>
+                    </li>
+                </ul>
             </div>
-            <!--end:Menu item-->
-            @endcan
-            @can('classcategory-list')
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link {{ request()->is('classcategory*')
-                ? ' active' : '' }}"
-                href="{{ route('classcategories.index') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span></span>
-              <span  class="menu-title" >
-              Class Category
-              </span>
-              </a>
-              <!--end:Menu link-->
+        </li>
+    @endcan
+
+    {{-- Sales Analytics --}}
+    @can('View sale')
+        <li class="nav-item">
+            <a class="nav-link menu-link {{ request()->routeIs('sales.*') ? 'nav-active-parent' : 'collapsed' }}"
+               href="#sidebarsales" data-bs-toggle="collapse" role="button"
+               aria-expanded="{{ request()->routeIs('sales.*') ? 'true' : 'false' }}"
+               aria-controls="sidebarsales">
+                <i class="ph-chart-line"></i> <span data-key="t-authentication">Sales Analytics</span>
+                <i class="ri-arrow-down-s-line ms-auto"></i>
+            </a>
+            <div class="collapse menu-dropdown {{ request()->routeIs('sales.*') ? 'show' : '' }}" id="sidebarsales">
+                <ul class="nav nav-sm flex-column">
+                    <li class="nav-item">
+                        <a href="{{ route('sales.index') }}" class="nav-link {{ request()->routeIs('sales.index') ? 'nav-active-child' : '' }}" data-key="t-signin">
+                            Sales Reports
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ route('sales.commissions') }}" class="nav-link {{ request()->routeIs('sales.commissions') ? 'nav-active-child' : '' }}" data-key="t-signin">
+                            Commissions
+                        </a>
+                    </li>
+                </ul>
             </div>
-            <!--end:Menu item-->
-            @endcan
-            @can('school_class-list')
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link  {{ request()->is('schoolclass*')
-                ? ' active' : '' }}"  href="{{ route('schoolclass.index') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span>
-              </span>
-              <span  class="menu-title" >
-              Class Name
-              </span>
-              </a>
-              <!--end:Menu link-->
+        </li>
+    @endcan
+
+    @can('View personal sales dashboard')
+        <li class="nav-item">
+            <a class="nav-link menu-link {{ request()->routeIs('salesperson.*') ? 'nav-active-parent' : 'collapsed' }}"
+               href="#sidebarsalesperson" data-bs-toggle="collapse" role="button"
+               aria-expanded="{{ request()->routeIs('salesperson.*') ? 'true' : 'false' }}"
+               aria-controls="sidebarsalesperson">
+                <i class="ph-user-tie"></i> <span data-key="t-authentication">My Sales</span>
+                <i class="ri-arrow-down-s-line ms-auto"></i>
+            </a>
+            <div class="collapse menu-dropdown {{ request()->routeIs('salesperson.*') ? 'show' : '' }}" id="sidebarsalesperson">
+                <ul class="nav nav-sm flex-column">
+                    <li class="nav-item">
+                        <a href="{{ route('salesperson.dashboard') }}" class="nav-link {{ request()->routeIs('salesperson.dashboard') ? 'nav-active-child' : '' }}" data-key="t-signin">
+                            My Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ route('salesperson.commissions') }}" class="nav-link {{ request()->routeIs('salesperson.commissions') ? 'nav-active-child' : '' }}" data-key="t-signin">
+                            My Commissions
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ route('salesperson.performance') }}" class="nav-link {{ request()->routeIs('salesperson.performance') ? 'nav-active-child' : '' }}" data-key="t-signin">
+                            My Performance
+                        </a>
+                    </li>
+                </ul>
             </div>
-            <!--end:Menu item-->
-            @endcan
-            @can('class_teacher-list')
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link {{ request()->is('classteacher*')
-                ? ' active' : '' }}"
-                href="{{ route('classteacher.index') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span></span>
-              <span  class="menu-title" >
-              Class Teacher
-              </span>
-              </a>
-              <!--end:Menu link-->
+        </li>
+    @endcan
+
+    {{-- Settings --}}
+    <li class="menu-title"><span data-key="t-menu">Settings</span></li>
+
+    @can('View store setting')
+        <li class="nav-item">
+            <a class="nav-link menu-link {{ request()->routeIs('settings.store.*') ? 'nav-active-parent' : 'collapsed' }}"
+               href="#sidebarsetting" data-bs-toggle="collapse" role="button"
+               aria-expanded="{{ request()->routeIs('settings.store.*') ? 'true' : 'false' }}"
+               aria-controls="sidebarsetting">
+                <i class="ph-gear"></i> <span data-key="t-authentication">Store Settings</span>
+                <i class="ri-arrow-down-s-line ms-auto"></i>
+            </a>
+            <div class="collapse menu-dropdown {{ request()->routeIs('settings.store.*') ? 'show' : '' }}" id="sidebarsetting">
+                <ul class="nav nav-sm flex-column">
+                    <li class="nav-item">
+                        <a href="{{ route('settings.store.index') }}" class="nav-link {{ request()->routeIs('settings.store.index') ? 'nav-active-child' : '' }}" data-key="t-signin">
+                            Store Configuration
+                        </a>
+                    </li>
+                </ul>
             </div>
-            <!--end:Menu item-->
-            @endcan
-          </div>
-          <!--end:Menu sub-->
-        </div>
-        <!--end:Menu item-->
-        <!--begin:Menu item-->
-        <div  data-kt-menu-trigger="click"  class="menu-item {{
-          request()->is('subject*') ||
-          request()->is('subjectteacher*')  ||
-          request()->is('subjectclass*')
-          ? ' here show menu-accordion' : '' }}" >
-          <!--begin:Menu link-->
-          <span class="menu-link" >
-          <span  class="menu-icon" >
-          <i class="ki-duotone ki-element-11 fs-2">
-          <span class="path1">
-          </span><span class="path2">
-          </span><span class="path3">
-          </span><span class="path4">
-          </span></i></span>
-          <span  class="menu-title" >
-          Subject Settings
-          </span>
-          <span  class="menu-arrow" >
-          </span></span>
-          <!--end:Menu link-->
-          <!--begin:Menu sub-->
-          <div  class="menu-sub menu-sub-accordion" >
-            @can('subject-list')
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link  {{ request()->is('subject*')
-                ? ' active' : '' }}"  href="{{ route('subject.index') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span>
-              </span>
-              <span  class="menu-title" >
-              School Subject
-              </span>
-              </a>
-              <!--end:Menu link-->
-            </div>
-            <!--end:Menu item-->
-            @endcan
-            @can('subject_teacher-list')
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link  {{ request()->is('subjectteacher*')
-                ? ' active' : '' }}"  href="{{ route('subjectteacher.index') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span>
-              </span>
-              <span  class="menu-title" >
-              Subject Teacher
-              </span>
-              </a>
-              <!--end:Menu link-->
-            </div>
-            <!--end:Menu item-->
-            @endcan
-            @can('subject_class-list')
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link {{ request()->is('subjectclass*')
-                ? ' active' : '' }}"
-                href="{{ route('subjectclass.index') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span></span>
-              <span  class="menu-title" >
-              Subjects For Classes
-              </span>
-              </a>
-              <!--end:Menu link-->
-            </div>
-            <!--end:Menu item-->
-            @endcan
-          </div>
-          <!--end:Menu sub-->
-        </div>
-        <!--end:Menu item-->
-        <!--begin:Menu item-->
-        <div  data-kt-menu-trigger="click"  class="menu-item {{
-          request()->is('schoolbill*')||
-          request()->is('schoolbilltermsession*')
-          ? ' here show menu-accordion' : '' }}" >
-          <!--begin:Menu link-->
-          <span class="menu-link" >
-          <span  class="menu-icon" >
-          <i class="ki-duotone ki-element-11 fs-2">
-          <span class="path1">
-          </span><span class="path2">
-          </span><span class="path3">
-          </span><span class="path4">
-          </span></i></span>
-          <span  class="menu-title" >
-          School BIll Settings
-          </span>
-          <span  class="menu-arrow" >
-          </span></span>
-          <!--end:Menu link-->
-          <!--begin:Menu sub-->
-          <div  class="menu-sub menu-sub-accordion" >
-            {{-- @can('school-bill') --}}
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link {{ request()->is('schoolbill*')
-                ? ' active' : '' }}"
-                href="{{ route('schoolbill.index') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span></span>
-              <span  class="menu-title" >
-              School BIlls</span>
-              </a>
-              <!--end:Menu link-->
-            </div>
-            <!--end:Menu item-->
-            {{-- @endcan --}}
-            {{-- @can('schoolbill_term_session-list') --}}
-            <!--begin:Menu item-->
-            <div  class="menu-item" >
-              <!--begin:Menu link-->
-              <a class="menu-link {{ request()->is('schoolbill_term_session*')
-                ? ' active' : '' }}"
-                href="{{ route('schoolbilltermsession.index') }}" >
-              <span  class="menu-bullet" >
-              <span class="bullet bullet-dot">
-              </span></span>
-              <span  class="menu-title" >
-              School Bill for Class, Term & Session
-              </span>
-              </a>
-              <!--end:Menu link-->
-            </div>
-            <!--end:Menu item-->
-            {{-- @endcan --}}
-          </div>
-          <!--end:Menu sub-->
-        </div>
-        <!--end:Menu item-->
-      </div>
-      <!--end::Menu -->
-    </div>
-    <!--end::Menu wrapper-->
-  </div>
-  <!--end::sidebar menu-->
-</div>
-<!--end::Sidebar-->
+        </li>
+    @endcan
+@endif
