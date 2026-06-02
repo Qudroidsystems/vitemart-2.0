@@ -20,14 +20,13 @@ class OrderDiscount extends Model
         'applied_at',
     ];
 
-    // Optional: Cast applied_at as datetime
     protected $casts = [
         'applied_at' => 'datetime',
         'discount_value' => 'decimal:2',
         'amount' => 'decimal:2',
     ];
 
-    // Relationships (optional but recommended)
+    // Relationships
     public function order()
     {
         return $this->belongsTo(Order::class, 'order_id', 'id');

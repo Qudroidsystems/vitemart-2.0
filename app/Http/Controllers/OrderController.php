@@ -10,6 +10,7 @@ use App\Models\Transaction;
 use App\Models\Customer;
 use App\Models\User;
 use App\Models\Address;
+use App\Models\OrderDiscount;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -120,14 +121,15 @@ class OrderController extends Controller
     public function show($id)
     {
         $order = Order::with([
-            'customer',      // The actual customer who placed the order
-            'user',          // The salesperson who processed the order
-            'items',         // Order items
+            'customer',
+            'user',
+            'items',
             'shippingAddress',
             'billingAddress',
             'transactions',
             'refunds',
-            'notes'          // Order notes
+            'notes',
+            'discounts'
         ])->findOrFail($id);
 
         // Calculate items count
@@ -172,7 +174,8 @@ class OrderController extends Controller
             'user',
             'items',
             'shippingAddress',
-            'billingAddress'
+            'billingAddress',
+            'discounts'
         ])->findOrFail($id);
 
         $pdf = Pdf::loadView('orders.invoice', compact('order'));
@@ -367,6 +370,8 @@ class OrderController extends Controller
                 'Customer Name',
                 'Customer Email',
                 'Customer Phone',
+                'Subtotal',
+                'Discount',
                 'Total Amount',
                 'Status',
                 'Payment Status',
@@ -395,6 +400,8 @@ class OrderController extends Controller
                     $customerName,
                     $customerEmail,
                     $customerPhone,
+                    $order->subtotal ?? 0,
+                    $order->discount_amount ?? 0,
                     $order->total_amount,
                     $order->status,
                     $order->payment_status,
@@ -419,60 +426,154 @@ class OrderController extends Controller
             'customer_id' => 'nullable|exists:customers,id',
             'items' => 'required|array',
             'items.*.product_id' => 'required',
-            'items.*.quantity' => 'required|integer|min:1',
-            'items.*.unit_price' => 'required|numeric|min:0',
-            'total_amount' => 'required|numeric|min:0',
-            'payment_method' => 'required|string',
+            'items.*.qty' => 'required|numeric|min:0.001',
+            'items.*.sale_price' => 'required|numeric|min:0',
+            'items.*.unit_id' => 'nullable|integer',
+            'items.*.unit_name' => 'nullable|string',
+            'items.*.discount_type' => 'nullable|string|in:percent,fixed',
+            'items.*.discount_value' => 'nullable|numeric|min:0',
+            'items.*.is_unit_mode' => 'boolean',
+            'payment_method' => 'required|string|in:cash,card,transfer',
+            'discount_type' => 'nullable|string|in:percent,fixed',
+            'discount_value' => 'nullable|numeric|min:0',
+            'discount_amount' => 'nullable|numeric|min:0',
+            'tax_rate' => 'nullable|numeric',
+            'tax_cost' => 'nullable|numeric',
         ]);
 
         DB::beginTransaction();
 
         try {
+            // Calculate totals
+            $subtotal = 0;
+            $totalDiscount = 0;
+            $itemsData = [];
+
+            foreach ($request->items as $item) {
+                $itemTotal = $item['sale_price'] * $item['qty'];
+                $subtotal += $itemTotal;
+
+                // Calculate item discount
+                $itemDiscountAmount = 0;
+                if (!empty($item['discount_value']) && $item['discount_value'] > 0) {
+                    if ($item['discount_type'] === 'percent') {
+                        $itemDiscountAmount = $itemTotal * ($item['discount_value'] / 100);
+                    } else {
+                        $itemDiscountAmount = min($item['discount_value'], $itemTotal);
+                    }
+                    $totalDiscount += $itemDiscountAmount;
+                }
+
+                $itemsData[] = [
+                    'product_id' => $item['product_id'],
+                    'title' => $item['title'] ?? 'Product',
+                    'unit_price' => $item['sale_price'],
+                    'quantity' => $item['qty'],
+                    'total_price' => $itemTotal,
+                    'discount_type' => $item['discount_type'] ?? null,
+                    'discount_value' => $item['discount_value'] ?? 0,
+                    'discount_amount' => $itemDiscountAmount,
+                    'is_unit_mode' => $item['is_unit_mode'] ?? false,
+                    'unit_name' => $item['unit_name'] ?? null,
+                    'unit_id' => $item['unit_id'] ?? null,
+                    'image' => $item['thumbnail'] ?? null,
+                ];
+            }
+
+            // Apply order-level discount
+            $orderDiscountAmount = $request->discount_amount ?? 0;
+            if ($orderDiscountAmount > 0) {
+                $totalDiscount += $orderDiscountAmount;
+            }
+
+            $taxAmount = $request->tax_cost ?? 0;
+            $shippingCost = 0; // Default shipping cost
+            $grandTotal = max(0, $subtotal + $taxAmount + $shippingCost - $totalDiscount);
+
+            // Generate order ID
+            $orderId = 'POS-' . now()->format('Ymd-His') . '-' . uniqid();
+
+            // Create order
             $order = Order::create([
-                'id' => 'POS-' . now()->format('Ymd-His') . '-' . uniqid(),
+                'id' => $orderId,
                 'customer_id' => $request->customer_id,
                 'user_id' => auth()->id(),
-                'status' => 'pending',
+                'status' => 'completed',
                 'payment_status' => $request->payment_method === 'cash' ? 'paid' : 'unpaid',
-                'total_amount' => $request->total_amount,
-                'shipping_cost' => $request->shipping_cost ?? 0,
-                'tax_cost' => $request->tax_cost ?? 0,
+                'total_amount' => $grandTotal,
+                'subtotal' => $subtotal,
+                'shipping_cost' => $shippingCost,
+                'tax_cost' => $taxAmount,
+                'discount_amount' => $totalDiscount,
                 'payment_method' => $request->payment_method,
                 'order_date' => now(),
             ]);
 
             // Create order items
-            foreach ($request->items as $item) {
-                OrderItem::create([
+            foreach ($itemsData as $itemData) {
+                $orderItem = OrderItem::create([
                     'order_id' => $order->id,
-                    'product_id' => $item['product_id'],
-                    'title' => $item['title'],
-                    'unit_price' => $item['unit_price'],
-                    'quantity' => $item['quantity'],
-                    'total_price' => $item['unit_price'] * $item['quantity'],
-                    'image' => $item['image'] ?? null,
-                    'selected_variation' => $item['selected_variation'] ?? null,
+                    'product_id' => $itemData['product_id'],
+                    'title' => $itemData['title'],
+                    'unit_price' => $itemData['unit_price'],
+                    'quantity' => $itemData['quantity'],
+                    'total_price' => $itemData['total_price'],
+                    'discount_type' => $itemData['discount_type'],
+                    'discount_value' => $itemData['discount_value'],
+                    'discount_amount' => $itemData['discount_amount'],
+                    'is_unit_mode' => $itemData['is_unit_mode'],
+                    'unit_name' => $itemData['unit_name'],
+                    'unit_id' => $itemData['unit_id'],
+                    'image' => $itemData['image'],
+                ]);
+
+                // Save item discount to OrderDiscount table if applicable
+                if ($itemData['discount_amount'] > 0) {
+                    OrderDiscount::create([
+                        'order_id' => $order->id,
+                        'order_item_id' => $orderItem->id,
+                        'type' => 'item',
+                        'discount_type' => $itemData['discount_type'],
+                        'discount_value' => $itemData['discount_value'],
+                        'amount' => $itemData['discount_amount'],
+                        'applied_by' => auth()->id(),
+                        'applied_at' => now(),
+                    ]);
+                }
+            }
+
+            // Save order-level discount to OrderDiscount table
+            if ($orderDiscountAmount > 0) {
+                OrderDiscount::create([
+                    'order_id' => $order->id,
+                    'order_item_id' => null,
+                    'type' => 'order',
+                    'discount_type' => $request->discount_type ?? 'percent',
+                    'discount_value' => $request->discount_value ?? 0,
+                    'amount' => $orderDiscountAmount,
+                    'applied_by' => auth()->id(),
+                    'applied_at' => now(),
                 ]);
             }
 
-            // If paid by cash, create transaction
-            if ($request->payment_method === 'cash') {
-                Transaction::create([
-                    'order_id' => $order->id,
-                    'user_id' => auth()->id(),
-                    'amount' => $request->total_amount,
-                    'payment_method' => 'cash',
-                    'status' => 'success',
-                    'transaction_id' => 'TXN-' . uniqid(),
-                ]);
-            }
+            // Create transaction
+            $transactionStatus = $request->payment_method === 'cash' ? 'success' : 'pending';
+            Transaction::create([
+                'order_id' => $order->id,
+                'user_id' => auth()->id(),
+                'amount' => $grandTotal,
+                'payment_method' => $request->payment_method,
+                'status' => $transactionStatus,
+                'transaction_id' => 'TXN-' . uniqid(),
+            ]);
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Order saved successfully',
-                'order_id' => $order->id
+                'order_id' => $order->id,
+                'total' => $grandTotal
             ]);
 
         } catch (\Exception $e) {

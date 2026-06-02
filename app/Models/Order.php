@@ -14,12 +14,14 @@ class Order extends Model
 {
     use HasFactory;
 
-   protected $fillable = [
+    protected $fillable = [
         'id',
         'user_id',
         'customer_id',
         'status',
+        'subtotal',
         'total_amount',
+        'discount_amount',
         'shipping_cost',
         'tax_cost',
         'order_date',
@@ -32,12 +34,14 @@ class Order extends Model
         'barcode_data',
         'paid_at',
         'payment_status',
-        'commission_rate',      // NEW
-        'commission_amount',    // NEW
+        'commission_rate',
+        'commission_amount',
     ];
 
     protected $casts = [
         'total_amount' => 'decimal:2',
+        'subtotal' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
         'shipping_cost' => 'decimal:2',
         'tax_cost' => 'decimal:2',
         'order_date' => 'datetime',
@@ -45,11 +49,12 @@ class Order extends Model
         'paid_at' => 'datetime',
         'billing_address_same_as_shipping' => 'boolean',
         'barcode_data' => 'array',
-        'commission_rate' => 'decimal:2',     // NEW
-        'commission_amount' => 'decimal:2',   // NEW
+        'commission_rate' => 'decimal:2',
+        'commission_amount' => 'decimal:2',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+
     protected $keyType = 'string';
     public $incrementing = false;
 
@@ -89,6 +94,11 @@ class Order extends Model
     public function transactions()
     {
         return $this->hasMany(Transaction::class);
+    }
+
+    public function discounts()
+    {
+        return $this->hasMany(OrderDiscount::class);
     }
 
     public function successfulTransaction()
