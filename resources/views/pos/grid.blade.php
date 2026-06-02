@@ -146,6 +146,7 @@
                                         <option value="fixed">₦</option>
                                     </select>
                                     <button class="pos-discount-apply" id="applyDiscountBtn" title="Apply"><i class="bi bi-check-lg"></i></button>
+                                    <button class="pos-discount-apply" id="clearDiscountBtn" title="Clear Discount" style="background: #dc2626;"><i class="bi bi-x-lg"></i></button>
                                 </div>
                                 <div id="discountApplied" class="pos-discount-applied d-none">
                                     <i class="bi bi-tag-fill me-1"></i><span id="discountAmountLabel">-₦0.00</span>
@@ -468,6 +469,7 @@ document.addEventListener('DOMContentLoaded', function () {
         initQuickCustomer();
         setupOfflineMode();
         setupKeyboardShortcuts();
+        setupDiscountHandlers();
 
         document.addEventListener('click', function (e) {
             if (!e.target.closest('.modal') &&
@@ -1120,7 +1122,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (chargeTotalSpan) chargeTotalSpan.textContent = formatCurrency(0);
 
             document.getElementById('discountApplied').classList.add('d-none');
-            window.currentDiscount = { type:'percent', value:0, amount:0 };
+            window.currentDiscount = { type: orderDiscountType, value: orderDiscountValue, amount: 0 };
             return;
         }
 
@@ -1130,24 +1132,32 @@ document.addEventListener('DOMContentLoaded', function () {
         let subtotal = 0;
 
         cart.forEach((item, i) => {
-            const unitPrice  = parseFloat(item.price_per_unit) || (parseFloat(item.price) / parseFloat(item.qty));
-            let discPrice    = unitPrice;
+            const unitPrice = parseFloat(item.price_per_unit) || (parseFloat(item.price) / parseFloat(item.qty));
+            let discPrice = unitPrice;
+
+            // Apply item-level discount
             if (item.discount_value > 0) {
-                discPrice = item.discount_type === 'percent'
-                    ? unitPrice * (1 - item.discount_value / 100)
-                    : unitPrice - (item.discount_value / item.qty);
+                if (item.discount_type === 'percent') {
+                    discPrice = unitPrice * (1 - item.discount_value / 100);
+                } else {
+                    const discountPerUnit = item.discount_value / item.qty;
+                    discPrice = unitPrice - discountPerUnit;
+                }
                 discPrice = Math.max(0, discPrice);
+                item.discounted_price = discPrice;
+            } else {
+                item.discounted_price = unitPrice;
             }
-            item.discounted_price = discPrice;
-            const lineTotal   = discPrice * parseFloat(item.qty);
-            subtotal         += lineTotal;
+
+            const lineTotal = discPrice * parseFloat(item.qty);
+            subtotal += lineTotal;
             const displayUnit = item.unit_short_name || item.unit_name || 'Unit';
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <tr>
                     <div class="cart-item-name">${escHtml(item.title)}</div>
-                    ${item.discount_value > 0 ? `<span class="cart-disc-badge">-${formatNum(item.discount_value,2)}${item.discount_type==='percent'?'%':'₦'}</span>` : ''}
+                    ${item.discount_value > 0 ? `<span class="cart-disc-badge">-${formatNum(item.discount_value,2)}${item.discount_type === 'percent' ? '%' : '₦'}</span>` : ''}
                 </td>
                 <td class="text-center">
                     <button class="cart-qty-btn qty-btn-cart" data-product-id="${escHtml(String(item.product_id))}">
@@ -1173,9 +1183,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 currentItemIndex = cart.findIndex(x => String(x.product_id) === String(pid));
                 if (currentItemIndex === -1) return;
                 const ci = cart[currentItemIndex];
-                document.getElementById('itemName').textContent      = ci.title;
-                document.getElementById('itemDiscountValue').value   = ci.discount_value || 0;
-                document.getElementById('itemDiscountType').value    = ci.discount_type || 'percent';
+                document.getElementById('itemName').textContent = ci.title;
+                document.getElementById('itemDiscountValue').value = ci.discount_value || 0;
+                document.getElementById('itemDiscountType').value = ci.discount_type || 'percent';
                 new bootstrap.Modal(document.getElementById('itemDiscountModal')).show();
             });
             tr.querySelector('.remove-cart-item-btn').addEventListener('click', function () {
@@ -1183,135 +1193,203 @@ document.addEventListener('DOMContentLoaded', function () {
                 const pid = cart[idx]?.product_id;
                 cart.splice(idx, 1);
                 if (pid) delete productQuantityCache[pid];
-                renderCartAndTotals(); renderGrid();
+                renderCartAndTotals();
+                renderGrid();
                 showToast('Removed', 'success');
             });
         });
 
         const taxRate = {{ config('pos.tax_rate', 0) }};
-        const taxAmt  = taxRate > 0 ? (subtotal * taxRate) / 100 : 0;
-        let orderDisc = 0;
-        if (orderDiscountValue > 0) {
-            orderDisc = orderDiscountType === 'percent' ? (subtotal * orderDiscountValue) / 100 : orderDiscountValue;
-            orderDisc = Math.min(orderDisc, subtotal);
-        }
-        const grand = Math.max(0, subtotal + taxAmt - orderDisc);
+        const taxAmt = taxRate > 0 ? (subtotal * taxRate) / 100 : 0;
 
-        subtotalEl.textContent     = formatCurrency(subtotal);
-        taxAmountEl.textContent    = formatCurrency(taxAmt);
-        grandTotalEl.textContent   = formatCurrency(grand);
+        // Calculate order-level discount
+        let orderDiscAmount = 0;
+        if (orderDiscountValue > 0) {
+            if (orderDiscountType === 'percent') {
+                orderDiscAmount = (subtotal * orderDiscountValue) / 100;
+            } else {
+                orderDiscAmount = orderDiscountValue;
+            }
+            orderDiscAmount = Math.min(orderDiscAmount, subtotal);
+        }
+
+        const grand = Math.max(0, subtotal + taxAmt - orderDiscAmount);
+
+        subtotalEl.textContent = formatCurrency(subtotal);
+        taxAmountEl.textContent = formatCurrency(taxAmt);
+        grandTotalEl.textContent = formatCurrency(grand);
 
         const chargeTotalSpan = document.getElementById('chargeBtnTotal');
         if (chargeTotalSpan) chargeTotalSpan.textContent = formatCurrency(grand);
 
-        if (orderDiscountValue > 0) {
-            document.getElementById('discountApplied').classList.remove('d-none');
-            document.getElementById('discountAmountLabel').textContent = `-${formatCurrency(orderDisc)}`;
+        // Show discount applied badge
+        if (orderDiscountValue > 0 && orderDiscAmount > 0) {
+            const discountAppliedDiv = document.getElementById('discountApplied');
+            const discountAmountLabel = document.getElementById('discountAmountLabel');
+            if (discountAppliedDiv && discountAmountLabel) {
+                discountAppliedDiv.classList.remove('d-none');
+                discountAmountLabel.textContent = `-${formatCurrency(orderDiscAmount)}`;
+            }
         } else {
-            document.getElementById('discountApplied').classList.add('d-none');
+            document.getElementById('discountApplied')?.classList.add('d-none');
         }
-        window.currentDiscount = { type: orderDiscountType, value: orderDiscountValue, amount: orderDisc };
+
+        window.currentDiscount = {
+            type: orderDiscountType,
+            value: orderDiscountValue,
+            amount: orderDiscAmount
+        };
+    }
+
+    // ── DISCOUNT HANDLERS ─────────────────────────────────────
+    function setupDiscountHandlers() {
+        // Apply order discount
+        const applyDiscountBtn = document.getElementById('applyDiscountBtn');
+        const clearDiscountBtn = document.getElementById('clearDiscountBtn');
+
+        if (applyDiscountBtn) {
+            applyDiscountBtn.addEventListener('click', () => {
+                let value = parseFloat(discountValueEl.value) || 0;
+                const type = discountTypeEl.value;
+
+                if (type === 'percent' && value > 100) {
+                    value = 100;
+                    discountValueEl.value = 100;
+                    showToast('Maximum discount is 100%', 'warning');
+                }
+
+                if (type === 'fixed' && value < 0) {
+                    value = 0;
+                    discountValueEl.value = 0;
+                }
+
+                orderDiscountValue = value;
+                orderDiscountType = type;
+
+                renderCartAndTotals();
+                if (value > 0) {
+                    showToast(`Discount applied: ${value}${type === 'percent' ? '%' : '₦'}`, 'success');
+                } else {
+                    showToast('Discount removed', 'info');
+                }
+            });
+        }
+
+        // Clear discount button
+        if (clearDiscountBtn) {
+            clearDiscountBtn.addEventListener('click', () => {
+                orderDiscountValue = 0;
+                orderDiscountType = 'percent';
+                discountValueEl.value = '0';
+                discountTypeEl.value = 'percent';
+                renderCartAndTotals();
+                showToast('Discount removed', 'info');
+            });
+        }
+
+        // Enter key on discount input
+        if (discountValueEl) {
+            discountValueEl.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (applyDiscountBtn) applyDiscountBtn.click();
+                }
+            });
+        }
     }
 
     // ── ITEM DISCOUNT MODAL ───────────────────────────────────
     function setupItemDiscountModal() {
-        document.getElementById('applyItemDiscountBtn').addEventListener('click', function () {
-            if (currentItemIndex === null || currentItemIndex < 0) return;
-            const val  = parseFloat(document.getElementById('itemDiscountValue').value) || 0;
-            const type = document.getElementById('itemDiscountType').value;
-            if (type === 'percent' && val > 100) { showToast('Max 100%', 'warning'); return; }
-            cart[currentItemIndex].discount_type  = type;
-            cart[currentItemIndex].discount_value = val;
-            renderCartAndTotals(); renderGrid();
-            bootstrap.Modal.getInstance(document.getElementById('itemDiscountModal')).hide();
-            showToast('Item discount applied', 'success');
+        const itemDiscountModal = document.getElementById('itemDiscountModal');
+        const applyBtn = document.getElementById('applyItemDiscountBtn');
+        const discountValueInput = document.getElementById('itemDiscountValue');
+        const discountTypeSelect = document.getElementById('itemDiscountType');
+
+        if (!applyBtn) return;
+
+        applyBtn.addEventListener('click', function () {
+            if (currentItemIndex === null || currentItemIndex < 0) {
+                showToast('No item selected', 'error');
+                return;
+            }
+
+            let value = parseFloat(discountValueInput.value) || 0;
+            const type = discountTypeSelect.value;
+
+            if (type === 'percent' && value > 100) {
+                value = 100;
+                discountValueInput.value = 100;
+                showToast('Maximum discount is 100%', 'warning');
+            }
+
+            if (type === 'fixed' && value < 0) {
+                value = 0;
+                discountValueInput.value = 0;
+            }
+
+            const cartItem = cart[currentItemIndex];
+            const originalPrice = parseFloat(cartItem.price_per_unit) || (parseFloat(cartItem.price) / parseFloat(cartItem.qty));
+
+            // Validate fixed discount doesn't exceed item total
+            if (type === 'fixed') {
+                const totalItemPrice = originalPrice * cartItem.qty;
+                if (value > totalItemPrice) {
+                    value = totalItemPrice;
+                    discountValueInput.value = value;
+                    showToast(`Discount cannot exceed item total of ${formatCurrency(totalItemPrice)}`, 'warning');
+                }
+            }
+
+            cart[currentItemIndex].discount_type = type;
+            cart[currentItemIndex].discount_value = value;
+
+            // Recalculate discounted price
+            if (value > 0) {
+                if (type === 'percent') {
+                    cart[currentItemIndex].discounted_price = originalPrice * (1 - value / 100);
+                } else {
+                    const discountPerUnit = value / cartItem.qty;
+                    cart[currentItemIndex].discounted_price = Math.max(0, originalPrice - discountPerUnit);
+                }
+            } else {
+                cart[currentItemIndex].discounted_price = originalPrice;
+            }
+
+            renderCartAndTotals();
+            renderGrid();
+            bootstrap.Modal.getInstance(itemDiscountModal).hide();
+
+            if (value > 0) {
+                showToast(`Discount applied: ${value}${type === 'percent' ? '%' : '₦'}`, 'success');
+            } else {
+                showToast('Discount removed', 'info');
+            }
+
+            // Reset for next use
+            currentItemIndex = null;
+            discountValueInput.value = '';
+            discountTypeSelect.value = 'percent';
         });
+
+        // Reset modal when hidden
+        if (itemDiscountModal) {
+            itemDiscountModal.addEventListener('hidden.bs.modal', function() {
+                if (discountValueInput) discountValueInput.value = '';
+                if (discountTypeSelect) discountTypeSelect.value = 'percent';
+                currentItemIndex = null;
+            });
+        }
+
+        // Apply on Enter key
+        if (discountValueInput) {
+            discountValueInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (applyBtn) applyBtn.click();
+                }
+            });
+        }
     }
-
-    // ── ORDER DISCOUNT ────────────────────────────────────────
-    document.getElementById('applyDiscountBtn').addEventListener('click', () => {
-        orderDiscountValue = parseFloat(discountValueEl.value) || 0;
-        orderDiscountType  = discountTypeEl.value;
-        if (orderDiscountType === 'percent' && orderDiscountValue > 100) {
-            orderDiscountValue = 100; discountValueEl.value = 100; showToast('Max 100%', 'warning'); return;
-        }
-        renderCartAndTotals();
-        showToast('Discount applied', 'success');
-    });
-
-    // ── CLEAR / HOLD / LOAD ───────────────────────────────────
-    document.getElementById('clearCart').addEventListener('click', () => {
-        if (cart.length === 0) { showToast('Cart is already empty', 'info'); return; }
-        Swal.fire({ title:'Clear Cart?', text:'Remove all items?', icon:'warning', showCancelButton:true, confirmButtonText:'Yes, clear' })
-            .then(r => { if (r.isConfirmed) { cart = []; productQuantityCache = {}; renderCartAndTotals(); renderGrid(); showToast('Cart cleared','success'); } });
-    });
-
-    document.getElementById('holdOrderBtn').addEventListener('click', () => {
-        if (cart.length === 0) { showToast('Cart is empty','info'); return; }
-        const held = JSON.parse(localStorage.getItem('heldOrders')||'[]');
-        held.push({
-            id: Date.now(), cart: JSON.parse(JSON.stringify(cart)), customer: customerSelect.value,
-            registrySnapshot: Array.from(productRegistry.entries()),
-            productQuantityCache: {...productQuantityCache},
-            discount: { type: orderDiscountType, value: orderDiscountValue },
-            time: new Date().toLocaleString(), timestamp: Date.now(),
-        });
-        localStorage.setItem('heldOrders', JSON.stringify(held));
-        cart = []; productQuantityCache = {}; orderDiscountValue = 0; discountValueEl.value = '0';
-        renderCartAndTotals(); renderGrid();
-        showToast('Order held!', 'success');
-    });
-
-    document.getElementById('loadHeldBtn').addEventListener('click', () => {
-        const held   = JSON.parse(localStorage.getItem('heldOrders')||'[]');
-        const list   = document.getElementById('heldOrdersList');
-        const noOrds = document.getElementById('noHeldOrders');
-        if (held.length === 0) { list.innerHTML=''; noOrds.style.display='block'; }
-        else {
-            noOrds.style.display='none';
-            list.innerHTML = '<div class="list-group">' + held.sort((a,b)=>b.timestamp-a.timestamp).map(o => {
-                const total = o.cart.reduce((s,it) => s + (parseFloat(it.price)||0), 0);
-                return `<div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                    <div><strong>${o.time}</strong><br><small>${o.cart.length} item(s) — ${formatCurrency(total)}</small></div>
-                    <div class="btn-group">
-                        <button class="btn btn-sm btn-outline-primary load-order-btn" data-order-id="${o.id}">Load</button>
-                        <button class="btn btn-sm btn-outline-danger remove-order-btn" data-order-id="${o.id}"><i class="bi bi-trash"></i></button>
-                    </div></div>`;
-            }).join('') + '</div>';
-
-            list.querySelectorAll('.load-order-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const order = JSON.parse(localStorage.getItem('heldOrders')||'[]').find(o=>o.id==btn.dataset.orderId);
-                    if (!order) return;
-                    const doLoad = () => {
-                        cart = JSON.parse(JSON.stringify(order.cart));
-                        productQuantityCache = order.productQuantityCache || {};
-                        if (order.registrySnapshot) order.registrySnapshot.forEach(([k,v]) => productRegistry.set(k, v));
-                        if (order.customer) customerSelect.value = order.customer;
-                        if (order.discount) { orderDiscountType=order.discount.type; orderDiscountValue=order.discount.value; discountTypeEl.value=order.discount.type; discountValueEl.value=order.discount.value; }
-                        renderCartAndTotals(); renderGrid(); buildCategoryPills();
-                        bootstrap.Modal.getInstance(document.getElementById('loadOrderModal')).hide();
-                        showToast('Order loaded!','success');
-                    };
-                    if (cart.length > 0) {
-                        Swal.fire({title:'Replace Cart?',icon:'warning',showCancelButton:true,confirmButtonText:'Replace'}).then(r=>{ if(r.isConfirmed) doLoad(); });
-                    } else doLoad();
-                });
-            });
-            list.querySelectorAll('.remove-order-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    Swal.fire({title:'Remove order?',icon:'warning',showCancelButton:true,confirmButtonText:'Yes'}).then(r=>{
-                        if(r.isConfirmed){
-                            localStorage.setItem('heldOrders', JSON.stringify(JSON.parse(localStorage.getItem('heldOrders')||'[]').filter(o=>o.id!=btn.dataset.orderId)));
-                            btn.closest('.list-group-item').remove();
-                            showToast('Order removed','success');
-                        }
-                    });
-                });
-            });
-        }
-        new bootstrap.Modal(document.getElementById('loadOrderModal')).show();
-    });
 
     // ── COMPLETE ORDER ────────────────────────────────────────
     document.getElementById('completeOrder').addEventListener('click', completeOrder);
