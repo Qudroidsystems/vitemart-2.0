@@ -125,6 +125,9 @@
             border-radius: 8px;
             margin-top: 10px;
         }
+        .discount-text {
+            color: #dc3545;
+        }
         @media print {
             body {
                 padding: 0;
@@ -183,14 +186,12 @@
                     <strong>Bill To:</strong>
                     <div class="address-box">
                         @php
-                            // Get customer information - prioritize Customer model over User
                             if ($order->customer) {
                                 $customerName = $order->customer->first_name . ' ' . $order->customer->last_name;
                                 $customerEmail = $order->customer->email ?? 'N/A';
                                 $customerPhone = $order->customer->phone_number ?? 'N/A';
                                 $customerAddress = $order->customer->home_address ?? $order->customer->office_address ?? '';
                             } else {
-                                // Fallback to user (but this is likely the salesperson)
                                 $customerName = $order->user ? ($order->user->first_name . ' ' . $order->user->last_name) : 'Walk-in Customer';
                                 $customerEmail = $order->user->email ?? 'N/A';
                                 $customerPhone = $order->user->phone_number ?? 'N/A';
@@ -245,7 +246,12 @@
                 @foreach($order->items as $index => $item)
                 <tr>
                     <td>{{ $index + 1 }}</td>
-                    <td>{{ $item->title ?? 'N/A' }}</td>
+                    <td>
+                        {{ $item->title ?? 'N/A' }}
+                        @if($item->discount_amount > 0)
+                            <br><small class="discount-text">Discount: -{{ $currencySymbol }}{{ number_format($item->discount_amount, 2) }}</small>
+                        @endif
+                    </td>
                     <td>
                         @if($item->unit_name)
                             {{ $item->unit_name }}
@@ -256,38 +262,68 @@
                         @endif
                     </td>
                     <td class="text-right">{{ number_format($item->quantity ?? 0, $item->is_unit_mode ? 3 : 0) }}</td>
-                    <td class="text-right">{{ $currencySymbol }}{{ number_format($item->unit_price ?? 0, 2) }}</td>
-                    <td class="text-right">{{ $currencySymbol }}{{ number_format($item->total_price ?? ($item->unit_price * $item->quantity), 2) }}</td>
+                    <td class="text-right">
+                        @if($item->discount_amount > 0)
+                            <del>{{ $currencySymbol }}{{ number_format($item->unit_price ?? 0, 2) }}</del><br>
+                            <span class="text-success">{{ $currencySymbol }}{{ number_format($item->discounted_price, 2) }}</span>
+                        @else
+                            {{ $currencySymbol }}{{ number_format($item->unit_price ?? 0, 2) }}
+                        @endif
+                    </td>
+                    <td class="text-right">
+                        @if($item->discount_amount > 0)
+                            <del>{{ $currencySymbol }}{{ number_format($item->total_price ?? ($item->unit_price * $item->quantity), 2) }}</del><br>
+                            <span class="text-success">{{ $currencySymbol }}{{ number_format(($item->discounted_price * $item->quantity), 2) }}</span>
+                        @else
+                            {{ $currencySymbol }}{{ number_format($item->total_price ?? ($item->unit_price * $item->quantity), 2) }}
+                        @endif
+                    </td>
                 </tr>
                 @endforeach
             </tbody>
         </table>
 
         <table style="width: 50%; margin-left: auto;">
+            @php
+                $subtotal = $order->subtotal ?? $order->items->sum('total_price');
+                $discount = $order->discount_amount ?? 0;
+            @endphp
+
+            @if($subtotal > 0)
             <tr>
                 <td style="border: none;"><strong>Subtotal</strong></td>
-                <td style="border: none;" class="text-right">{{ $currencySymbol }}{{ number_format($order->items->sum('total_price'), 2) }}</td>
-            </tr>
-            @if($order->discount_amount > 0)
-            <tr>
-                <td style="border: none;"><strong>Discount</strong></td>
-                <td style="border: none;" class="text-right text-danger">-{{ $currencySymbol }}{{ number_format($order->discount_amount, 2) }}</td>
+                <td style="border: none;" class="text-right">{{ $currencySymbol }}{{ number_format($subtotal, 2) }}</td>
             </tr>
             @endif
+
+            @if($discount > 0)
+            <tr>
+                <td style="border: none;"><strong>Discount</strong></td>
+                <td style="border: none;" class="text-right discount-text">-{{ $currencySymbol }}{{ number_format($discount, 2) }}</td>
+            </tr>
+            @endif
+
+            @if($order->shipping_cost > 0)
             <tr>
                 <td style="border: none;"><strong>Shipping</strong></td>
-                <td style="border: none;" class="text-right">{{ $currencySymbol }}{{ number_format($order->shipping_cost ?? 0, 2) }}</td>
+                <td style="border: none;" class="text-right">{{ $currencySymbol }}{{ number_format($order->shipping_cost, 2) }}</td>
             </tr>
+            @endif
+
+            @if($order->tax_cost > 0)
             <tr>
                 <td style="border: none;"><strong>Tax</strong></td>
-                <td style="border: none;" class="text-right">{{ $currencySymbol }}{{ number_format($order->tax_cost ?? 0, 2) }}</td>
+                <td style="border: none;" class="text-right">{{ $currencySymbol }}{{ number_format($order->tax_cost, 2) }}</td>
             </tr>
+            @endif
+
             @if($order->totalRefunded() > 0)
             <tr>
                 <td style="border: none;"><strong class="text-danger">Refunded</strong></td>
                 <td style="border: none;" class="text-right text-danger">-{{ $currencySymbol }}{{ number_format($order->totalRefunded(), 2) }}</td>
             </tr>
             @endif
+
             <tr class="total-row">
                 <td style="border: none;"><strong>Grand Total</strong></td>
                 <td style="border: none;" class="text-right"><strong class="amount">{{ $currencySymbol }}{{ number_format($order->total_amount - $order->totalRefunded(), 2) }}</strong></td>
