@@ -3,7 +3,6 @@
 
 <head>
     <meta charset="utf-8">
-    <!-- Dynamic Title -->
     @php
         $store = \App\Models\StoreSetting::getSettings();
         $pageTitle = $pagetitle ?? 'Dashboard';
@@ -934,20 +933,16 @@
                     </div>
 
                     <div class="d-flex align-items-center">
+                        <!-- Light/Dark Mode Toggle - Fixed -->
                         <div class="dropdown topbar-head-dropdown ms-1 header-item">
-                            <button type="button" class="btn btn-icon btn-topbar btn-ghost-dark rounded-circle mode-layout" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <button type="button" class="btn btn-icon btn-topbar btn-ghost-dark rounded-circle mode-layout" id="theme-toggle-btn" style="background: transparent; border: none;">
                                 <i class="bi bi-sun align-middle fs-3xl"></i>
                             </button>
-                            <div class="dropdown-menu p-2 dropdown-menu-end" id="light-dark-mode">
-                                <a href="#!" class="dropdown-item" data-mode="light"><i class="bi bi-sun align-middle me-2"></i> Default (light mode)</a>
-                                <a href="#!" class="dropdown-item" data-mode="dark"><i class="bi bi-moon align-middle me-2"></i> Dark</a>
-                                <a href="#!" class="dropdown-item" data-mode="auto"><i class="bi bi-moon-stars align-middle me-2"></i> Auto (system default)</a>
-                            </div>
                         </div>
 
-                        <!-- FIXED USER DROPDOWN -->
+                        <!-- User Dropdown - Fixed -->
                         <div class="dropdown ms-sm-3 header-item topbar-user">
-                            <a class="btn shadow-none dropdown-toggle" href="#" role="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="background: transparent; border: none;">
+                            <button type="button" class="btn shadow-none dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="background: transparent; border: none;">
                                 <span class="d-flex align-items-center">
                                     @php
                                         use App\Models\User;
@@ -968,7 +963,7 @@
                                         </span>
                                     @endif
                                 </span>
-                            </a>
+                            </button>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                                 @if($userdata)
                                     <li><h6 class="dropdown-header">Welcome {{ $userdata->name }}!</h6></li>
@@ -977,9 +972,9 @@
                                     <li>
                                         <form method="POST" action="{{ route('logout') }}" id="logout-form">
                                             @csrf
-                                            <a class="dropdown-item" href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                                            <button type="submit" class="dropdown-item" style="background: none; border: none; width: 100%; text-align: left;">
                                                 <i class="mdi mdi-logout text-muted fs-lg align-middle me-1"></i> Logout
-                                            </a>
+                                            </button>
                                         </form>
                                     </li>
                                 @else
@@ -1018,171 +1013,6 @@
     <!-- Preloader -->
     <div id="preloader"><div id="status"><div class="spinner-border text-primary avatar-sm" role="status"><span class="visually-hidden">Loading...</span></div></div></div>
 
-    <!-- Customizer -->
-    <div class="customizer-setting d-none d-md-block">
-        <div class="btn btn-info p-2 text-uppercase rounded-end-0 shadow-lg" data-bs-toggle="offcanvas" data-bs-target="#theme-settings-offcanvas" aria-controls="theme-settings-offcanvas">
-            <i class="bi bi-gear mb-1"></i> Customizer
-        </div>
-    </div>
-
-    <!-- Theme Settings Offcanvas -->
-    <div class="offcanvas offcanvas-end border-0" tabindex="-1" id="theme-settings-offcanvas">
-        <div class="d-flex align-items-center bg-primary bg-gradient p-3 offcanvas-header">
-            <div class="me-2"><h5 class="mb-1 text-white">Theme Customizer</h5><p class="text-white text-opacity-75 mb-0">Customize your experience</p></div>
-            <button type="button" class="btn-close btn-close-white ms-auto" id="customizerclose-btn" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-        </div>
-        <div class="offcanvas-body p-0">
-            <div data-simplebar class="h-100">
-                <div class="p-4">
-                    <h6 class="fs-md mb-1">Layout</h6>
-                    <p class="text-muted fs-sm">Choose your layout</p>
-                    <div class="row">
-                        <div class="col-4">
-                            <div class="form-check card-radio">
-                                <input id="customizer-layout01" name="data-layout" type="radio" value="vertical" class="form-check-input">
-                                <label class="form-check-label p-0 avatar-md w-100" for="customizer-layout01">
-                                    <span class="d-flex gap-1 h-100">
-                                        <span class="flex-shrink-0"><span class="bg-light d-flex h-100 flex-column gap-1 p-1"><span class="d-block p-1 px-2 bg-primary-subtle rounded mb-2"></span><span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span><span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span><span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span></span></span>
-                                        <span class="flex-grow-1"><span class="d-flex h-100 flex-column"><span class="bg-light d-block p-1"></span><span class="bg-light d-block p-1 mt-auto"></span></span></span>
-                                    </span>
-                                </label>
-                            </div>
-                            <h5 class="fs-sm text-center fw-medium mt-2">Vertical</h5>
-                        </div>
-                        <div class="col-4">
-                            <div class="form-check card-radio">
-                                <input id="customizer-layout02" name="data-layout" type="radio" value="horizontal" class="form-check-input">
-                                <label class="form-check-label p-0 avatar-md w-100" for="customizer-layout02">
-                                    <span class="d-flex h-100 flex-column gap-1"><span class="bg-light d-flex p-1 gap-1 align-items-center"><span class="d-block p-1 bg-primary-subtle rounded me-1"></span><span class="d-block p-1 pb-0 px-2 bg-primary-subtle ms-auto"></span><span class="d-block p-1 pb-0 px-2 bg-primary-subtle"></span></span><span class="bg-light d-block p-1"></span><span class="bg-light d-block p-1 mt-auto"></span></span>
-                                </label>
-                            </div>
-                            <h5 class="fs-sm text-center fw-medium mt-2">Horizontal</h5>
-                        </div>
-                    </div>
-
-                    <h6 class="mt-4 fs-md mb-1">Color Scheme</h6>
-                    <p class="text-muted fs-sm">Choose Light or Dark Scheme.</p>
-                    <div class="colorscheme-cardradio">
-                        <div class="row g-3">
-                            <div class="col-6">
-                                <div class="form-check card-radio">
-                                    <input class="form-check-input" type="radio" name="data-bs-theme" id="layout-mode-light" value="light">
-                                    <label class="form-check-label p-0 bg-transparent" for="layout-mode-light">
-                                        <img src="{{ asset('theme/layouts/assets/images/custom-theme/light-mode.png')}}" alt="" class="img-fluid">
-                                    </label>
-                                </div>
-                                <h5 class="fs-sm text-center fw-medium mt-2">Light</h5>
-                            </div>
-                            <div class="col-6">
-                                <div class="form-check card-radio dark">
-                                    <input class="form-check-input" type="radio" name="data-bs-theme" id="layout-mode-dark" value="dark">
-                                    <label class="form-check-label p-0 bg-transparent" for="layout-mode-dark">
-                                        <img src="{{ asset('theme/layouts/assets/images/custom-theme/dark-mode.png')}}" alt="" class="img-fluid">
-                                    </label>
-                                </div>
-                                <h5 class="fs-sm text-center fw-medium mt-2">Dark</h5>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="sidebar-color">
-                        <h6 class="mt-4 fs-md mb-1">Sidebar Color</h6>
-                        <p class="text-muted fs-sm">Choose a color of Sidebar.</p>
-                        <div class="row">
-                            <div class="col-4">
-                                <div class="form-check sidebar-setting card-radio">
-                                    <input class="form-check-input" type="radio" name="data-sidebar" id="sidebar-color-light" value="light">
-                                    <label class="form-check-label p-0 avatar-md w-100" for="sidebar-color-light">
-                                        <span class="d-flex gap-1 h-100"><span class="flex-shrink-0"><span class="bg-white border-end d-flex h-100 flex-column gap-1 p-1"><span class="d-block p-1 px-2 bg-primary-subtle rounded mb-2"></span><span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span><span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span><span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span></span></span><span class="flex-grow-1"><span class="d-flex h-100 flex-column"><span class="bg-light d-block p-1"></span><span class="bg-light d-block p-1 mt-auto"></span></span></span></span>
-                                    </label>
-                                </div>
-                                <h5 class="fs-sm text-center fw-medium mt-2">Light</h5>
-                            </div>
-                            <div class="col-4">
-                                <div class="form-check sidebar-setting card-radio">
-                                    <input class="form-check-input" type="radio" name="data-sidebar" id="sidebar-color-dark" value="dark">
-                                    <label class="form-check-label p-0 avatar-md w-100" for="sidebar-color-dark">
-                                        <span class="d-flex gap-1 h-100"><span class="flex-shrink-0"><span class="bg-primary d-flex h-100 flex-column gap-1 p-1"><span class="d-block p-1 px-2 bg-soft-light rounded mb-2"></span><span class="d-block p-1 px-2 pb-0 bg-soft-light"></span><span class="d-block p-1 px-2 pb-0 bg-soft-light"></span><span class="d-block p-1 px-2 pb-0 bg-soft-light"></span></span></span><span class="flex-grow-1"><span class="d-flex h-100 flex-column"><span class="bg-light d-block p-1"></span><span class="bg-light d-block p-1 mt-auto"></span></span></span></span>
-                                    </label>
-                                </div>
-                                <h5 class="fs-sm text-center fw-medium mt-2">Dark</h5>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="preloader-menu">
-                        <h6 class="mt-4 fw-semibold fs-base">Preloader</h6>
-                        <p class="text-muted fs-sm">Choose a preloader.</p>
-                        <div class="row">
-                            <div class="col-4">
-                                <div class="form-check sidebar-setting card-radio">
-                                    <input class="form-check-input" type="radio" name="data-preloader" id="preloader-view-custom" value="enable">
-                                    <label class="form-check-label p-0 avatar-md w-100" for="preloader-view-custom">
-                                        <span class="d-flex gap-1 h-100"><span class="flex-shrink-0"><span class="bg-light d-flex h-100 flex-column gap-1 p-1"><span class="d-block p-1 px-2 bg-primary-subtle rounded mb-2"></span><span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span><span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span><span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span></span></span><span class="flex-grow-1"><span class="d-flex h-100 flex-column"><span class="bg-light d-block p-1"></span><span class="bg-light d-block p-1 mt-auto"></span></span></span></span>
-                                        <span class="d-flex align-items-center justify-content-center mt-2"><span class="spinner-border text-primary avatar-xxs m-auto" role="status"></span></span>
-                                    </label>
-                                </div>
-                                <h5 class="fs-sm text-center fw-medium mt-2">Enable</h5>
-                            </div>
-                            <div class="col-4">
-                                <div class="form-check sidebar-setting card-radio">
-                                    <input class="form-check-input" type="radio" name="data-preloader" id="preloader-view-none" value="disable">
-                                    <label class="form-check-label p-0 avatar-md w-100" for="preloader-view-none">
-                                        <span class="d-flex gap-1 h-100"><span class="flex-shrink-0"><span class="bg-light d-flex h-100 flex-column gap-1 p-1"><span class="d-block p-1 px-2 bg-primary-subtle rounded mb-2"></span><span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span><span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span><span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span></span></span><span class="flex-grow-1"><span class="d-flex h-100 flex-column"><span class="bg-light d-block p-1"></span><span class="bg-light d-block p-1 mt-auto"></span></span></span></span>
-                                    </label>
-                                </div>
-                                <h5 class="fs-sm text-center fw-medium mt-2">Disable</h5>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="offcanvas-footer border-top p-3 text-center">
-            <div class="row">
-                <div class="col-6">
-                    <button type="button" class="btn btn-light w-100" id="reset-layout">Reset</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- SPOTLIGHT SEARCH MODAL -->
-    <div id="spotlight-overlay"
-         style="display:none; position:fixed; inset:0; z-index:9999; align-items:flex-start; justify-content:center; padding-top:6vh;">
-        <div id="spotlight-box"
-             style="width:100%; max-width:860px; margin:0 24px; background:rgba(24, 26, 32, 0.96); border:1px solid rgba(255,255,255,0.1); border-radius:28px; box-shadow:0 32px 80px rgba(0,0,0,0.6); overflow:hidden;">
-            <div style="display:flex; align-items:center; gap:16px; padding:20px 24px; border-bottom:1px solid rgba(255,255,255,0.08);">
-                <i class="mdi mdi-magnify" style="font-size:26px; color:#4f8ef7; flex-shrink:0;"></i>
-                <input id="spotlight-input" type="text" placeholder="Search for pages, products, customers, orders…" autocomplete="off"
-                    style="flex:1; background:transparent; border:none; outline:none; font-size:18px; color:#fff; caret-color:#4f8ef7; padding:8px 0;">
-                <div style="display:flex; gap:8px;">
-                    <kbd id="spotlight-esc"
-                         style="font-size:12px; padding:4px 10px; border-radius:8px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.6); cursor:pointer;">
-                        ESC
-                    </kbd>
-                </div>
-            </div>
-            <div id="spotlight-results" style="max-height:520px; overflow-y:auto; padding:12px 0;">
-                <div id="spotlight-empty" style="padding:48px 24px; text-align:center; color:rgba(255,255,255,0.35);">
-                    <i class="mdi mdi-lightning-bolt" style="font-size:48px; display:block; margin-bottom:16px; opacity:0.4;"></i>
-                    <span style="font-size:15px;">Start typing to search…</span>
-                </div>
-                <div id="spotlight-loading" style="display:none; padding:48px; text-align:center;">
-                    <div style="display:inline-block; width:32px; height:32px; border:2px solid rgba(255,255,255,0.15); border-top-color:#4f8ef7; border-radius:50%; animation:loadingSpin 0.7s linear infinite;"></div>
-                    <div style="margin-top:16px; font-size:13px; color:rgba(255,255,255,0.45);">Searching<span class="typing-dot">.</span><span class="typing-dot">.</span><span class="typing-dot">.</span></div>
-                </div>
-                <ul id="spotlight-list" style="list-style:none; margin:0; padding:0; display:none;"></ul>
-            </div>
-            <div style="padding:14px 24px; border-top:1px solid rgba(255,255,255,0.07); display:flex; gap:24px; font-size:12px; color:rgba(255,255,255,0.35); flex-wrap:wrap;">
-                <span><kbd style="background:rgba(255,255,255,0.1); border-radius:5px; padding:2px 6px;">⌘K</kbd> or <kbd style="background:rgba(255,255,255,0.1); border-radius:5px; padding:2px 6px;">Ctrl+K</kbd> open</span>
-                <span><kbd style="background:rgba(255,255,255,0.1); border-radius:5px; padding:2px 6px;">↑↓</kbd> navigate</span>
-                <span><kbd style="background:rgba(255,255,255,0.1); border-radius:5px; padding:2px 6px;">↵</kbd> open</span>
-                <span><kbd style="background:rgba(255,255,255,0.1); border-radius:5px; padding:2px 6px;">ESC</kbd> close</span>
-            </div>
-        </div>
-    </div>
-
     <!-- Scripts -->
     <script src="{{ asset('theme/layouts/assets/libs/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ asset('theme/layouts/assets/libs/simplebar/simplebar.min.js') }}"></script>
@@ -1194,6 +1024,47 @@
         var scrollbarElement = document.getElementById('scrollbar');
         if (scrollbarElement && typeof SimpleBar !== 'undefined') {
             new SimpleBar(scrollbarElement);
+        }
+
+        // Initialize Bootstrap Dropdowns
+        var dropdownElementList = [].slice.call(document.querySelectorAll('.dropdown-toggle'));
+        dropdownElementList.map(function (dropdownToggleEl) {
+            return new bootstrap.Dropdown(dropdownToggleEl);
+        });
+
+        // Theme Toggle Functionality
+        var themeToggleBtn = document.getElementById('theme-toggle-btn');
+        var htmlElement = document.documentElement;
+
+        // Check for saved theme preference or use system preference
+        var savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            htmlElement.setAttribute('data-bs-theme', 'dark');
+            themeToggleBtn.innerHTML = '<i class="bi bi-moon align-middle fs-3xl"></i>';
+        } else if (savedTheme === 'light') {
+            htmlElement.setAttribute('data-bs-theme', 'light');
+            themeToggleBtn.innerHTML = '<i class="bi bi-sun align-middle fs-3xl"></i>';
+        } else {
+            // Check system preference
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                htmlElement.setAttribute('data-bs-theme', 'dark');
+                themeToggleBtn.innerHTML = '<i class="bi bi-moon align-middle fs-3xl"></i>';
+            }
+        }
+
+        if (themeToggleBtn) {
+            themeToggleBtn.addEventListener('click', function() {
+                var currentTheme = htmlElement.getAttribute('data-bs-theme');
+                if (currentTheme === 'dark') {
+                    htmlElement.setAttribute('data-bs-theme', 'light');
+                    localStorage.setItem('theme', 'light');
+                    themeToggleBtn.innerHTML = '<i class="bi bi-sun align-middle fs-3xl"></i>';
+                } else {
+                    htmlElement.setAttribute('data-bs-theme', 'dark');
+                    localStorage.setItem('theme', 'dark');
+                    themeToggleBtn.innerHTML = '<i class="bi bi-moon align-middle fs-3xl"></i>';
+                }
+            });
         }
 
         // NProgress
@@ -1257,23 +1128,11 @@
             backToTop.addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); });
         }
 
-        // Reset Layout
-        var resetBtn = document.getElementById('reset-layout');
-        if (resetBtn) {
-            resetBtn.addEventListener('click', function () { localStorage.clear(); location.reload(); });
-        }
-
         // Form Submission NProgress
         document.querySelectorAll('form').forEach(function (form) {
             if (form.getAttribute('action') && !form.dataset.noProgress) {
                 form.addEventListener('submit', function () { if (typeof NProgress !== 'undefined') NProgress.start(); });
             }
-        });
-
-        // Ensure dropdowns work properly
-        var dropdownElementList = [].slice.call(document.querySelectorAll('.dropdown-toggle'));
-        dropdownElementList.map(function (dropdownToggleEl) {
-            return new bootstrap.Dropdown(dropdownToggleEl);
         });
     });
     </script>
