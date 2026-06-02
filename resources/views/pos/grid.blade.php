@@ -1,184 +1,196 @@
 @extends('layouts.master')
 @section('title', $pagetitle ?? 'POS Grid')
 @section('content')
-<div class="main-content pos-grid-page">
-    <div class="page-content p-0">
-        <div class="pos-grid-layout">
-
-            <!-- ══════════════════════════ TOP NAV BAR ══════════════════════════ -->
-            <header class="pos-topbar">
-                <div class="pos-topbar-left">
-                    <a href="{{ route('pos.index') }}" class="pos-back-btn" title="Standard POS">
-                        <i class="bi bi-layout-text-sidebar-reverse"></i>
-                        <span>Standard POS</span>
-                    </a>
-                    <div class="pos-topbar-divider"></div>
-                    <span class="pos-topbar-title">
-                        <i class="bi bi-grid-3x3-gap-fill me-1"></i>Grid POS
-                    </span>
-                </div>
-
-                <!-- SEARCH — same as pos.index -->
-                <div class="pos-topbar-center">
-                    <div class="pos-search-outer position-relative">
-                        <input type="text" id="barcodeInput"
-                               class="form-control form-control-lg fs-5 pos-search-input"
-                               placeholder="Scan barcode or search by name / SKU…"
-                               autofocus autocomplete="off"
-                               aria-label="Search or scan products">
-                        <i class="bi bi-upc-scan pos-search-icon-right"></i>
-                        <span id="searchSpinner" class="pos-search-spinner d-none">
-                            <span class="spinner-border spinner-border-sm"></span>
-                        </span>
-                    </div>
-                    <!-- Shortcuts row -->
-                    <div class="pos-shortcuts-row">
-                        <small class="text-muted me-1">Shortcuts:</small>
-                        <span class="badge bg-secondary">F1</span> Search &nbsp;
-                        <span class="badge bg-secondary">F2</span> Clear &nbsp;
-                        <span class="badge bg-secondary">F3</span> Charge &nbsp;
-                        <span class="badge bg-secondary">F4</span> Hold &nbsp;
-                        <span class="badge bg-secondary">F6</span> Standard POS
-                        <span id="connectionStatus" class="pos-conn-badge online ms-3">
-                            <i class="bi bi-wifi"></i><span>Online</span>
-                        </span>
-                        <div class="form-check form-switch mb-0 ms-2">
-                            <input class="form-check-input" type="checkbox" id="offlineModeToggle">
-                            <label class="form-check-label small text-muted" for="offlineModeToggle">Offline</label>
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-12">
+                    <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+                        <h4 class="mb-sm-0">
+                            <i class="bi bi-grid-3x3-gap-fill me-2 text-primary"></i>Grid POS
+                        </h4>
+                        <div class="page-title-right d-flex align-items-center gap-3">
+                            <a href="{{ route('pos.index') }}" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-layout-text-sidebar-reverse me-1"></i>Standard POS
+                            </a>
+                            <span id="connectionStatus" class="badge bg-success">
+                                <i class="bi bi-wifi"></i> Online
+                            </span>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" id="offlineModeToggle">
+                                <label class="form-check-label small" for="offlineModeToggle">Offline</label>
+                            </div>
+                            <div class="pos-clock" id="posClock">--:--</div>
                         </div>
                     </div>
-                </div>
-
-                <div class="pos-topbar-right">
-                    <div class="pos-clock" id="posClock">--:--</div>
-                </div>
-            </header>
-
-            <!-- ══════════════════════════ MAIN BODY ══════════════════════════ -->
-            <div class="pos-body">
-
-                <!-- ─── LEFT: Products ─── -->
-                <div class="pos-products-panel">
-                    <!-- Category pills -->
-                    <div class="pos-cat-bar" id="catBar">
-                        <button class="pos-cat-pill active" data-cat="all">
-                            <i class="bi bi-grid-fill me-1"></i>All
-                        </button>
-                    </div>
-
-                    <!-- Loading overlay -->
-                    <div id="gridLoadingOverlay" class="pos-grid-loading">
-                        <div class="spinner-border text-primary" style="width:3rem;height:3rem;" role="status"></div>
-                        <p class="mt-3 text-primary fw-semibold">Loading products…</p>
-                    </div>
-
-                    <!-- Product grid -->
-                    <div class="pos-product-grid" id="productGrid"></div>
-
-                    <!-- Empty state -->
-                    <div id="emptyState" class="pos-empty-state d-none">
-                        <i class="bi bi-search"></i>
-                        <h5>No products found</h5>
-                        <p>Try a different search or category</p>
-                    </div>
-                </div>
-
-                <!-- ─── RIGHT: Order Panel ─── -->
-                <div class="pos-order-panel">
-
-                    <!-- Customer -->
-                    <div class="pos-customer-row">
-                        <div class="pos-customer-select-wrap">
-                            <i class="bi bi-person-circle pos-customer-icon"></i>
-                            <select id="customerSelect" class="pos-customer-select">
-                                <option value="">Walk-in Customer</option>
-                                @foreach($customers as $customer)
-                                    <option value="{{ $customer->id }}">
-                                        {{ $customer->first_name }} {{ $customer->last_name }}
-                                        @if($customer->phone_number) · {{ $customer->phone_number }}@endif
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <button class="pos-icon-btn" id="quickCustomerBtn" title="Add Customer"><i class="bi bi-person-plus-fill"></i></button>
-                        <button class="pos-icon-btn warning" id="holdOrderBtn" title="Hold (F4)"><i class="bi bi-pause-circle-fill"></i></button>
-                        <button class="pos-icon-btn info" id="loadHeldBtn" title="Load Held"><i class="bi bi-folder-symlink-fill"></i></button>
-                        <button class="pos-icon-btn danger" id="clearCart" title="Clear (F2)"><i class="bi bi-trash3-fill"></i></button>
-                    </div>
-
-                    <!-- Cart -->
-                    <div class="pos-cart-area" id="cartArea">
-                        <div id="emptyCartState" class="pos-cart-empty">
-                            <div class="pos-cart-empty-icon"><i class="bi bi-cart4"></i></div>
-                            <p>Cart is empty</p>
-                            <small>Tap a product to add it</small>
-                        </div>
-                        <div id="cartItemsWrap" class="d-none">
-                            <table class="pos-cart-table">
-                                <thead>
-                                    <tr>
-                                        <th>Item</th>
-                                        <th class="text-center">Qty</th>
-                                        <th class="text-end">Price</th>
-                                        <th class="text-end">Total</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="cartBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Discount -->
-                    <div class="pos-discount-row">
-                        <span class="pos-discount-label">Discount</span>
-                        <div class="pos-discount-inputs">
-                            <input type="number" id="discountValue" class="pos-discount-input" placeholder="0" min="0" step="0.01" value="0">
-                            <select id="discountType" class="pos-discount-select">
-                                <option value="percent" selected>%</option>
-                                <option value="fixed">₦</option>
-                            </select>
-                            <button class="pos-discount-apply" id="applyDiscountBtn" title="Apply"><i class="bi bi-check-lg"></i></button>
-                        </div>
-                        <div id="discountApplied" class="pos-discount-applied d-none">
-                            <i class="bi bi-tag-fill me-1"></i><span id="discountAmountLabel">-₦0.00</span>
-                        </div>
-                    </div>
-
-                    <!-- Totals -->
-                    <div class="pos-totals">
-                        <div class="pos-total-row"><span>Subtotal</span><span id="subtotal">₦0.00</span></div>
-                        <div class="pos-total-row"><span>Tax ({{ config('pos.tax_rate', 0) }}%)</span><span id="taxAmount">₦0.00</span></div>
-                        <div class="pos-total-row grand"><span>Total</span><span id="grandTotal">₦0.00</span></div>
-                    </div>
-
-                    <!-- Payment -->
-                    <div class="pos-payment-group">
-                        <label class="pos-payment-opt">
-                            <input type="radio" name="payment" value="cash" checked>
-                            <span><i class="bi bi-cash-coin"></i> Cash</span>
-                        </label>
-                        <label class="pos-payment-opt">
-                            <input type="radio" name="payment" value="card">
-                            <span><i class="bi bi-credit-card-fill"></i> Card</span>
-                        </label>
-                        <label class="pos-payment-opt">
-                            <input type="radio" name="payment" value="transfer">
-                            <span><i class="bi bi-bank2"></i> Transfer</span>
-                        </label>
-                    </div>
-
-                    <!-- Charge Button -->
-                    <button class="pos-charge-btn" id="completeOrder">
-                        <i class="bi bi-printer-fill me-2"></i>
-                        <span>Charge</span>
-                        <span class="pos-charge-total" id="chargeBtnTotal">₦0.00</span>
-                    </button>
                 </div>
             </div>
-        </div>
-    </div>
-</div>
+
+            <div class="row g-0 pos-grid-body">
+
+                <!-- ═══════════════ LEFT: Products Panel ═══════════════ -->
+                <div class="col-xxl-8 col-xl-8 col-lg-7 pos-products-col">
+
+                    <!-- Search Bar -->
+                    <div class="card mb-2 border-0 shadow-sm">
+                        <div class="card-body py-2 px-3">
+                            <div class="pos-search-wrap position-relative">
+                                <input type="text" id="barcodeInput"
+                                       class="form-control form-control-lg fs-5 pos-search-input"
+                                       placeholder="Scan barcode or search by name / SKU…"
+                                       autofocus autocomplete="off"
+                                       aria-label="Search or scan products">
+                                <i class="bi bi-upc-scan pos-search-icon"></i>
+                                <span id="searchSpinner" class="pos-search-spinner d-none">
+                                    <span class="spinner-border spinner-border-sm text-primary"></span>
+                                </span>
+                            </div>
+                            <div class="pos-shortcuts-row mt-1">
+                                <small class="text-muted me-1">Shortcuts:</small>
+                                <span class="badge bg-secondary">F1</span> Search &nbsp;
+                                <span class="badge bg-secondary">F2</span> Clear &nbsp;
+                                <span class="badge bg-secondary">F3</span> Charge &nbsp;
+                                <span class="badge bg-secondary">F4</span> Hold &nbsp;
+                                <span class="badge bg-secondary">F6</span> Standard POS
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Category Pills + Grid -->
+                    <div class="card border-0 shadow-sm pos-products-card">
+                        <div class="card-body p-2 d-flex flex-column pos-products-card-body">
+
+                            <!-- Category pills -->
+                            <div class="pos-cat-bar mb-2" id="catBar">
+                                <button class="pos-cat-pill active" data-cat="all">
+                                    <i class="bi bi-grid-fill me-1"></i>All
+                                </button>
+                            </div>
+
+                            <!-- Loading overlay -->
+                            <div id="gridLoadingOverlay" class="pos-grid-loading">
+                                <div class="spinner-border text-primary" style="width:3rem;height:3rem;" role="status"></div>
+                                <p class="mt-3 text-primary fw-semibold">Loading products…</p>
+                            </div>
+
+                            <!-- Product grid -->
+                            <div class="pos-product-grid" id="productGrid"></div>
+
+                            <!-- Empty state -->
+                            <div id="emptyState" class="pos-empty-state d-none">
+                                <i class="bi bi-search"></i>
+                                <h5>No products found</h5>
+                                <p>Try a different search or category</p>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══════════════ RIGHT: Order Panel ═══════════════ -->
+                <div class="col-xxl-4 col-xl-4 col-lg-5 pos-order-col">
+                    <div class="card border-0 shadow-sm h-100 pos-order-card">
+                        <div class="card-body d-flex flex-column p-0 pos-order-body">
+
+                            <!-- Customer -->
+                            <div class="pos-customer-row px-3 pt-3 pb-2 border-bottom">
+                                <div class="pos-customer-select-wrap">
+                                    <i class="bi bi-person-circle pos-customer-icon"></i>
+                                    <select id="customerSelect" class="pos-customer-select">
+                                        <option value="">Walk-in Customer</option>
+                                        @foreach($customers as $customer)
+                                            <option value="{{ $customer->id }}">
+                                                {{ $customer->first_name }} {{ $customer->last_name }}
+                                                @if($customer->phone_number) · {{ $customer->phone_number }}@endif
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <button class="pos-icon-btn" id="quickCustomerBtn" title="Add Customer"><i class="bi bi-person-plus-fill"></i></button>
+                                <button class="pos-icon-btn warning" id="holdOrderBtn" title="Hold (F4)"><i class="bi bi-pause-circle-fill"></i></button>
+                                <button class="pos-icon-btn info" id="loadHeldBtn" title="Load Held"><i class="bi bi-folder-symlink-fill"></i></button>
+                                <button class="pos-icon-btn danger" id="clearCart" title="Clear (F2)"><i class="bi bi-trash3-fill"></i></button>
+                            </div>
+
+                            <!-- Cart -->
+                            <div class="pos-cart-area px-0" id="cartArea">
+                                <div id="emptyCartState" class="pos-cart-empty">
+                                    <div class="pos-cart-empty-icon"><i class="bi bi-cart4"></i></div>
+                                    <p>Cart is empty</p>
+                                    <small>Tap a product to add it</small>
+                                </div>
+                                <div id="cartItemsWrap" class="d-none">
+                                    <table class="pos-cart-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Item</th>
+                                                <th class="text-center">Qty</th>
+                                                <th class="text-end">Price</th>
+                                                <th class="text-end">Total</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="cartBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Discount -->
+                            <div class="pos-discount-row px-3 py-2 border-top">
+                                <span class="pos-discount-label">Discount</span>
+                                <div class="pos-discount-inputs">
+                                    <input type="number" id="discountValue" class="pos-discount-input" placeholder="0" min="0" step="0.01" value="0">
+                                    <select id="discountType" class="pos-discount-select">
+                                        <option value="percent" selected>%</option>
+                                        <option value="fixed">₦</option>
+                                    </select>
+                                    <button class="pos-discount-apply" id="applyDiscountBtn" title="Apply"><i class="bi bi-check-lg"></i></button>
+                                </div>
+                                <div id="discountApplied" class="pos-discount-applied d-none">
+                                    <i class="bi bi-tag-fill me-1"></i><span id="discountAmountLabel">-₦0.00</span>
+                                </div>
+                            </div>
+
+                            <!-- Totals -->
+                            <div class="pos-totals px-3 py-2 border-top">
+                                <div class="pos-total-row"><span>Subtotal</span><span id="subtotal">₦0.00</span></div>
+                                <div class="pos-total-row"><span>Tax ({{ config('pos.tax_rate', 0) }}%)</span><span id="taxAmount">₦0.00</span></div>
+                                <div class="pos-total-row grand"><span>Total</span><span id="grandTotal">₦0.00</span></div>
+                            </div>
+
+                            <!-- Payment -->
+                            <div class="pos-payment-group px-3 py-2 border-top">
+                                <label class="pos-payment-opt">
+                                    <input type="radio" name="payment" value="cash" checked>
+                                    <span><i class="bi bi-cash-coin"></i> Cash</span>
+                                </label>
+                                <label class="pos-payment-opt">
+                                    <input type="radio" name="payment" value="card">
+                                    <span><i class="bi bi-credit-card-fill"></i> Card</span>
+                                </label>
+                                <label class="pos-payment-opt">
+                                    <input type="radio" name="payment" value="transfer">
+                                    <span><i class="bi bi-bank2"></i> Transfer</span>
+                                </label>
+                            </div>
+
+                            <!-- Charge Button -->
+                            <div class="px-3 pb-3 pt-2">
+                                <button class="pos-charge-btn w-100" id="completeOrder">
+                                    <i class="bi bi-printer-fill me-2"></i>
+                                    <span>Charge</span>
+                                    <span class="pos-charge-total" id="chargeBtnTotal">₦0.00</span>
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div><!-- /.row -->
+        </div><!-- /.container-fluid -->
+    </div><!-- /.page-content -->
+</div><!-- /.main-content -->
 
 <!-- ══════════════════════════ QUANTITY MODAL ══════════════════════════ -->
 <div class="modal fade" id="quantityModal" tabindex="-1" aria-labelledby="quantityModalLabel" aria-hidden="true">
@@ -388,17 +400,12 @@
 document.addEventListener('DOMContentLoaded', function () {
 
     // ══════════════════════════════════════════════════════
-    // PRODUCT REGISTRY — avoids any data-attribute JSON issues
-    // Products are stored in a JS Map keyed by product ID
+    // PRODUCT REGISTRY
     // ══════════════════════════════════════════════════════
-    const productRegistry = new Map();   // id (string) => product object
+    const productRegistry = new Map();
 
-    function registerProduct(p) {
-        productRegistry.set(String(p.id), p);
-    }
-    function getProduct(id) {
-        return productRegistry.get(String(id));
-    }
+    function registerProduct(p) { productRegistry.set(String(p.id), p); }
+    function getProduct(id)     { return productRegistry.get(String(id)); }
 
     // ══════════════════════════════════════════════════════
     // CLOCK
@@ -412,27 +419,27 @@ document.addEventListener('DOMContentLoaded', function () {
     // ══════════════════════════════════════════════════════
     // DOM REFS
     // ══════════════════════════════════════════════════════
-    const input             = document.getElementById('barcodeInput');
-    const productGrid       = document.getElementById('productGrid');
-    const emptyState        = document.getElementById('emptyState');
+    const input              = document.getElementById('barcodeInput');
+    const productGrid        = document.getElementById('productGrid');
+    const emptyState         = document.getElementById('emptyState');
     const gridLoadingOverlay = document.getElementById('gridLoadingOverlay');
-    const cartBody          = document.getElementById('cartBody');
-    const emptyCartState    = document.getElementById('emptyCartState');
-    const cartItemsWrap     = document.getElementById('cartItemsWrap');
-    const subtotalEl        = document.getElementById('subtotal');
-    const taxAmountEl       = document.getElementById('taxAmount');
-    const grandTotalEl      = document.getElementById('grandTotal');
-    const chargeBtnTotal    = document.getElementById('chargeBtnTotal');
-    const discountValueEl   = document.getElementById('discountValue');
-    const discountTypeEl    = document.getElementById('discountType');
-    const modalQty          = document.getElementById('modalQty');
-    const modalUnit         = document.getElementById('modalUnit');
-    const confirmAddBtn     = document.getElementById('confirmAddBtn');
-    const removeFromCartBtn = document.getElementById('removeFromCartBtn');
-    const customerSelect    = document.getElementById('customerSelect');
-    const pricePerUnitInput = document.getElementById('pricePerUnit');
-    const unitSelect        = document.getElementById('unitSelect');
-    const catBar            = document.getElementById('catBar');
+    const cartBody           = document.getElementById('cartBody');
+    const emptyCartState     = document.getElementById('emptyCartState');
+    const cartItemsWrap      = document.getElementById('cartItemsWrap');
+    const subtotalEl         = document.getElementById('subtotal');
+    const taxAmountEl        = document.getElementById('taxAmount');
+    const grandTotalEl       = document.getElementById('grandTotal');
+    const chargeBtnTotal     = document.getElementById('chargeBtnTotal');
+    const discountValueEl    = document.getElementById('discountValue');
+    const discountTypeEl     = document.getElementById('discountType');
+    const modalQty           = document.getElementById('modalQty');
+    const modalUnit          = document.getElementById('modalUnit');
+    const confirmAddBtn      = document.getElementById('confirmAddBtn');
+    const removeFromCartBtn  = document.getElementById('removeFromCartBtn');
+    const customerSelect     = document.getElementById('customerSelect');
+    const pricePerUnitInput  = document.getElementById('pricePerUnit');
+    const unitSelect         = document.getElementById('unitSelect');
+    const catBar             = document.getElementById('catBar');
 
     // ══════════════════════════════════════════════════════
     // STATE
@@ -448,12 +455,11 @@ document.addEventListener('DOMContentLoaded', function () {
     let activeCategoryFilter   = 'all';
     let availableUnits         = [];
     let selectedUnit           = null;
-    let currentProduct         = null;         // plain JS object from registry
+    let currentProduct         = null;
     let currentMeasurementType = 'quantity';
     let originalPricePerUnit   = 0;
     let isPriceInputActive     = false;
     let productQuantityCache   = {};
-    let printWindow            = null;
 
     input.focus();
 
@@ -472,7 +478,6 @@ document.addEventListener('DOMContentLoaded', function () {
         setupOfflineMode();
         setupKeyboardShortcuts();
 
-        // Re-focus search when clicking non-interactive areas
         document.addEventListener('click', function (e) {
             if (!e.target.closest('.modal') &&
                 !e.target.closest('#customerSelect') &&
@@ -499,7 +504,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const products = res.data.products || [];
             products.forEach(p => registerProduct(p));
         } catch (e) {
-            // silently continue — grid will be empty
+            // silently continue
         } finally {
             gridLoadingOverlay.style.display = 'none';
             buildCategoryPills();
@@ -573,7 +578,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const results = res.data || [];
             results.forEach(p => registerProduct(p));
             buildCategoryPills();
-            renderGrid(results.map(p => String(p.id)));  // show only search results
+            renderGrid(results.map(p => String(p.id)));
         } catch (e) {
             showToast('Search failed', 'error');
         } finally {
@@ -588,7 +593,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const allProds = Array.from(productRegistry.values());
         const cats = [...new Set(allProds.map(p => p.category || '').filter(Boolean))];
 
-        // Remove dynamic pills, keep "All"
         catBar.querySelectorAll('.pos-cat-pill:not([data-cat="all"])').forEach(el => el.remove());
 
         cats.forEach(cat => {
@@ -616,17 +620,14 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderGrid(limitToIds = null) {
         let products = Array.from(productRegistry.values());
 
-        // Filter to search result IDs if provided
         if (limitToIds !== null) {
             products = products.filter(p => limitToIds.includes(String(p.id)));
         }
 
-        // Filter by category
         if (activeCategoryFilter !== 'all') {
             products = products.filter(p => (p.category || '') === activeCategoryFilter);
         }
 
-        // Sort: in-cart first, then alphabetically
         products.sort((a, b) => {
             const aCart = cart.some(i => String(i.product_id) === String(a.id));
             const bCart = cart.some(i => String(i.product_id) === String(b.id));
@@ -653,7 +654,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const card = document.createElement('div');
             card.className = `pos-prod-card${inCart ? ' in-cart' : ''}${outOfStock ? ' out-of-stock' : ''}`;
-            card.dataset.productId = String(p.id);   // only store the ID, never JSON
+            card.dataset.productId = String(p.id);
             card.setAttribute('role', 'button');
             card.setAttribute('tabindex', outOfStock ? '-1' : '0');
 
@@ -683,7 +684,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
             }
 
-            // Right-click: remove from cart
             card.addEventListener('contextmenu', e => {
                 e.preventDefault();
                 if (inCart) {
@@ -699,25 +699,21 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ══════════════════════════════════════════════════════
-    // OPEN QUANTITY MODAL — takes an ID, looks up from registry
+    // OPEN QUANTITY MODAL
     // ══════════════════════════════════════════════════════
     function openQuantityModal(productId) {
         const p = getProduct(productId);
-        if (!p) {
-            showToast('Product data not found', 'error');
-            return;
-        }
+        if (!p) { showToast('Product data not found', 'error'); return; }
 
         currentProduct         = p;
         availableUnits         = [];
         selectedUnit           = null;
         isPriceInputActive     = false;
 
-        const price     = parseFloat(p.sale_price || p.price) || 0;
-        const cartItem  = cart.find(i => String(i.product_id) === String(p.id));
-        const prevQty   = cartItem ? cartItem.qty : (productQuantityCache[p.id] || 1);
+        const price    = parseFloat(p.sale_price || p.price) || 0;
+        const cartItem = cart.find(i => String(i.product_id) === String(p.id));
+        const prevQty  = cartItem ? cartItem.qty : (productQuantityCache[p.id] || 1);
 
-        // Fill modal header
         document.getElementById('modalProductLabel').textContent = p.title;
         document.getElementById('modalProductPrice').textContent = formatCurrency(price);
         document.getElementById('modalProductStock').textContent = `Stock: ${formatNum(p.stock, 0)}`;
@@ -726,7 +722,6 @@ document.addEventListener('DOMContentLoaded', function () {
             `<span class="badge bg-secondary"><i class="bi bi-upc-scan me-1"></i>SKU: ${escHtml(p.sku||'')}</span>
              <span class="badge bg-info text-dark"><i class="bi bi-barcode me-1"></i>${escHtml(p.barcode||'')}</span>`;
 
-        // Thumbnail
         const thumb = document.getElementById('modalThumb');
         if (p.thumbnail) {
             thumb.innerHTML = `<img src="${p.thumbnail}" alt="${escHtml(p.title)}" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">`;
@@ -734,13 +729,11 @@ document.addEventListener('DOMContentLoaded', function () {
             thumb.innerHTML = '<i class="bi bi-box-seam"></i>';
         }
 
-        // Unit availability
         const hasUnits = Array.isArray(p.units) && p.units.length > 0;
         const measureUnitRadio = document.getElementById('measureUnit');
         measureUnitRadio.disabled = !hasUnits;
         measureUnitRadio.closest('.pos-measure-opt').style.opacity = hasUnits ? '1' : '0.4';
 
-        // Restore saved preference
         const savedPref = getSavedUnitPref(p.id);
         if (savedPref && hasUnits) {
             document.getElementById('measureUnit').checked = true;
@@ -815,7 +808,6 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
-        // Quantity / unit inputs
         modalQty.addEventListener('input', () => {
             if (!isPriceInputActive) pricePerUnitInput.value = ((parseInt(modalQty.value)||1) * originalPricePerUnit).toFixed(2);
             updateModalTotal(); updateAmountDisplay();
@@ -846,7 +838,6 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
-        // Stepper buttons
         document.getElementById('increaseQty').addEventListener('click', () => {
             modalQty.value = (parseInt(modalQty.value)||1) + 1;
             pricePerUnitInput.value = (parseInt(modalQty.value) * originalPricePerUnit).toFixed(2);
@@ -868,7 +859,6 @@ document.addEventListener('DOMContentLoaded', function () {
             if (c > getUnitStep()) { modalUnit.value = (c - getUnitStep()).toFixed(3); pricePerUnitInput.value = (parseFloat(modalUnit.value) * originalPricePerUnit).toFixed(2); updateModalTotal(); updateAmountDisplay(); modalUnit.focus(); modalUnit.select(); }
         });
 
-        // Quick buttons
         document.querySelectorAll('.quick-btn').forEach(btn => {
             btn.addEventListener('click', function () {
                 if (currentMeasurementType === 'quantity') {
@@ -896,7 +886,6 @@ document.addEventListener('DOMContentLoaded', function () {
             if (this.checked && currentProduct && selectedUnit) saveUnitPref();
         });
 
-        // Enter key confirms
         [modalQty, modalUnit, pricePerUnitInput].forEach(el => {
             el.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); confirmAddBtn.click(); } });
         });
@@ -995,7 +984,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     unitSelect.appendChild(opt);
                 });
             } else {
-                // fallback default
                 selectedUnit = { id: 1, name: currentProduct.primary_unit||'Unit', short_name: currentProduct.primary_unit||'unit', conversion_factor:1, is_default:true };
                 unitSelect.appendChild(new Option(`${selectedUnit.name} (${selectedUnit.short_name})`, '1', true, true));
             }
@@ -1032,10 +1020,10 @@ document.addEventListener('DOMContentLoaded', function () {
         if (currentMeasurementType === 'unit' && !selectedUnit) { showToast('Select a unit first', 'warning'); unitSelect.focus(); return; }
 
         const isUnitMode = currentMeasurementType === 'unit';
-        let quantity = isUnitMode ? (parseFloat(modalUnit.value)||0.001) : (parseInt(modalQty.value)||1);
+        let quantity     = isUnitMode ? (parseFloat(modalUnit.value)||0.001) : (parseInt(modalQty.value)||1);
         const totalPrice = parseFloat(pricePerUnitInput.value) || 0;
-        let unitId = currentProduct.primary_unit_id || 1;
-        let unitName = currentProduct.primary_unit || 'Unit';
+        let unitId       = currentProduct.primary_unit_id || 1;
+        let unitName     = currentProduct.primary_unit || 'Unit';
         let unitShortName = unitName;
 
         if (isUnitMode) {
@@ -1118,8 +1106,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 discPrice = Math.max(0, discPrice);
             }
             item.discounted_price = discPrice;
-            const lineTotal  = discPrice * parseFloat(item.qty);
-            subtotal        += lineTotal;
+            const lineTotal   = discPrice * parseFloat(item.qty);
+            subtotal         += lineTotal;
             const displayUnit = item.unit_short_name || item.unit_name || 'Unit';
 
             const tr = document.createElement('tr');
@@ -1144,7 +1132,6 @@ document.addEventListener('DOMContentLoaded', function () {
             `;
             cartBody.appendChild(tr);
 
-            // Cart qty button — re-opens quantity modal
             tr.querySelector('.qty-btn-cart').addEventListener('click', function () {
                 openQuantityModal(this.dataset.productId);
             });
@@ -1177,9 +1164,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         const grand = Math.max(0, subtotal + taxAmt - orderDisc);
 
-        subtotalEl.textContent   = formatCurrency(subtotal);
-        taxAmountEl.textContent  = formatCurrency(taxAmt);
-        grandTotalEl.textContent = formatCurrency(grand);
+        subtotalEl.textContent     = formatCurrency(subtotal);
+        taxAmountEl.textContent    = formatCurrency(taxAmt);
+        grandTotalEl.textContent   = formatCurrency(grand);
         chargeBtnTotal.textContent = formatCurrency(grand);
 
         if (orderDiscountValue > 0) {
@@ -1209,7 +1196,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ══════════════════════════════════════════════════════
-    // DISCOUNT
+    // ORDER DISCOUNT
     // ══════════════════════════════════════════════════════
     document.getElementById('applyDiscountBtn').addEventListener('click', () => {
         orderDiscountValue = parseFloat(discountValueEl.value) || 0;
@@ -1417,8 +1404,8 @@ document.addEventListener('DOMContentLoaded', function () {
     function setupOfflineMode() {
         function updateConn(online) {
             const el = document.getElementById('connectionStatus');
-            el.className = 'pos-conn-badge ' + (online ? 'online' : 'offline');
-            el.innerHTML = online ? '<i class="bi bi-wifi"></i><span>Online</span>' : '<i class="bi bi-wifi-off"></i><span>Offline</span>';
+            el.className = 'badge ' + (online ? 'bg-success' : 'bg-danger');
+            el.innerHTML = online ? '<i class="bi bi-wifi"></i> Online' : '<i class="bi bi-wifi-off"></i> Offline';
             document.getElementById('offlineModeToggle').checked = !online;
         }
         updateConn(navigator.onLine);
@@ -1493,357 +1480,309 @@ document.addEventListener('DOMContentLoaded', function () {
 
 <style>
 /* ═══════════════════════════════════════════════════════════
-   POS GRID — STYLES
-   Matches: pos.index look+feel for topbar/search
-   Cards: large tiles like the reference screenshot
+   POS GRID PAGE — inherits master layout, no viewport takeover
 ═══════════════════════════════════════════════════════════ */
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 
-.pos-grid-page {
-    font-family: 'DM Sans', sans-serif;
-    --pg-bg:          #f0f2f5;
-    --pg-surface:     #ffffff;
-    --pg-border:      #e1e4e8;
-    --pg-topbar:      #1c2336;
+:root {
     --pg-accent:      #2563eb;
     --pg-green:       #16a34a;
     --pg-green-light: #dcfce7;
     --pg-amber:       #d97706;
     --pg-red:         #dc2626;
+    --pg-border:      #e1e4e8;
+    --pg-surface:     #ffffff;
     --pg-price-font:  'DM Mono', monospace;
     --pg-radius:      14px;
     --pg-radius-sm:   8px;
-    background: var(--pg-bg);
-    height: 100vh;
+}
+
+/* ─── TWO-COLUMN BODY ─── */
+/* Fills remaining viewport height below master navbar + page-title-box */
+.pos-grid-body {
+    /* Master navbar ~70px + page-title-box ~58px + page-content padding ~24px = ~152px */
+    height: calc(100vh - 152px);
+    min-height: 500px;
+}
+
+.pos-products-col,
+.pos-order-col {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
     overflow: hidden;
 }
 
-.pos-grid-layout {
-    display: flex; flex-direction: column;
-    height: 100vh; overflow: hidden;
-}
+/* Products column: search card (fixed) + products card (flex-fill) */
+.pos-products-col .card.mb-2 { flex-shrink: 0; }
+.pos-products-card { flex: 1; overflow: hidden; }
+.pos-products-card-body { height: 100%; overflow: hidden; }
 
-/* ─── TOPBAR ─── */
-.pos-topbar {
-    display: flex; align-items: flex-start; gap: 16px;
-    padding: 10px 20px 8px;
-    background: var(--pg-topbar);
-    flex-shrink: 0; z-index: 100;
-    flex-wrap: wrap;
-}
-.pos-topbar-left  { display:flex; align-items:center; gap:10px; padding-top:6px; min-width:180px; }
-.pos-topbar-right { display:flex; align-items:center; padding-top:6px; }
-.pos-topbar-center { flex:1; min-width:280px; }
-.pos-topbar-divider { width:1px; height:22px; background:rgba(255,255,255,.15); }
-.pos-topbar-title { color:rgba(255,255,255,.9); font-weight:600; font-size:.88rem; white-space:nowrap; }
+/* Order column: card fills full height */
+.pos-order-card { overflow: hidden; }
+.pos-order-body  { overflow: hidden; }
 
-.pos-back-btn {
-    display:flex; align-items:center; gap:6px; color:rgba(255,255,255,.65);
-    text-decoration:none; font-size:.78rem; font-weight:500;
-    padding:5px 10px; border-radius:6px; border:1px solid rgba(255,255,255,.15);
-    transition:all .2s; white-space:nowrap;
-}
-.pos-back-btn:hover { color:#fff; background:rgba(255,255,255,.1); border-color:rgba(255,255,255,.3); }
-
-/* Search — same large style as pos.index */
-.pos-search-outer {
-    width:100%;
-}
+/* ─── SEARCH ─── */
+.pos-search-wrap { position: relative; }
 .pos-search-input {
-    background: rgba(255,255,255,.1) !important;
-    border: 1px solid rgba(255,255,255,.2) !important;
-    color: #fff !important;
-    border-radius: 8px !important;
     padding-right: 80px !important;
     font-family: 'DM Sans', sans-serif;
+    border-radius: var(--pg-radius-sm) !important;
 }
-.pos-search-input::placeholder { color: rgba(255,255,255,.4) !important; }
 .pos-search-input:focus {
-    background: rgba(255,255,255,.15) !important;
-    border-color: rgba(99,155,255,.7) !important;
-    box-shadow: 0 0 0 3px rgba(37,99,235,.3) !important;
+    border-color: var(--pg-accent) !important;
+    box-shadow: 0 0 0 3px rgba(37,99,235,.15) !important;
 }
-.pos-search-icon-right {
-    position:absolute; right:44px; top:50%; transform:translateY(-50%);
-    font-size:1.4rem; color:rgba(255,255,255,.4); pointer-events:none;
+.pos-search-icon {
+    position: absolute; right: 44px; top: 50%; transform: translateY(-50%);
+    font-size: 1.3rem; color: #9ca3af; pointer-events: none;
 }
-.pos-search-spinner { position:absolute; right:12px; top:50%; transform:translateY(-50%); color:rgba(255,255,255,.7); }
-
-/* Shortcuts row */
+.pos-search-spinner { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); }
 .pos-shortcuts-row {
-    display:flex; align-items:center; flex-wrap:wrap; gap:4px;
-    margin-top:6px; font-size:.78rem; color:rgba(255,255,255,.5);
+    display: flex; align-items: center; flex-wrap: wrap; gap: 4px;
+    font-size: .75rem; color: #6b7280;
 }
-.pos-shortcuts-row .badge { font-size:.65rem; }
+.pos-shortcuts-row .badge { font-size: .62rem; }
 
-.pos-conn-badge {
-    display:inline-flex; align-items:center; gap:4px;
-    font-size:.73rem; font-weight:600; padding:3px 9px; border-radius:20px; white-space:nowrap;
-}
-.pos-conn-badge.online  { background:rgba(22,163,74,.25); color:#4ade80; }
-.pos-conn-badge.offline { background:rgba(220,38,38,.2); color:#f87171; animation:blink 1.5s infinite; }
+/* ─── CLOCK ─── */
+.pos-clock { font-family: var(--pg-price-font); font-size: .82rem; color: #6b7280; }
 
-.pos-clock { color:rgba(255,255,255,.55); font-family:'DM Mono',monospace; font-size:.82rem; padding-top:6px; }
-
-/* ─── BODY ─── */
-.pos-body { display:flex; flex:1; overflow:hidden; }
-
-/* ─── PRODUCTS PANEL ─── */
-.pos-products-panel {
-    flex:1; display:flex; flex-direction:column; overflow:hidden;
-    padding:14px 10px 14px 16px; gap:10px; position:relative;
-}
-
-/* Category pills */
+/* ─── CATEGORY PILLS ─── */
 .pos-cat-bar {
-    display:flex; align-items:center; gap:8px;
-    flex-wrap:nowrap; overflow-x:auto; padding-bottom:2px;
-    scrollbar-width:none; flex-shrink:0;
+    display: flex; align-items: center; gap: 8px;
+    flex-wrap: nowrap; overflow-x: auto;
+    scrollbar-width: none; flex-shrink: 0;
 }
-.pos-cat-bar::-webkit-scrollbar { display:none; }
+.pos-cat-bar::-webkit-scrollbar { display: none; }
 .pos-cat-pill {
-    flex-shrink:0; padding:6px 16px; border-radius:20px;
-    font-size:.8rem; font-weight:600; cursor:pointer;
-    border:1.5px solid var(--pg-border); background:var(--pg-surface); color:#6b7280;
-    transition:all .15s; white-space:nowrap;
+    flex-shrink: 0; padding: 5px 14px; border-radius: 20px;
+    font-size: .78rem; font-weight: 600; cursor: pointer;
+    border: 1.5px solid var(--pg-border); background: var(--pg-surface); color: #6b7280;
+    transition: all .15s; white-space: nowrap;
 }
-.pos-cat-pill:hover { border-color:var(--pg-accent); color:var(--pg-accent); }
-.pos-cat-pill.active { background:var(--pg-accent); color:#fff; border-color:var(--pg-accent); box-shadow:0 2px 8px rgba(37,99,235,.3); }
+.pos-cat-pill:hover { border-color: var(--pg-accent); color: var(--pg-accent); }
+.pos-cat-pill.active { background: var(--pg-accent); color: #fff; border-color: var(--pg-accent); box-shadow: 0 2px 8px rgba(37,99,235,.25); }
 
-/* Loading overlay */
+/* ─── LOADING OVERLAY ─── */
 .pos-grid-loading {
-    position:absolute; inset:0; background:rgba(240,242,245,.9);
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    z-index:10; border-radius:12px;
+    position: absolute; inset: 0; background: rgba(255,255,255,.9);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 10; border-radius: var(--pg-radius);
 }
 
 /* ─── PRODUCT GRID ─── */
 .pos-product-grid {
-    flex:1; overflow-y:auto;
-    display:grid;
-    /* Larger cards — 4-column default, like the reference screenshot */
-    grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
-    gap:14px; padding-right:6px; align-content:start;
+    flex: 1; overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px; padding: 4px 2px; align-content: start;
 }
-.pos-product-grid::-webkit-scrollbar { width:6px; }
-.pos-product-grid::-webkit-scrollbar-thumb { background:#d1d5db; border-radius:3px; }
+.pos-product-grid::-webkit-scrollbar { width: 5px; }
+.pos-product-grid::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
 
-/* ─── PRODUCT CARD — large tile ─── */
+/* ─── PRODUCT CARD ─── */
 .pos-prod-card {
     background: var(--pg-surface);
     border: 1.5px solid var(--pg-border);
     border-radius: var(--pg-radius);
     cursor: pointer; position: relative;
     display: flex; flex-direction: column; align-items: center;
-    padding: 14px 12px 0;
-    gap: 8px;
+    padding: 12px 10px 0;
+    gap: 6px;
     transition: transform .12s, border-color .15s, box-shadow .15s;
     user-select: none; overflow: hidden;
-    min-height: 200px;
+    min-height: 185px;
 }
 .pos-prod-card:hover:not(.out-of-stock) {
     border-color: var(--pg-accent);
-    box-shadow: 0 6px 20px rgba(37,99,235,.14);
+    box-shadow: 0 6px 18px rgba(37,99,235,.14);
     transform: translateY(-3px);
 }
 .pos-prod-card:active:not(.out-of-stock) { transform: translateY(0); }
-.pos-prod-card:focus-visible { outline:2px solid var(--pg-accent); outline-offset:2px; }
+.pos-prod-card:focus-visible { outline: 2px solid var(--pg-accent); outline-offset: 2px; }
 .pos-prod-card.in-cart { border-color: var(--pg-green); background: #f0fdf4; }
-.pos-prod-card.in-cart:hover { border-color:#15803d; box-shadow:0 6px 20px rgba(22,163,74,.18); }
-.pos-prod-card.out-of-stock { opacity:.45; cursor:not-allowed; filter:grayscale(.7); }
-.pos-prod-card.out-of-stock:hover { transform:none; box-shadow:none; border-color:var(--pg-border); }
+.pos-prod-card.in-cart:hover { border-color: #15803d; box-shadow: 0 6px 18px rgba(22,163,74,.18); }
+.pos-prod-card.out-of-stock { opacity: .45; cursor: not-allowed; filter: grayscale(.7); }
+.pos-prod-card.out-of-stock:hover { transform: none; box-shadow: none; border-color: var(--pg-border); }
 
-/* Cart badge — top-left */
 .prod-cart-badge {
-    position:absolute; top:7px; left:7px; z-index:2;
-    background:var(--pg-green); color:#fff;
-    font-size:10.5px; font-weight:700; padding:2px 8px;
-    border-radius:20px; display:flex; align-items:center; gap:2px;
+    position: absolute; top: 6px; left: 6px; z-index: 2;
+    background: var(--pg-green); color: #fff;
+    font-size: 10px; font-weight: 700; padding: 2px 7px;
+    border-radius: 20px; display: flex; align-items: center; gap: 2px;
 }
-
-/* Stock pip — top-right */
 .prod-stock-pip {
-    position:absolute; top:9px; right:9px;
-    width:9px; height:9px; border-radius:50%;
+    position: absolute; top: 8px; right: 8px;
+    width: 8px; height: 8px; border-radius: 50%;
 }
-.prod-stock-pip.good { background:#22c55e; }
-.prod-stock-pip.low  { background:#f59e0b; }
-.prod-stock-pip.out  { background:#ef4444; }
+.prod-stock-pip.good { background: #22c55e; }
+.prod-stock-pip.low  { background: #f59e0b; }
+.prod-stock-pip.out  { background: #ef4444; }
 
-/* Product image — big square */
 .prod-img-wrap {
-    width:90px; height:90px; border-radius:12px;
-    background:#f3f4f6; display:flex; align-items:center; justify-content:center;
-    position:relative; overflow:hidden; flex-shrink:0; margin-top:6px;
+    width: 80px; height: 80px; border-radius: 10px;
+    background: #f3f4f6; display: flex; align-items: center; justify-content: center;
+    position: relative; overflow: hidden; flex-shrink: 0; margin-top: 4px;
 }
-.prod-img-wrap img { width:100%; height:100%; object-fit:cover; }
-.prod-img-placeholder { font-size:36px; color:#d1d5db; }
+.prod-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
+.prod-img-placeholder { font-size: 32px; color: #d1d5db; }
 .prod-out-overlay {
-    position:absolute; inset:0; background:rgba(0,0,0,.45);
-    display:flex; align-items:center; justify-content:center; border-radius:12px;
+    position: absolute; inset: 0; background: rgba(0,0,0,.45);
+    display: flex; align-items: center; justify-content: center; border-radius: 10px;
 }
-.prod-out-overlay span { color:#fff; font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; }
+.prod-out-overlay span { color: #fff; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
 
-/* Product info */
-.prod-info { width:100%; text-align:center; padding-bottom:6px; }
+.prod-info { width: 100%; text-align: center; padding-bottom: 4px; }
 .prod-name {
-    font-size:12.5px; font-weight:600; color:#111827; line-height:1.3;
-    max-height:2.6em; overflow:hidden;
-    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
-    margin-bottom:4px;
+    font-size: 12px; font-weight: 600; color: #111827; line-height: 1.3;
+    max-height: 2.6em; overflow: hidden;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    margin-bottom: 3px;
 }
-.prod-price { font-family:var(--pg-price-font); font-size:14px; font-weight:700; color:var(--pg-green); }
-.prod-meta  { font-size:10px; color:#9ca3af; margin-top:2px; }
-.prod-saved-unit { font-size:10px; color:#6b7280; margin-top:2px; }
-
-/* In-cart bar at bottom */
+.prod-price { font-family: var(--pg-price-font); font-size: 13px; font-weight: 700; color: var(--pg-green); }
+.prod-meta  { font-size: 10px; color: #9ca3af; margin-top: 2px; }
+.prod-saved-unit { font-size: 10px; color: #6b7280; }
 .prod-in-cart-bar {
-    width:calc(100% + 24px); margin:auto -12px -0px;
-    background:var(--pg-green); color:#fff;
-    font-size:10px; font-weight:700; text-align:center;
-    padding:4px 0; letter-spacing:.5px; text-transform:uppercase; margin-top:auto;
+    width: calc(100% + 20px); margin: auto -10px -0px;
+    background: var(--pg-green); color: #fff;
+    font-size: 10px; font-weight: 700; text-align: center;
+    padding: 3px 0; letter-spacing: .5px; text-transform: uppercase; margin-top: auto;
 }
 
-/* Empty state */
+/* ─── EMPTY STATE ─── */
 .pos-empty-state {
-    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
-    color:#9ca3af; padding:40px;
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: #9ca3af; padding: 40px;
 }
-.pos-empty-state i { font-size:3rem; margin-bottom:12px; color:#d1d5db; }
-.pos-empty-state h5 { font-size:1rem; font-weight:600; color:#6b7280; }
+.pos-empty-state i { font-size: 2.8rem; margin-bottom: 12px; color: #d1d5db; }
+.pos-empty-state h5 { font-size: .95rem; font-weight: 600; color: #6b7280; }
 
 /* ─── ORDER PANEL ─── */
-.pos-order-panel {
-    width:380px; flex-shrink:0; background:var(--pg-surface);
-    border-left:1px solid var(--pg-border);
-    display:flex; flex-direction:column; overflow:hidden;
-}
-
-/* Customer row */
 .pos-customer-row {
-    display:flex; align-items:center; gap:6px;
-    padding:10px 14px; border-bottom:1px solid var(--pg-border); flex-shrink:0;
+    display: flex; align-items: center; gap: 6px;
 }
-.pos-customer-select-wrap { flex:1; position:relative; display:flex; align-items:center; }
-.pos-customer-icon { position:absolute; left:10px; font-size:1.1rem; color:#9ca3af; pointer-events:none; z-index:2; }
+.pos-customer-select-wrap { flex: 1; position: relative; display: flex; align-items: center; }
+.pos-customer-icon { position: absolute; left: 10px; font-size: 1rem; color: #9ca3af; pointer-events: none; z-index: 2; }
 .pos-customer-select {
-    width:100%; padding:7px 10px 7px 34px; border:1px solid var(--pg-border);
-    border-radius:var(--pg-radius-sm); font-size:.8rem; font-family:'DM Sans',sans-serif;
-    appearance:none; background:#f9fafb; color:#374151; cursor:pointer; outline:none; transition:border-color .2s;
+    width: 100%; padding: 7px 10px 7px 32px; border: 1px solid var(--pg-border);
+    border-radius: var(--pg-radius-sm); font-size: .78rem; font-family: 'DM Sans', sans-serif;
+    appearance: none; background: #f9fafb; color: #374151; cursor: pointer; outline: none;
+    transition: border-color .2s;
 }
-.pos-customer-select:focus { border-color:var(--pg-accent); background:#fff; }
+.pos-customer-select:focus { border-color: var(--pg-accent); background: #fff; }
 .pos-icon-btn {
-    width:34px; height:34px; flex-shrink:0; border:1px solid var(--pg-border);
-    border-radius:var(--pg-radius-sm); background:#f9fafb; color:#6b7280;
-    display:flex; align-items:center; justify-content:center;
-    cursor:pointer; font-size:.9rem; transition:all .15s;
+    width: 32px; height: 32px; flex-shrink: 0; border: 1px solid var(--pg-border);
+    border-radius: var(--pg-radius-sm); background: #f9fafb; color: #6b7280;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: .85rem; transition: all .15s;
 }
-.pos-icon-btn:hover        { background:var(--pg-accent); color:#fff; border-color:var(--pg-accent); }
-.pos-icon-btn.warning:hover { background:#f59e0b; color:#fff; border-color:#f59e0b; }
-.pos-icon-btn.info:hover    { background:#0ea5e9; color:#fff; border-color:#0ea5e9; }
-.pos-icon-btn.danger:hover  { background:var(--pg-red); color:#fff; border-color:var(--pg-red); }
+.pos-icon-btn:hover         { background: var(--pg-accent); color: #fff; border-color: var(--pg-accent); }
+.pos-icon-btn.warning:hover { background: #f59e0b; color: #fff; border-color: #f59e0b; }
+.pos-icon-btn.info:hover    { background: #0ea5e9; color: #fff; border-color: #0ea5e9; }
+.pos-icon-btn.danger:hover  { background: var(--pg-red); color: #fff; border-color: var(--pg-red); }
 
-/* Cart area */
-.pos-cart-area { flex:1; overflow-y:auto; }
-.pos-cart-area::-webkit-scrollbar { width:4px; }
-.pos-cart-area::-webkit-scrollbar-thumb { background:#e5e7eb; border-radius:2px; }
-.pos-cart-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:#9ca3af; gap:6px; padding:32px; }
-.pos-cart-empty-icon { font-size:3.2rem; color:#e5e7eb; }
-.pos-cart-empty p { font-size:.9rem; font-weight:600; color:#6b7280; margin:0; }
+/* ─── CART ─── */
+.pos-cart-area {
+    flex: 1; overflow-y: auto; min-height: 0;
+}
+.pos-cart-area::-webkit-scrollbar { width: 4px; }
+.pos-cart-area::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 2px; }
+.pos-cart-empty {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 100%; color: #9ca3af; gap: 6px; padding: 32px;
+}
+.pos-cart-empty-icon { font-size: 3rem; color: #e5e7eb; }
+.pos-cart-empty p { font-size: .88rem; font-weight: 600; color: #6b7280; margin: 0; }
 
-/* Cart table */
-.pos-cart-table { width:100%; border-collapse:collapse; font-size:.8rem; }
-.pos-cart-table thead tr { background:#f9fafb; border-bottom:2px solid var(--pg-border); }
-.pos-cart-table thead th { padding:7px 10px; font-weight:600; color:#6b7280; text-transform:uppercase; font-size:.68rem; letter-spacing:.5px; }
-.pos-cart-table tbody tr { border-bottom:1px solid #f3f4f6; transition:background .1s; }
-.pos-cart-table tbody tr:hover { background:#fafafa; }
-.pos-cart-table td { padding:7px 10px; vertical-align:middle; }
-.cart-item-name { font-weight:600; color:#111827; font-size:.8rem; line-height:1.3; }
-.cart-disc-badge { display:inline-block; font-size:9px; background:#fef3c7; color:#92400e; border-radius:4px; padding:1px 5px; margin-top:2px; font-weight:600; }
-.cart-qty-btn { background:#eff6ff; border:1px solid #dbeafe; border-radius:6px; color:var(--pg-accent); font-size:.77rem; font-weight:600; padding:3px 7px; cursor:pointer; white-space:nowrap; transition:all .12s; }
-.cart-qty-btn:hover { background:var(--pg-accent); color:#fff; border-color:var(--pg-accent); }
-.cart-action-btn { width:26px; height:26px; border-radius:6px; cursor:pointer; border:1px solid var(--pg-border); background:#f9fafb; color:#9ca3af; display:flex; align-items:center; justify-content:center; font-size:.72rem; transition:all .12s; }
-.cart-action-btn.disc:hover { background:#fef3c7; border-color:#f59e0b; color:#d97706; }
-.cart-action-btn.del:hover  { background:#fee2e2; border-color:#ef4444; color:#dc2626; }
+.pos-cart-table { width: 100%; border-collapse: collapse; font-size: .78rem; }
+.pos-cart-table thead tr { background: #f9fafb; border-bottom: 2px solid var(--pg-border); }
+.pos-cart-table thead th { padding: 6px 8px; font-weight: 600; color: #6b7280; text-transform: uppercase; font-size: .65rem; letter-spacing: .5px; }
+.pos-cart-table tbody tr { border-bottom: 1px solid #f3f4f6; transition: background .1s; }
+.pos-cart-table tbody tr:hover { background: #fafafa; }
+.pos-cart-table td { padding: 6px 8px; vertical-align: middle; }
+.cart-item-name { font-weight: 600; color: #111827; font-size: .78rem; line-height: 1.3; }
+.cart-disc-badge { display: inline-block; font-size: 9px; background: #fef3c7; color: #92400e; border-radius: 4px; padding: 1px 5px; margin-top: 2px; font-weight: 600; }
+.cart-qty-btn { background: #eff6ff; border: 1px solid #dbeafe; border-radius: 5px; color: var(--pg-accent); font-size: .72rem; font-weight: 600; padding: 2px 6px; cursor: pointer; white-space: nowrap; transition: all .12s; }
+.cart-qty-btn:hover { background: var(--pg-accent); color: #fff; border-color: var(--pg-accent); }
+.cart-action-btn { width: 24px; height: 24px; border-radius: 5px; cursor: pointer; border: 1px solid var(--pg-border); background: #f9fafb; color: #9ca3af; display: flex; align-items: center; justify-content: center; font-size: .68rem; transition: all .12s; }
+.cart-action-btn.disc:hover { background: #fef3c7; border-color: #f59e0b; color: #d97706; }
+.cart-action-btn.del:hover  { background: #fee2e2; border-color: #ef4444; color: #dc2626; }
 
-/* Discount row */
-.pos-discount-row { padding:9px 14px; border-top:1px solid var(--pg-border); background:#fafafa; display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex-shrink:0; }
-.pos-discount-label { font-size:.78rem; font-weight:600; color:#374151; white-space:nowrap; }
-.pos-discount-inputs { display:flex; gap:4px; align-items:center; flex:1; }
-.pos-discount-input { flex:1; height:32px; border:1px solid var(--pg-border); border-radius:6px; padding:0 8px; font-size:.8rem; font-family:var(--pg-price-font); text-align:right; outline:none; background:#fff; transition:border-color .15s; }
-.pos-discount-input:focus { border-color:var(--pg-accent); }
-.pos-discount-select { height:32px; border:1px solid var(--pg-border); border-radius:6px; padding:0 4px; font-size:.78rem; background:#fff; outline:none; cursor:pointer; }
-.pos-discount-apply { height:32px; width:32px; border:1px solid var(--pg-accent); border-radius:6px; background:var(--pg-accent); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:.9rem; transition:background .15s; }
-.pos-discount-apply:hover { background:#1d4ed8; }
-.pos-discount-applied { font-size:.77rem; font-weight:700; color:var(--pg-red); white-space:nowrap; }
+/* ─── DISCOUNT ─── */
+.pos-discount-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: #fafafa; }
+.pos-discount-label { font-size: .75rem; font-weight: 600; color: #374151; white-space: nowrap; }
+.pos-discount-inputs { display: flex; gap: 4px; align-items: center; flex: 1; }
+.pos-discount-input { flex: 1; height: 30px; border: 1px solid var(--pg-border); border-radius: 6px; padding: 0 6px; font-size: .78rem; font-family: var(--pg-price-font); text-align: right; outline: none; background: #fff; transition: border-color .15s; }
+.pos-discount-input:focus { border-color: var(--pg-accent); }
+.pos-discount-select { height: 30px; border: 1px solid var(--pg-border); border-radius: 6px; padding: 0 4px; font-size: .75rem; background: #fff; outline: none; cursor: pointer; }
+.pos-discount-apply { height: 30px; width: 30px; border: 1px solid var(--pg-accent); border-radius: 6px; background: var(--pg-accent); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: .85rem; transition: background .15s; }
+.pos-discount-apply:hover { background: #1d4ed8; }
+.pos-discount-applied { font-size: .74rem; font-weight: 700; color: var(--pg-red); white-space: nowrap; }
 
-/* Totals */
-.pos-totals { padding:8px 14px; border-top:1px solid var(--pg-border); flex-shrink:0; }
-.pos-total-row { display:flex; justify-content:space-between; align-items:center; font-size:.82rem; color:#6b7280; padding:3px 0; }
-.pos-total-row span:last-child { font-family:var(--pg-price-font); }
-.pos-total-row.grand { margin-top:6px; padding-top:8px; border-top:2px solid #111827; font-size:1rem; font-weight:700; color:#111827; }
-.pos-total-row.grand span:last-child { font-size:1.1rem; color:var(--pg-green); }
+/* ─── TOTALS ─── */
+.pos-totals {}
+.pos-total-row { display: flex; justify-content: space-between; align-items: center; font-size: .8rem; color: #6b7280; padding: 2px 0; }
+.pos-total-row span:last-child { font-family: var(--pg-price-font); }
+.pos-total-row.grand { margin-top: 4px; padding-top: 6px; border-top: 2px solid #111827; font-size: .95rem; font-weight: 700; color: #111827; }
+.pos-total-row.grand span:last-child { font-size: 1.05rem; color: var(--pg-green); }
 
-/* Payment */
-.pos-payment-group { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; padding:9px 14px; flex-shrink:0; }
-.pos-payment-opt { cursor:pointer; }
-.pos-payment-opt input { display:none; }
-.pos-payment-opt span { display:flex; align-items:center; justify-content:center; gap:5px; padding:8px 4px; border-radius:var(--pg-radius-sm); border:1.5px solid var(--pg-border); font-size:.77rem; font-weight:600; color:#6b7280; background:#f9fafb; transition:all .15s; }
-.pos-payment-opt:hover span { border-color:var(--pg-accent); color:var(--pg-accent); background:#eff6ff; }
-.pos-payment-opt input:checked + span { border-color:var(--pg-green); background:var(--pg-green-light); color:var(--pg-green); }
+/* ─── PAYMENT ─── */
+.pos-payment-group { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.pos-payment-opt { cursor: pointer; }
+.pos-payment-opt input { display: none; }
+.pos-payment-opt span { display: flex; align-items: center; justify-content: center; gap: 4px; padding: 7px 4px; border-radius: var(--pg-radius-sm); border: 1.5px solid var(--pg-border); font-size: .73rem; font-weight: 600; color: #6b7280; background: #f9fafb; transition: all .15s; }
+.pos-payment-opt:hover span { border-color: var(--pg-accent); color: var(--pg-accent); background: #eff6ff; }
+.pos-payment-opt input:checked + span { border-color: var(--pg-green); background: var(--pg-green-light); color: var(--pg-green); }
 
-/* Charge button */
+/* ─── CHARGE BUTTON ─── */
 .pos-charge-btn {
-    margin:0 14px 8px; width:calc(100% - 28px); height:52px;
-    border:none; border-radius:var(--pg-radius);
-    background:linear-gradient(135deg,#16a34a,#15803d);
-    color:#fff; font-family:'DM Sans',sans-serif; font-weight:700; font-size:1rem;
-    cursor:pointer; flex-shrink:0;
-    display:flex; align-items:center; justify-content:center; gap:8px;
-    box-shadow:0 4px 12px rgba(22,163,74,.35); transition:all .15s;
+    border: none; border-radius: var(--pg-radius);
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    color: #fff; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: .95rem;
+    cursor: pointer; height: 50px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    box-shadow: 0 4px 12px rgba(22,163,74,.3); transition: all .15s;
 }
-.pos-charge-btn:hover:not(:disabled) { background:linear-gradient(135deg,#15803d,#166534); box-shadow:0 6px 16px rgba(22,163,74,.4); transform:translateY(-1px); }
-.pos-charge-btn:disabled { opacity:.6; cursor:not-allowed; transform:none; }
-.pos-charge-total { font-family:var(--pg-price-font); background:rgba(255,255,255,.2); border-radius:6px; padding:2px 10px; font-size:1rem; }
+.pos-charge-btn:hover:not(:disabled) { background: linear-gradient(135deg, #15803d, #166534); box-shadow: 0 6px 16px rgba(22,163,74,.4); transform: translateY(-1px); }
+.pos-charge-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+.pos-charge-total { font-family: var(--pg-price-font); background: rgba(255,255,255,.2); border-radius: 6px; padding: 2px 10px; font-size: .9rem; }
 
-/* Modal */
-.pos-modal-content { border-radius:16px; overflow:hidden; }
-.pos-modal-header { background:linear-gradient(135deg,#1e40af,#2563eb); color:#fff; padding:16px 20px; }
-.pos-modal-header .btn-close { filter:brightness(0) invert(1); opacity:.8; }
-.pos-modal-product-thumb { width:50px; height:50px; border-radius:10px; background:rgba(255,255,255,.2); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:1.5rem; color:rgba(255,255,255,.8); overflow:hidden; }
-.pos-measure-toggle { display:flex; gap:8px; }
-.pos-measure-opt { flex:1; cursor:pointer; }
-.pos-measure-opt input { display:none; }
-.pos-measure-opt span { display:flex; align-items:center; justify-content:center; gap:5px; padding:8px; border-radius:8px; border:1.5px solid var(--pg-border); font-size:.82rem; font-weight:600; color:#6b7280; background:#f9fafb; transition:all .15s; }
-.pos-measure-opt input:checked + span { border-color:var(--pg-accent); background:#eff6ff; color:var(--pg-accent); }
-.pos-qty-stepper { display:flex; align-items:center; gap:8px; }
-.pos-step-btn { width:44px; height:50px; border:1.5px solid var(--pg-border); border-radius:10px; background:#f9fafb; color:#374151; font-size:1.1rem; cursor:pointer; transition:all .12s; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
-.pos-step-btn:hover:not(:disabled) { background:var(--pg-accent); color:#fff; border-color:var(--pg-accent); }
-.pos-step-btn:disabled { opacity:.4; cursor:not-allowed; }
-.pos-qty-input { flex:1; height:50px; border:1.5px solid var(--pg-border); border-radius:10px; text-align:center; font-size:1.6rem; font-weight:700; font-family:var(--pg-price-font); color:#111827; background:#fff; outline:none; transition:border-color .15s; }
-.pos-qty-input:focus { border-color:var(--pg-accent); box-shadow:0 0 0 3px rgba(37,99,235,.12); }
-.pos-price-box { background:#f9fafb; border-radius:10px; padding:12px; }
-.pos-quick-btns { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
-.pos-quick-btn { padding:8px 4px; border-radius:8px; border:1.5px solid var(--pg-border); background:#fff; color:#374151; font-size:.85rem; font-weight:600; cursor:pointer; transition:all .12s; font-family:'DM Sans',sans-serif; }
-.pos-quick-btn:hover { background:var(--pg-accent); color:#fff; border-color:var(--pg-accent); }
-.unit-quick-btn { border-color:#dcfce7; color:var(--pg-green); }
-.unit-quick-btn:hover { background:var(--pg-green); border-color:var(--pg-green); color:#fff; }
+/* ─── MODAL ─── */
+.pos-modal-content { border-radius: 16px; overflow: hidden; }
+.pos-modal-header { background: linear-gradient(135deg, #1e40af, #2563eb); color: #fff; padding: 14px 18px; }
+.pos-modal-header .btn-close { filter: brightness(0) invert(1); opacity: .8; }
+.pos-modal-product-thumb { width: 46px; height: 46px; border-radius: 10px; background: rgba(255,255,255,.2); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; color: rgba(255,255,255,.8); overflow: hidden; }
+.pos-measure-toggle { display: flex; gap: 8px; }
+.pos-measure-opt { flex: 1; cursor: pointer; }
+.pos-measure-opt input { display: none; }
+.pos-measure-opt span { display: flex; align-items: center; justify-content: center; gap: 5px; padding: 7px; border-radius: 8px; border: 1.5px solid var(--pg-border); font-size: .8rem; font-weight: 600; color: #6b7280; background: #f9fafb; transition: all .15s; }
+.pos-measure-opt input:checked + span { border-color: var(--pg-accent); background: #eff6ff; color: var(--pg-accent); }
+.pos-qty-stepper { display: flex; align-items: center; gap: 8px; }
+.pos-step-btn { width: 42px; height: 48px; border: 1.5px solid var(--pg-border); border-radius: 10px; background: #f9fafb; color: #374151; font-size: 1rem; cursor: pointer; transition: all .12s; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.pos-step-btn:hover:not(:disabled) { background: var(--pg-accent); color: #fff; border-color: var(--pg-accent); }
+.pos-step-btn:disabled { opacity: .4; cursor: not-allowed; }
+.pos-qty-input { flex: 1; height: 48px; border: 1.5px solid var(--pg-border); border-radius: 10px; text-align: center; font-size: 1.5rem; font-weight: 700; font-family: var(--pg-price-font); color: #111827; background: #fff; outline: none; transition: border-color .15s; }
+.pos-qty-input:focus { border-color: var(--pg-accent); box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+.pos-price-box { background: #f9fafb; border-radius: 10px; padding: 10px 12px; }
+.pos-quick-btns { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; }
+.pos-quick-btn { padding: 7px 4px; border-radius: 7px; border: 1.5px solid var(--pg-border); background: #fff; color: #374151; font-size: .82rem; font-weight: 600; cursor: pointer; transition: all .12s; font-family: 'DM Sans', sans-serif; }
+.pos-quick-btn:hover { background: var(--pg-accent); color: #fff; border-color: var(--pg-accent); }
+.unit-quick-btn { border-color: #dcfce7; color: var(--pg-green); }
+.unit-quick-btn:hover { background: var(--pg-green); border-color: var(--pg-green); color: #fff; }
 
 /* ─── RESPONSIVE ─── */
-@media (max-width:1200px) {
-    .pos-order-panel { width:340px; }
-    .pos-product-grid { grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); }
+@media (max-width: 991px) {
+    .pos-grid-body { height: auto; }
+    .pos-products-col,
+    .pos-order-col { height: auto; overflow: visible; }
+    .pos-products-card { flex: none; }
+    .pos-products-card-body { height: auto; }
+    .pos-product-grid { max-height: 55vh; }
+    .pos-cart-area { max-height: 300px; }
+    .pos-product-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
 }
-@media (max-width:900px) {
-    .pos-order-panel { width:300px; }
-    .pos-product-grid { grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); }
-}
-@media (max-width:768px) {
-    .pos-body { flex-direction:column; }
-    .pos-products-panel { flex:0 0 55vh; }
-    .pos-order-panel { width:100%; border-left:none; border-top:1px solid var(--pg-border); }
-    .pos-product-grid { grid-template-columns:repeat(3,1fr); }
-    .pos-topbar-right { display:none; }
+@media (max-width: 767px) {
+    .pos-product-grid { grid-template-columns: repeat(3,1fr); }
 }
 
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.5} }
