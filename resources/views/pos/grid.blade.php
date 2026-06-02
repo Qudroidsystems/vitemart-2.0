@@ -404,8 +404,8 @@ document.addEventListener('DOMContentLoaded', function () {
     function getProduct(id)     { return productRegistry.get(String(id)); }
 
     // ── SEARCH CACHE + ABORT ─────────────────────────────────
-    const searchCache = new Map();   // query → array of products
-    let   searchAbort = null;        // current AbortController
+    const searchCache = new Map();
+    let   searchAbort = null;
 
     // ── CLOCK ────────────────────────────────────────────────
     (function tickClock() {
@@ -425,7 +425,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const subtotalEl         = document.getElementById('subtotal');
     const taxAmountEl        = document.getElementById('taxAmount');
     const grandTotalEl       = document.getElementById('grandTotal');
-    const chargeBtnTotal     = document.getElementById('chargeBtnTotal');
     const discountValueEl    = document.getElementById('discountValue');
     const discountTypeEl     = document.getElementById('discountType');
     const modalQty           = document.getElementById('modalQty');
@@ -494,7 +493,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const products = res.data.products || [];
             products.forEach(p => registerProduct(p));
         } catch (e) {
-            // silently continue — registry stays empty, search still works
+            // silently continue
         } finally {
             gridLoadingOverlay.style.display = 'none';
             buildCategoryPills();
@@ -516,7 +515,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (q.length >= 2 && !isLikelyBarcode(q)) {
             searchProducts(q);
         } else if (q.length === 0) {
-            // Cancel any in-flight search
             if (searchAbort) { searchAbort.abort(); searchAbort = null; }
             buildCategoryPills();
             renderGrid();
@@ -561,13 +559,11 @@ document.addEventListener('DOMContentLoaded', function () {
         } catch (e) {}
     }
 
-    // ── SEARCH (with cache + abort) ───────────────────────────
+    // ── SEARCH ───────────────────────────────────────────
     async function searchProducts(q) {
-        // Abort previous request
         if (searchAbort) { searchAbort.abort(); }
         searchAbort = new AbortController();
 
-        // Serve from cache instantly — no spinner
         if (searchCache.has(q)) {
             const cached = searchCache.get(q);
             cached.forEach(p => registerProduct(p));
@@ -585,7 +581,6 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             const results = res.data || [];
 
-            // Store in cache (cap at 200 entries)
             searchCache.set(q, results);
             if (searchCache.size > 200) {
                 searchCache.delete(searchCache.keys().next().value);
@@ -628,7 +623,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // ── RENDER GRID (diff-based — no full rebuild) ────────────
+    // ── RENDER GRID ────────────────────────────
     function renderGrid(limitToIds = null) {
         let products = Array.from(productRegistry.values());
 
@@ -654,13 +649,11 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         emptyState.classList.add('d-none');
 
-        // Remove cards no longer in the filtered list
         const currentIds = new Set(products.map(p => String(p.id)));
         productGrid.querySelectorAll('.pos-prod-card').forEach(card => {
             if (!currentIds.has(card.dataset.productId)) card.remove();
         });
 
-        // Update existing or insert new cards
         products.forEach(p => {
             const pid      = String(p.id);
             const cartItem = cart.find(i => String(i.product_id) === pid);
@@ -668,9 +661,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const existing = productGrid.querySelector(`[data-product-id="${pid}"]`);
 
             if (existing) {
-                // Patch only the in-cart state — avoid full re-render
                 existing.classList.toggle('in-cart', inCart);
-
                 const badge = existing.querySelector('.prod-cart-badge');
                 if (inCart && !badge) {
                     const b = document.createElement('div');
@@ -682,7 +673,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 } else if (inCart && badge) {
                     badge.innerHTML = `<i class="bi bi-check2 me-1"></i>${formatQty(cartItem.qty, cartItem.is_unit_mode)}`;
                 }
-
                 const bar = existing.querySelector('.prod-in-cart-bar');
                 if (inCart && !bar) {
                     const b = document.createElement('div');
@@ -692,13 +682,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 } else if (!inCart && bar) {
                     bar.remove();
                 }
-
-                // Re-order in DOM to match sorted position
                 productGrid.appendChild(existing);
                 return;
             }
 
-            // Build new card
             const price      = parseFloat(p.sale_price || p.price) || 0;
             const outOfStock = parseFloat(p.stock) <= 0;
             const stockClass = parseFloat(p.stock) > 10 ? 'good' : parseFloat(p.stock) > 0 ? 'low' : 'out';
@@ -1128,7 +1115,11 @@ document.addEventListener('DOMContentLoaded', function () {
             subtotalEl.textContent = formatCurrency(0);
             taxAmountEl.textContent = formatCurrency(0);
             grandTotalEl.textContent = formatCurrency(0);
-            if (chargeBtnTotal) chargeBtnTotal.textContent = formatCurrency(0);
+
+            // Update charge button total - get fresh reference
+            const chargeTotalSpan = document.getElementById('chargeBtnTotal');
+            if (chargeTotalSpan) chargeTotalSpan.textContent = formatCurrency(0);
+
             document.getElementById('discountApplied').classList.add('d-none');
             window.currentDiscount = { type:'percent', value:0, amount:0 };
             return;
@@ -1210,7 +1201,10 @@ document.addEventListener('DOMContentLoaded', function () {
         subtotalEl.textContent     = formatCurrency(subtotal);
         taxAmountEl.textContent    = formatCurrency(taxAmt);
         grandTotalEl.textContent   = formatCurrency(grand);
-        if (chargeBtnTotal) chargeBtnTotal.textContent = formatCurrency(grand);
+
+        // Update charge button total - get fresh reference
+        const chargeTotalSpan = document.getElementById('chargeBtnTotal');
+        if (chargeTotalSpan) chargeTotalSpan.textContent = formatCurrency(grand);
 
         if (orderDiscountValue > 0) {
             document.getElementById('discountApplied').classList.remove('d-none');
@@ -1375,7 +1369,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         isProcessingOrder = true;
         const btn = document.getElementById('completeOrder');
-        const originalBtnHTML = btn.innerHTML;
+        const originalBtnText = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing…';
 
@@ -1457,7 +1451,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 await Swal.fire('Error', res.data.message || 'Failed to complete order', 'error');
                 // Reset button state but keep cart
                 btn.disabled = false;
-                btn.innerHTML = originalBtnHTML;
+                btn.innerHTML = originalBtnText;
                 isProcessingOrder = false;
             }
         } catch (e) {
@@ -1472,7 +1466,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Reset button state
             btn.disabled = false;
-            btn.innerHTML = originalBtnHTML;
+            btn.innerHTML = originalBtnText;
             isProcessingOrder = false;
         }
     }
@@ -1492,18 +1486,6 @@ document.addEventListener('DOMContentLoaded', function () {
         // Force complete UI refresh
         renderCartAndTotals();
         renderGrid();
-
-        // Explicitly reset the charge button total
-        if (chargeBtnTotal) {
-            chargeBtnTotal.textContent = formatCurrency(0);
-        }
-
-        // Reset the complete order button - ensure it's enabled
-        const chargeBtn = document.getElementById('completeOrder');
-        if (chargeBtn) {
-            chargeBtn.disabled = false;
-            chargeBtn.innerHTML = '<i class="bi bi-printer-fill me-2"></i><span>Charge</span><span class="pos-charge-total" id="chargeBtnTotal">₦0.00</span>';
-        }
 
         // Reset processing flag
         isProcessingOrder = false;
