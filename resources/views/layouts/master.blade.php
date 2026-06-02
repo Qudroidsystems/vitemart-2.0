@@ -96,7 +96,7 @@
         .modal.show .modal-dialog { transform: translate(0, 0); }
 
         /* =====================================================
-           SIDEBAR SCROLLBAR - FIXED
+           SIDEBAR SCROLLBAR
            ===================================================== */
         .app-menu {
             position: fixed;
@@ -125,7 +125,6 @@
         #scrollbar::-webkit-scrollbar-thumb:hover {
             background: rgba(255, 255, 255, 0.3);
         }
-        /* Ensure sidebar content scrolls properly */
         .navbar-menu .container-fluid {
             padding: 0;
         }
@@ -946,8 +945,9 @@
                             </div>
                         </div>
 
+                        <!-- FIXED USER DROPDOWN -->
                         <div class="dropdown ms-sm-3 header-item topbar-user">
-                            <button type="button" class="btn shadow-none" id="page-header-user-dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <a class="btn shadow-none dropdown-toggle" href="#" role="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="background: transparent; border: none;">
                                 <span class="d-flex align-items-center">
                                     @php
                                         use App\Models\User;
@@ -968,28 +968,24 @@
                                         </span>
                                     @endif
                                 </span>
-                            </button>
-                            <div class="dropdown-menu dropdown-menu-end">
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                                 @if($userdata)
-                                    <h6 class="dropdown-header">Welcome {{ $userdata->name }}!</h6>
-                                    <a class="dropdown-item" href="{{ route('user.overview', $userdata) }}">
-                                        <i class="mdi mdi-account-circle text-muted fs-lg align-middle me-1"></i>
-                                        <span class="align-middle">Profile</span>
-                                    </a>
-                                    <form method="POST" action="{{ route('logout') }}">
-                                        @csrf
-                                        <a class="dropdown-item" href="{{ route('logout') }}" onclick="event.preventDefault(); this.closest('form').submit();">
-                                            <i class="mdi mdi-logout text-muted fs-lg align-middle me-1"></i>
-                                            <span class="align-middle" data-key="t-logout">Logout</span>
-                                        </a>
-                                    </form>
+                                    <li><h6 class="dropdown-header">Welcome {{ $userdata->name }}!</h6></li>
+                                    <li><a class="dropdown-item" href="{{ route('user.overview', $userdata) }}"><i class="mdi mdi-account-circle text-muted fs-lg align-middle me-1"></i> Profile</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form method="POST" action="{{ route('logout') }}" id="logout-form">
+                                            @csrf
+                                            <a class="dropdown-item" href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                                                <i class="mdi mdi-logout text-muted fs-lg align-middle me-1"></i> Logout
+                                            </a>
+                                        </form>
+                                    </li>
                                 @else
-                                    <a class="dropdown-item" href="{{ route('login') }}">
-                                        <i class="mdi mdi-login text-muted fs-lg align-middle me-1"></i>
-                                        <span class="align-middle">Login</span>
-                                    </a>
+                                    <li><a class="dropdown-item" href="{{ route('login') }}"><i class="mdi mdi-login text-muted fs-lg align-middle me-1"></i> Login</a></li>
                                 @endif
-                            </div>
+                            </ul>
                         </div>
                     </div>
                 </div>
@@ -1272,6 +1268,12 @@
             if (form.getAttribute('action') && !form.dataset.noProgress) {
                 form.addEventListener('submit', function () { if (typeof NProgress !== 'undefined') NProgress.start(); });
             }
+        });
+
+        // Ensure dropdowns work properly
+        var dropdownElementList = [].slice.call(document.querySelectorAll('.dropdown-toggle'));
+        dropdownElementList.map(function (dropdownToggleEl) {
+            return new bootstrap.Dropdown(dropdownToggleEl);
         });
     });
     </script>
