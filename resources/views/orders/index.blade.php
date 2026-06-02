@@ -1,444 +1,339 @@
-{{-- resources/views/orders/index.blade.php --}}
-@extends('layouts.master')
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice #{{ $order->invoice_number ?? substr($order->id, 0, 10) }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'DejaVu Sans', 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 40px;
+            color: #333;
+            line-height: 1.6;
+            background: #fff;
+        }
+        .invoice-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 3px solid #0d6efd;
+            padding-bottom: 20px;
+        }
+        .logo {
+            max-height: 80px;
+            margin-bottom: 10px;
+        }
+        h1 {
+            margin: 0;
+            color: #0d6efd;
+            font-size: 28px;
+        }
+        .company-info {
+            color: #666;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        .info-grid {
+            display: table;
+            width: 100%;
+            margin: 30px 0;
+        }
+        .info-row {
+            display: table-row;
+        }
+        .info-cell {
+            display: table-cell;
+            padding: 8px 0;
+            width: 50%;
+            vertical-align: top;
+        }
+        .info-cell strong {
+            display: inline-block;
+            width: 100px;
+            font-weight: 600;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .invoice-title {
+            font-size: 32px;
+            font-weight: bold;
+            color: #0d6efd;
+            margin: 10px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .total-row {
+            font-weight: bold;
+            background-color: #f8f9fa;
+        }
+        .footer {
+            margin-top: 60px;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+        .badge {
+            padding: 6px 12px;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .status-paid {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status-unpaid {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .amount {
+            font-weight: bold;
+            color: #28a745;
+        }
+        .address-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        .discount-text {
+            color: #dc3545;
+        }
+        @media print {
+            body {
+                padding: 0;
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="invoice-container">
+        <div class="header">
+            @php
+                $storeSettings = \App\Models\StoreSetting::getSettings();
+                $storeName = $storeSettings->store_name ?? config('app.name', 'Store Name');
+                $storeAddress = $storeSettings->address ?? '';
+                $storePhone = $storeSettings->phone ?? '';
+                $storeEmail = $storeSettings->email ?? '';
+                $storeWebsite = $storeSettings->website ?? '';
+                $currencySymbol = $storeSettings->currency_symbol ?? '₦';
+            @endphp
 
-@section('title', 'Order Management')
+            @if($storeSettings && $storeSettings->logo)
+                <img src="{{ public_path('storage/' . $storeSettings->logo) }}" class="logo" alt="Logo" style="max-height:80px;">
+            @else
+                <h1>{{ $storeName }}</h1>
+            @endif
+            <div class="company-info">
+                {{ $storeAddress }}<br>
+                {{ $storePhone ? "Tel: $storePhone | " : '' }}{{ $storeEmail ? "Email: $storeEmail | " : '' }}{{ $storeWebsite ? "Web: $storeWebsite" : '' }}
+            </div>
+        </div>
 
-@section('content')
-<div class="main-content">
-    <div class="page-content">
-        <div class="container-fluid">
+        <div class="info-grid">
+            <div class="info-row">
+                <div class="info-cell">
+                    <strong>Invoice #:</strong> {{ $order->invoice_number ?? substr($order->id, 0, 10) }}<br>
+                    <strong>Order Date:</strong> {{ $order->created_at ? $order->created_at->format('d M Y h:i A') : 'N/A' }}<br>
+                    <strong>Payment Method:</strong> {{ ucfirst(str_replace('_', ' ', $order->payment_method ?? 'N/A')) }}
+                </div>
+                <div class="info-cell text-right">
+                    <div class="badge
+                        @if($order->payment_status == 'paid') status-paid
+                        @elseif($order->payment_status == 'unpaid') status-unpaid
+                        @else status-pending
+                        @endif">
+                        {{ ucfirst($order->payment_status ?? 'Pending') }}
+                    </div>
+                    <div class="invoice-title">INVOICE</div>
+                </div>
+            </div>
+        </div>
 
-            <!-- Page Title -->
-            <div class="row">
-                <div class="col-12">
-                    <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-                        <h4 class="mb-sm-0">Order Management</h4>
-                        <ol class="breadcrumb m-0">
-                            <li class="breadcrumb-item"><a href="javascript:void(0)">Ecommerce</a></li>
-                            <li class="breadcrumb-item active">Orders</li>
-                        </ol>
+        <div class="info-grid">
+            <div class="info-row">
+                <div class="info-cell">
+                    <strong>Bill To:</strong>
+                    <div class="address-box">
+                        @php
+                            if ($order->customer) {
+                                $customerName = $order->customer->first_name . ' ' . $order->customer->last_name;
+                                $customerEmail = $order->customer->email ?? 'N/A';
+                                $customerPhone = $order->customer->phone_number ?? 'N/A';
+                                $customerAddress = $order->customer->home_address ?? $order->customer->office_address ?? '';
+                            } else {
+                                $customerName = $order->user ? ($order->user->first_name . ' ' . $order->user->last_name) : 'Walk-in Customer';
+                                $customerEmail = $order->user->email ?? 'N/A';
+                                $customerPhone = $order->user->phone_number ?? 'N/A';
+                                $customerAddress = '';
+                            }
+                        @endphp
+                        <strong>{{ $customerName }}</strong><br>
+                        @if($customerAddress)
+                            {{ $customerAddress }}<br>
+                        @endif
+                        @if($customerEmail && $customerEmail != 'N/A')
+                            Email: {{ $customerEmail }}<br>
+                        @endif
+                        @if($customerPhone && $customerPhone != 'N/A')
+                            Phone: {{ $customerPhone }}
+                        @endif
+                        @if(!$customerAddress && $customerEmail == 'N/A' && $customerPhone == 'N/A')
+                            Walk-in Customer
+                        @endif
+                    </div>
+                </div>
+                <div class="info-cell">
+                    <strong>Ship To:</strong>
+                    <div class="address-box">
+                        @if($order->shippingAddress)
+                            {{ $order->shippingAddress->name ?? $customerName }}<br>
+                            {{ $order->shippingAddress->address ?? $order->shippingAddress->street ?? 'N/A' }}<br>
+                            @if($order->shippingAddress->city){{ $order->shippingAddress->city }}, @endif
+                            @if($order->shippingAddress->state){{ $order->shippingAddress->state }}, @endif
+                            @if($order->shippingAddress->country){{ $order->shippingAddress->country }} @endif
+                            @if($order->shippingAddress->phone_number)<br>Phone: {{ $order->shippingAddress->phone_number }}@endif
+                        @else
+                            Same as billing address
+                        @endif
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Stats Cards -->
-            <div class="row">
-                <div class="col-xl-3 col-md-6">
-                    <div class="card card-animate bg-primary-subtle border-0">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center">
-                                <div class="flex-grow-1">
-                                    <p class="text-uppercase fw-medium text-primary mb-0">Total Orders</p>
-                                    <h4 class="fs-22 fw-semibold mb-0">{{ number_format($stats['total']) }}</h4>
-                                </div>
-                                <div class="avatar-sm flex-shrink-0">
-                                    <span class="avatar-title bg-primary rounded-circle fs-3">
-                                        <i class="bi bi-cart-check"></i>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Product</th>
+                    <th>Unit</th>
+                    <th class="text-right">Qty</th>
+                    <th class="text-right">Unit Price</th>
+                    <th class="text-right">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($order->items as $index => $item)
+                <tr>
+                    <td>{{ $index + 1 }}</td>
+                    <td>
+                        {{ $item->title ?? 'N/A' }}
+                        @if($item->discount_amount > 0)
+                            <br><small class="discount-text">Discount: -{{ $currencySymbol }}{{ number_format($item->discount_amount, 2) }}</small>
+                        @endif
+                    </td>
+                    <td>
+                        @if($item->unit_name)
+                            {{ $item->unit_name }}
+                        @elseif($item->unit)
+                            {{ $item->unit->name }}
+                        @else
+                            -
+                        @endif
+                    </td>
+                    <td class="text-right">{{ number_format($item->quantity ?? 0, $item->is_unit_mode ? 3 : 0) }}</td>
+                    <td class="text-right">
+                        @if($item->discount_amount > 0)
+                            <del>{{ $currencySymbol }}{{ number_format($item->unit_price ?? 0, 2) }}</del><br>
+                            <span class="text-success">{{ $currencySymbol }}{{ number_format($item->discounted_price, 2) }}</span>
+                        @else
+                            {{ $currencySymbol }}{{ number_format($item->unit_price ?? 0, 2) }}
+                        @endif
+                    </td>
+                    <td class="text-right">
+                        @if($item->discount_amount > 0)
+                            <del>{{ $currencySymbol }}{{ number_format($item->total_price ?? ($item->unit_price * $item->quantity), 2) }}</del><br>
+                            <span class="text-success">{{ $currencySymbol }}{{ number_format(($item->discounted_price * $item->quantity), 2) }}</span>
+                        @else
+                            {{ $currencySymbol }}{{ number_format($item->total_price ?? ($item->unit_price * $item->quantity), 2) }}
+                        @endif
+                    </td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
 
-                <div class="col-xl-3 col-md-6">
-                    <div class="card card-animate bg-success-subtle border-0">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center">
-                                <div class="flex-grow-1">
-                                    <p class="text-uppercase fw-medium text-success mb-0">Total Revenue</p>
-                                    <h4 class="fs-22 fw-semibold mb-0">${{ number_format($analytics['total_revenue'] ?? 0, 2) }}</h4>
-                                </div>
-                                <div class="avatar-sm flex-shrink-0">
-                                    <span class="avatar-title bg-success rounded-circle fs-3">
-                                        <i class="bi bi-currency-dollar"></i>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <table style="width: 50%; margin-left: auto;">
+            @php
+                $subtotal = $order->subtotal ?? $order->items->sum('total_price');
+                $discount = $order->discount_amount ?? 0;
+            @endphp
 
-                <div class="col-xl-3 col-md-6">
-                    <div class="card card-animate bg-warning-subtle border-0">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center">
-                                <div class="flex-grow-1">
-                                    <p class="text-uppercase fw-medium text-warning mb-0">Pending Orders</p>
-                                    <h4 class="fs-22 fw-semibold mb-0">{{ $stats['pending'] }}</h4>
-                                </div>
-                                <div class="avatar-sm flex-shrink-0">
-                                    <span class="avatar-title bg-warning rounded-circle fs-3">
-                                        <i class="bi bi-hourglass-split"></i>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            @if($subtotal > 0)
+            <tr>
+                <td style="border: none;"><strong>Subtotal</strong></td>
+                <td style="border: none;" class="text-right">{{ $currencySymbol }}{{ number_format($subtotal, 2) }}</td>
+            </tr>
+            @endif
 
-                <div class="col-xl-3 col-md-6">
-                    <div class="card card-animate bg-danger-subtle border-0">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center">
-                                <div class="flex-grow-1">
-                                    <p class="text-uppercase fw-medium text-danger mb-0">Unpaid Orders</p>
-                                    <h4 class="fs-22 fw-semibold mb-0">{{ $stats['unpaid'] }}</h4>
-                                </div>
-                                <div class="avatar-sm flex-shrink-0">
-                                    <span class="avatar-title bg-danger rounded-circle fs-3">
-                                        <i class="bi bi-credit-card-2-back text-white"></i>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            @if($discount > 0)
+            <tr>
+                <td style="border: none;"><strong>Discount</strong></td>
+                <td style="border: none;" class="text-right discount-text">-{{ $currencySymbol }}{{ number_format($discount, 2) }}</td>
+            </tr>
+            @endif
 
-            <!-- Charts -->
-            <div class="row mt-4">
-                <div class="col-xl-8">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">Sales Overview (Last 30 Days)</h5>
-                        </div>
-                        <div class="card-body">
-                            <canvas id="salesChart" height="300"></canvas>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-xl-4">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">Order Status Distribution</h5>
-                        </div>
-                        <div class="card-body">
-                            <canvas id="statusChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            @if($order->shipping_cost > 0)
+            <tr>
+                <td style="border: none;"><strong>Shipping</strong></td>
+                <td style="border: none;" class="text-right">{{ $currencySymbol }}{{ number_format($order->shipping_cost, 2) }}</td>
+            </tr>
+            @endif
 
-            <!-- Filters -->
-            <div class="row mt-4">
-                <div class="col-lg-12">
-                    <div class="card">
-                        <div class="card-body">
-                            <form action="{{ route('orders.index') }}" method="GET" class="row g-3 align-items-end">
-                                <div class="col-md-3">
-                                    <input type="text" name="search" class="form-control" placeholder="Search Invoice / Customer..." value="{{ request('search') }}">
-                                </div>
-                                <div class="col-md-2">
-                                    <select name="status" class="form-select">
-                                        <option value="">All Status</option>
-                                        @foreach(['pending','processing','shipped','delivered','cancelled'] as $s)
-                                            <option value="{{ $s }}" {{ request('status') == $s ? 'selected' : '' }}>{{ ucfirst($s) }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <select name="payment_status" class="form-select">
-                                        <option value="">Payment Status</option>
-                                        <option value="paid" {{ request('payment_status') == 'paid' ? 'selected' : '' }}>Paid</option>
-                                        <option value="unpaid" {{ request('payment_status') == 'unpaid' ? 'selected' : '' }}>Unpaid</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <input type="date" name="from" class="form-control" value="{{ request('from') }}">
-                                </div>
-                                <div class="col-md-2">
-                                    <input type="date" name="to" class="form-control" value="{{ request('to') }}">
-                                </div>
-                                <div class="col-md-1">
-                                    <button type="submit" class="btn btn-primary w-100">
-                                        <i class="bi bi-funnel"></i> Filter
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            @if($order->tax_cost > 0)
+            <tr>
+                <td style="border: none;"><strong>Tax</strong></td>
+                <td style="border: none;" class="text-right">{{ $currencySymbol }}{{ number_format($order->tax_cost, 2) }}</td>
+            </tr>
+            @endif
 
-            <!-- Orders Table -->
-            <div class="row mt-4">
-                <div class="col-lg-12">
-                    <div class="card">
-                        <div class="card-header d-flex align-items-center justify-content-between">
-                            <h5 class="card-title mb-0">
-                                Orders <span class="badge bg-dark-subtle text-dark ms-1">{{ $orders->total() }}</span>
-                            </h5>
-                            <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-success" onclick="exportOrders('xlsx')">
-                                    <i class="bi bi-file-excel"></i> Export Excel
-                                </button>
-                                <button type="button" class="btn btn-info" onclick="exportOrders('csv')">
-                                    <i class="bi bi-file-text"></i> Export CSV
-                                </button>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-centered align-middle table-nowrap mb-0">
-                                    <thead class="table-active">
-                                        <tr>
-                                            <th>Invoice</th>
-                                            <th>Customer</th>
-                                            <th>Date</th>
-                                            <th>Total</th>
-                                            <th>Payment</th>
-                                            <th>Status</th>
-                                            <th>Items</th>
-                                            <th>Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @forelse($orders as $order)
-                                        <tr>
-                                            <td>
-                                                <a href="{{ route('orders.show', $order->id) }}" class="fw-bold text-primary">
-                                                    {{ $order->invoice_number ?? substr($order->id, 0, 8) }}
-                                                </a>
-                                            </td>
-                                            <td>
-                                                <div class="d-flex align-items-center">
-                                                    <div class="avatar-xs me-3">
-                                                        <div class="avatar-title bg-secondary-subtle rounded-circle text-uppercase">
-                                                            @php
-                                                                $customerName = $order->customer ? ($order->customer->first_name ?? 'C') : ($order->user->first_name ?? 'U');
-                                                            @endphp
-                                                            {{ Str::substr($customerName, 0, 1) }}
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <h6 class="mb-0">
-                                                            @if($order->customer)
-                                                                {{ $order->customer->first_name ?? 'N/A' }} {{ $order->customer->last_name ?? '' }}
-                                                            @elseif($order->user)
-                                                                {{ $order->user->first_name ?? 'N/A' }} {{ $order->user->last_name ?? '' }}
-                                                            @else
-                                                                N/A
-                                                            @endif
-                                                        </h6>
-                                                        <small class="text-muted">
-                                                            @if($order->customer)
-                                                                {{ $order->customer->email ?? 'N/A' }}
-                                                            @elseif($order->user)
-                                                                {{ $order->user->email ?? 'N/A' }}
-                                                            @else
-                                                                N/A
-                                                            @endif
-                                                        </small>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>{{ $order->created_at ? $order->created_at->format('d M, Y') : 'N/A' }}</td>
-                                            <td class="fw-bold text-success">${{ number_format($order->total_amount, 2) }}</td>
-                                            <td>
-                                                <span class="badge {{ $order->payment_status == 'paid' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' }}">
-                                                    {{ ucfirst($order->payment_status) }}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <select class="form-select form-select-sm status-select" data-id="{{ $order->id }}">
-                                                    @foreach(['pending','processing','shipped','delivered','cancelled'] as $s)
-                                                        <option value="{{ $s }}" {{ $order->status == $s ? 'selected' : '' }}>{{ ucfirst($s) }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </td>
-                                            <td class="text-center">{{ $order->items_count ?? $order->items->count() }}</td>
-                                            <td>
-                                                <div class="dropdown">
-                                                    <button class="btn btn-subtle-secondary btn-sm btn-icon" data-bs-toggle="dropdown">
-                                                        <i class="bi bi-three-dots-vertical"></i>
-                                                    </button>
-                                                    <ul class="dropdown-menu dropdown-menu-end">
-                                                        <li><a class="dropdown-item" href="{{ route('orders.show', $order->id) }}"><i class="bi bi-eye"></i> View Details</a></li>
-                                                        <li><a class="dropdown-item" href="{{ route('orders.invoice', $order->id) }}" target="_blank"><i class="bi bi-file-pdf"></i> PDF Invoice</a></li>
-                                                        <li><a class="dropdown-item" href="javascript:void(0)" onclick="emailInvoice('{{ $order->id }}')"><i class="bi bi-envelope"></i> Email Invoice</a></li>
-                                                    </ul>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        @empty
-                                        <tr>
-                                            <td colspan="8" class="text-center py-5 text-muted">
-                                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                                                No orders found.
-                                            </td>
-                                        </tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
+            @if($order->totalRefunded() > 0)
+            <tr>
+                <td style="border: none;"><strong class="text-danger">Refunded</strong></td>
+                <td style="border: none;" class="text-right text-danger">-{{ $currencySymbol }}{{ number_format($order->totalRefunded(), 2) }}</td>
+            </tr>
+            @endif
 
-                            <div class="row mt-4 align-items-center">
-                                <div class="col-sm">
-                                    <div class="text-muted text-center text-sm-start">
-                                        Showing {{ $orders->firstItem() }} to {{ $orders->lastItem() }} of {{ $orders->total() }} entries
-                                    </div>
-                                </div>
-                                <div class="col-sm-auto">
-                                    {!! $orders->appends(request()->query())->links('pagination::bootstrap-5') !!}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <tr class="total-row">
+                <td style="border: none;"><strong>Grand Total</strong></td>
+                <td style="border: none;" class="text-right"><strong class="amount">{{ $currencySymbol }}{{ number_format($order->total_amount - $order->totalRefunded(), 2) }}</strong></td>
+            </tr>
+        </table>
 
+        <div class="footer">
+            <p>{{ $storeSettings->footer_note ?? 'Thank you for your business!' }}</p>
+            <p>For any inquiries, please contact our support team.</p>
         </div>
     </div>
-</div>
-
-<!-- Chart.js JS -->
-<script src="{{ asset('theme/layouts/assets/libs/chart.js/chart.umd.min.js') }}"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    // Sales Chart
-    var salesCtx = document.getElementById('salesChart');
-    if (salesCtx) {
-        new Chart(salesCtx, {
-            type: 'line',
-            data: {
-                labels: @json($analytics['sales_chart']['labels'] ?? []),
-                datasets: [{
-                    label: 'Daily Sales ($)',
-                    data: @json($analytics['sales_chart']['data'] ?? []),
-                    borderColor: '#0d6efd',
-                    backgroundColor: 'rgba(13,110,253,0.1)',
-                    tension: 0.4,
-                    fill: true
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: { position: 'top' }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { callback: function(v) { return '$' + v; } }
-                    }
-                }
-            }
-        });
-    }
-
-    // Status Chart
-    var statusCtx = document.getElementById('statusChart');
-    if (statusCtx) {
-        new Chart(statusCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'],
-                datasets: [{
-                    data: [
-                        {{ $stats['pending'] ?? 0 }},
-                        {{ $stats['processing'] ?? 0 }},
-                        {{ $stats['shipped'] ?? 0 }},
-                        {{ $stats['delivered'] ?? 0 }},
-                        {{ $stats['cancelled'] ?? 0 }}
-                    ],
-                    backgroundColor: ['#ffc107', '#0dcaf0', '#0d6efd', '#198754', '#dc3545']
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: { position: 'bottom' }
-                }
-            }
-        });
-    }
-
-    // Status Update
-    document.querySelectorAll('.status-select').forEach(el => {
-        el.addEventListener('change', function () {
-            var originalValue = this.value;
-            var orderId = this.dataset.id;
-
-            Swal.fire({
-                title: 'Update Status?',
-                text: 'Are you sure you want to change this order status?',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#0d6efd',
-                confirmButtonText: 'Yes, update it!'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    fetch('/orders/' + orderId + '/status', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                        },
-                        body: JSON.stringify({ status: this.value })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            Swal.fire('Updated!', 'Order status has been updated.', 'success');
-                            setTimeout(function() { location.reload(); }, 1500);
-                        } else {
-                            Swal.fire('Error!', data.message || 'Failed to update status.', 'error');
-                            this.value = originalValue;
-                        }
-                    })
-                    .catch((error) => {
-                        console.error('Error:', error);
-                        Swal.fire('Error!', 'Something went wrong.', 'error');
-                        this.value = originalValue;
-                    });
-                } else {
-                    this.value = originalValue;
-                }
-            }.bind(this));
-        });
-    });
-
-    window.exportOrders = function(format) {
-        var url = new URL('/orders/export', window.location.origin);
-        var params = new URLSearchParams(window.location.search);
-        params.append('format', format);
-        url.search = params.toString();
-        window.location.href = url.toString();
-    };
-
-    window.emailInvoice = function(id) {
-        Swal.fire({
-            title: 'Sending Invoice...',
-            text: 'Please wait while we send the invoice',
-            allowOutsideClick: false,
-            didOpen: () => {
-                Swal.showLoading();
-                fetch('/orders/' + id + '/email-invoice', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        Swal.fire('Sent!', 'Invoice has been emailed to the customer.', 'success');
-                    } else {
-                        Swal.fire('Error!', data.message || 'Failed to send email.', 'error');
-                    }
-                })
-                .catch(() => {
-                    Swal.fire('Error!', 'Something went wrong.', 'error');
-                });
-            }
-        });
-    };
-});
-</script>
-@endsection
+</body>
+</html>
