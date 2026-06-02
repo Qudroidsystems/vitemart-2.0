@@ -1128,7 +1128,6 @@ document.addEventListener('DOMContentLoaded', function () {
             subtotalEl.textContent = formatCurrency(0);
             taxAmountEl.textContent = formatCurrency(0);
             grandTotalEl.textContent = formatCurrency(0);
-            // FIX: Reset charge button total when cart is empty
             if (chargeBtnTotal) chargeBtnTotal.textContent = formatCurrency(0);
             document.getElementById('discountApplied').classList.add('d-none');
             window.currentDiscount = { type:'percent', value:0, amount:0 };
@@ -1211,7 +1210,6 @@ document.addEventListener('DOMContentLoaded', function () {
         subtotalEl.textContent     = formatCurrency(subtotal);
         taxAmountEl.textContent    = formatCurrency(taxAmt);
         grandTotalEl.textContent   = formatCurrency(grand);
-        // FIX: Update charge button total
         if (chargeBtnTotal) chargeBtnTotal.textContent = formatCurrency(grand);
 
         if (orderDiscountValue > 0) {
@@ -1327,74 +1325,155 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('completeOrder').addEventListener('click', completeOrder);
 
     async function completeOrder() {
-        if (cart.length === 0) { showToast('Cart is empty','warning'); return; }
-        if (isProcessingOrder) { showToast('Already processing…','info'); return; }
+        if (cart.length === 0) {
+            showToast('Cart is empty', 'warning');
+            return;
+        }
+        if (isProcessingOrder) {
+            showToast('Already processing…', 'info');
+            return;
+        }
 
-        const payment    = document.querySelector('input[name="payment"]:checked').value;
+        const payment = document.querySelector('input[name="payment"]:checked').value;
         const customerId = customerSelect.value || null;
-        const offline    = document.getElementById('offlineModeToggle').checked || !navigator.onLine;
+        const offline = document.getElementById('offlineModeToggle').checked || !navigator.onLine;
 
         if (offline) {
-            const offlineOrders = JSON.parse(localStorage.getItem('offlineOrders')||'[]');
+            const offlineOrders = JSON.parse(localStorage.getItem('offlineOrders') || '[]');
             const oid = 'OFFLINE-' + Date.now();
             offlineOrders.push({
-                id:oid, items: cart.map(it => ({
-                    product_id: it.product_id, qty: parseFloat(it.qty), unit_id: parseInt(it.unit_id||1),
-                    sale_price: parseFloat(it.unit_price||it.price), discount_type: it.discount_type||null,
-                    discount_value: it.discount_value||0, is_unit_mode: it.is_unit_mode||false, unit_name: it.unit_name||null,
+                id: oid,
+                items: cart.map(it => ({
+                    product_id: it.product_id,
+                    qty: parseFloat(it.qty),
+                    unit_id: parseInt(it.unit_id || 1),
+                    sale_price: parseFloat(it.unit_price || it.price),
+                    discount_type: it.discount_type || null,
+                    discount_value: it.discount_value || 0,
+                    is_unit_mode: it.is_unit_mode || false,
+                    unit_name: it.unit_name || null,
                 })),
-                payment_method:payment, customer_id:customerId, discount_type:orderDiscountType,
-                discount_value:orderDiscountValue, discount_amount: window.currentDiscount?.amount||0,
-                tax_rate: {{ config('pos.tax_rate', 0) }}, timestamp:Date.now(), time:new Date().toLocaleString(),
+                payment_method: payment,
+                customer_id: customerId,
+                discount_type: orderDiscountType,
+                discount_value: orderDiscountValue,
+                discount_amount: window.currentDiscount?.amount || 0,
+                tax_rate: {{ config('pos.tax_rate', 0) }},
+                timestamp: Date.now(),
+                time: new Date().toLocaleString(),
             });
             localStorage.setItem('offlineOrders', JSON.stringify(offlineOrders));
             resetAfterOrder(false);
-            Swal.fire({title:'Saved Offline!',html:`<div class="text-center"><i class="bi bi-wifi-off text-warning display-1 mb-3"></i><h4>Order #${oid}</h4><p>Will sync when online.</p></div>`,icon:'warning',confirmButtonText:'OK'});
+            Swal.fire({
+                title: 'Saved Offline!',
+                html: `<div class="text-center"><i class="bi bi-wifi-off text-warning display-1 mb-3"></i><h4>Order #${oid}</h4><p>Will sync when online.</p></div>`,
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
             return;
         }
 
         isProcessingOrder = true;
         const btn = document.getElementById('completeOrder');
-        btn.disabled=true; btn.innerHTML='<span class="spinner-border spinner-border-sm me-2"></span>Processing…';
+        const originalBtnHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing…';
 
         const items = cart.map(it => ({
-            product_id:it.product_id, qty:parseFloat(it.qty), unit_id:parseInt(it.unit_id||1),
-            sale_price:parseFloat(it.unit_price||it.price/it.qty), discount_type:it.discount_type||null,
-            discount_value:it.discount_value||0, is_unit_mode:it.is_unit_mode||false, unit_name:it.unit_name||null,
+            product_id: it.product_id,
+            qty: parseFloat(it.qty),
+            unit_id: parseInt(it.unit_id || 1),
+            sale_price: parseFloat(it.unit_price || it.price / it.qty),
+            discount_type: it.discount_type || null,
+            discount_value: it.discount_value || 0,
+            is_unit_mode: it.is_unit_mode || false,
+            unit_name: it.unit_name || null,
         }));
-        const disc = window.currentDiscount || {type:'percent',value:0,amount:0};
+        const disc = window.currentDiscount || { type: 'percent', value: 0, amount: 0 };
 
-        Swal.fire({title:'Processing…',allowOutsideClick:false,didOpen:()=>Swal.showLoading()});
+        // Show loading toast
+        Swal.fire({
+            title: 'Processing order...',
+            text: 'Please wait',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
         try {
             const res = await axios.post('{{ route("pos.order.save") }}', {
-                items, payment_method:payment, customer_id:customerId,
-                discount_type:disc.type, discount_value:disc.value, discount_amount:disc.amount,
-                _token:'{{ csrf_token() }}',
+                items,
+                payment_method: payment,
+                customer_id: customerId,
+                discount_type: disc.type,
+                discount_value: disc.value,
+                discount_amount: disc.amount,
+                _token: '{{ csrf_token() }}',
             });
+
             Swal.close();
+
             if (res.data.success) {
-                if (thankYouAudio) { thankYouAudio.currentTime=0; thankYouAudio.play().catch(()=>{}); }
-                Swal.fire({
-                    title:'Order Complete!',
-                    html:`<div class="text-center"><i class="bi bi-check-circle text-success display-1 mb-3"></i><h4>Order #${res.data.order_id}</h4><p class="fs-4">${formatCurrency(res.data.total)}</p></div>`,
-                    icon:'success', showCancelButton:true, confirmButtonText:'Print Receipt', cancelButtonText:'New Order',
-                    buttonsStyling:false, customClass:{confirmButton:'btn btn-success btn-lg me-2',cancelButton:'btn btn-outline-secondary btn-lg'},
-                }).then(r => {
-                    if (r.isConfirmed) {
-                        const pw = window.open(`/pos/receipt/${res.data.order_id}`, '_blank');
-                        if (pw) { const iv=setInterval(()=>{ if(pw.closed){clearInterval(iv);resetAfterOrder();}},500); }
-                        else resetAfterOrder();
-                    } else resetAfterOrder();
+                if (thankYouAudio) {
+                    thankYouAudio.currentTime = 0;
+                    thankYouAudio.play().catch(() => {});
+                }
+
+                const result = await Swal.fire({
+                    title: 'Order Complete!',
+                    html: `<div class="text-center">
+                        <i class="bi bi-check-circle text-success display-1 mb-3"></i>
+                        <h4>Order #${res.data.order_id}</h4>
+                        <p class="fs-4">${formatCurrency(res.data.total)}</p>
+                    </div>`,
+                    icon: 'success',
+                    showCancelButton: true,
+                    confirmButtonText: 'Print Receipt',
+                    cancelButtonText: 'New Order',
+                    buttonsStyling: false,
+                    customClass: {
+                        confirmButton: 'btn btn-success btn-lg me-2',
+                        cancelButton: 'btn btn-outline-secondary btn-lg'
+                    },
                 });
-            } else { Swal.fire('Error', res.data.message||'Failed', 'error'); isProcessingOrder=false; btn.disabled=false; btn.innerHTML='<i class="bi bi-printer-fill me-2"></i><span>Charge</span><span class="pos-charge-total">' + (chargeBtnTotal ? chargeBtnTotal.textContent : '₦0.00') + '</span>'; }
+
+                if (result.isConfirmed) {
+                    const pw = window.open(`/pos/receipt/${res.data.order_id}`, '_blank');
+                    if (pw) {
+                        const interval = setInterval(() => {
+                            if (pw.closed) {
+                                clearInterval(interval);
+                                resetAfterOrder();
+                            }
+                        }, 500);
+                    } else {
+                        resetAfterOrder();
+                    }
+                } else {
+                    resetAfterOrder();
+                }
+            } else {
+                await Swal.fire('Error', res.data.message || 'Failed to complete order', 'error');
+                // Reset button state but keep cart
+                btn.disabled = false;
+                btn.innerHTML = originalBtnHTML;
+                isProcessingOrder = false;
+            }
         } catch (e) {
             Swal.close();
             let msg = 'Failed to complete order.';
-            if (e.response?.data?.errors) msg = Object.values(e.response.data.errors).flat().join('<br>');
-            else if (e.response?.data?.message) msg = e.response.data.message;
-            Swal.fire('Error', msg, 'error');
-            isProcessingOrder=false; btn.disabled=false;
-            btn.innerHTML='<i class="bi bi-printer-fill me-2"></i><span>Charge</span><span class="pos-charge-total">' + (chargeBtnTotal ? chargeBtnTotal.textContent : '₦0.00') + '</span>';
+            if (e.response?.data?.errors) {
+                msg = Object.values(e.response.data.errors).flat().join('<br>');
+            } else if (e.response?.data?.message) {
+                msg = e.response.data.message;
+            }
+            await Swal.fire('Error', msg, 'error');
+
+            // Reset button state
+            btn.disabled = false;
+            btn.innerHTML = originalBtnHTML;
+            isProcessingOrder = false;
         }
     }
 
@@ -1402,8 +1481,8 @@ document.addEventListener('DOMContentLoaded', function () {
     function resetAfterOrder(focusInput = true) {
         cart = [];
         productQuantityCache = {};
-        orderDiscountValue   = 0;
-        orderDiscountType    = 'percent';
+        orderDiscountValue = 0;
+        orderDiscountType = 'percent';
         discountValueEl.value = '0';
         discountTypeEl.value = 'percent';
 
@@ -1414,20 +1493,24 @@ document.addEventListener('DOMContentLoaded', function () {
         renderCartAndTotals();
         renderGrid();
 
-        // Explicitly reset the charge button total (double-check)
+        // Explicitly reset the charge button total
         if (chargeBtnTotal) {
             chargeBtnTotal.textContent = formatCurrency(0);
         }
 
-        // Reset the complete order button HTML to ensure it's clean
+        // Reset the complete order button - ensure it's enabled
         const chargeBtn = document.getElementById('completeOrder');
-        if (chargeBtn && !chargeBtn.disabled) {
+        if (chargeBtn) {
+            chargeBtn.disabled = false;
             chargeBtn.innerHTML = '<i class="bi bi-printer-fill me-2"></i><span>Charge</span><span class="pos-charge-total" id="chargeBtnTotal">₦0.00</span>';
         }
 
+        // Reset processing flag
+        isProcessingOrder = false;
+
         input.value = '';
         if (focusInput) input.focus();
-        showToast('New order started', 'info');
+        showToast('New order started', 'success');
     }
 
     // ── QUICK CUSTOMER ────────────────────────────────────────
