@@ -1125,8 +1125,11 @@ document.addEventListener('DOMContentLoaded', function () {
             emptyCartState.classList.remove('d-none');
             cartItemsWrap.classList.add('d-none');
             cartBody.innerHTML = '';
-            [subtotalEl, taxAmountEl, grandTotalEl].forEach(el => el.textContent = formatCurrency(0));
-            chargeBtnTotal.textContent = formatCurrency(0);
+            subtotalEl.textContent = formatCurrency(0);
+            taxAmountEl.textContent = formatCurrency(0);
+            grandTotalEl.textContent = formatCurrency(0);
+            // FIX: Reset charge button total when cart is empty
+            if (chargeBtnTotal) chargeBtnTotal.textContent = formatCurrency(0);
             document.getElementById('discountApplied').classList.add('d-none');
             window.currentDiscount = { type:'percent', value:0, amount:0 };
             return;
@@ -1208,7 +1211,8 @@ document.addEventListener('DOMContentLoaded', function () {
         subtotalEl.textContent     = formatCurrency(subtotal);
         taxAmountEl.textContent    = formatCurrency(taxAmt);
         grandTotalEl.textContent   = formatCurrency(grand);
-        chargeBtnTotal.textContent = formatCurrency(grand);
+        // FIX: Update charge button total
+        if (chargeBtnTotal) chargeBtnTotal.textContent = formatCurrency(grand);
 
         if (orderDiscountValue > 0) {
             document.getElementById('discountApplied').classList.remove('d-none');
@@ -1382,31 +1386,45 @@ document.addEventListener('DOMContentLoaded', function () {
                         else resetAfterOrder();
                     } else resetAfterOrder();
                 });
-            } else { Swal.fire('Error', res.data.message||'Failed', 'error'); }
+            } else { Swal.fire('Error', res.data.message||'Failed', 'error'); isProcessingOrder=false; btn.disabled=false; btn.innerHTML='<i class="bi bi-printer-fill me-2"></i><span>Charge</span><span class="pos-charge-total">' + (chargeBtnTotal ? chargeBtnTotal.textContent : '₦0.00') + '</span>'; }
         } catch (e) {
             Swal.close();
             let msg = 'Failed to complete order.';
             if (e.response?.data?.errors) msg = Object.values(e.response.data.errors).flat().join('<br>');
             else if (e.response?.data?.message) msg = e.response.data.message;
             Swal.fire('Error', msg, 'error');
-        } finally {
             isProcessingOrder=false; btn.disabled=false;
-            btn.innerHTML='<i class="bi bi-printer-fill me-2"></i><span>Charge</span><span class="pos-charge-total">' + grandTotalEl.textContent + '</span>';
+            btn.innerHTML='<i class="bi bi-printer-fill me-2"></i><span>Charge</span><span class="pos-charge-total">' + (chargeBtnTotal ? chargeBtnTotal.textContent : '₦0.00') + '</span>';
         }
     }
 
     // ── RESET AFTER ORDER ─────────────────────────────────────
-    // KEY OPTIMISATION: do NOT call loadInitialProducts() here.
-    // The registry already has all products. Just re-render from it.
     function resetAfterOrder(focusInput = true) {
         cart = [];
         productQuantityCache = {};
         orderDiscountValue   = 0;
+        orderDiscountType    = 'percent';
         discountValueEl.value = '0';
+        discountTypeEl.value = 'percent';
+
         // Clear search cache so stock counts stay fresh
         searchCache.clear();
+
+        // Force complete UI refresh
         renderCartAndTotals();
         renderGrid();
+
+        // Explicitly reset the charge button total (double-check)
+        if (chargeBtnTotal) {
+            chargeBtnTotal.textContent = formatCurrency(0);
+        }
+
+        // Reset the complete order button HTML to ensure it's clean
+        const chargeBtn = document.getElementById('completeOrder');
+        if (chargeBtn && !chargeBtn.disabled) {
+            chargeBtn.innerHTML = '<i class="bi bi-printer-fill me-2"></i><span>Charge</span><span class="pos-charge-total" id="chargeBtnTotal">₦0.00</span>';
+        }
+
         input.value = '';
         if (focusInput) input.focus();
         showToast('New order started', 'info');
