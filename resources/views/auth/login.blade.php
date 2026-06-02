@@ -2,26 +2,23 @@
 <html lang="en" data-layout="vertical" data-sidebar="dark" data-sidebar-size="lg" data-preloader="disable" data-theme="default" data-topbar="light" data-bs-theme="light">
 <head>
     <meta charset="utf-8">
-    <title>Sign In | {{ $storeName ?? 'Frost Hub' }}</title>
+    <title>Sign In | {{ $school->school_name ?? 'Vite-ESchool' }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta content="Smart Inventory Management POS" name="description">
+    <meta content="school App" name="description">
     <meta content="Themesbrand" name="author">
-
     @php
-        $store = \App\Models\StoreSetting::getSettings();
-        $storeName = $store?->store_name ?? 'Frost Hub';
+        $schoolInfo = App\Models\SchoolInformation::getActiveSchool();
     @endphp
-
-    <!-- App favicon -->
-    @if($store && $store->logo)
-        <link rel="shortcut icon" href="{{ $store->getLogoUrlAttribute() }}">
-        <link rel="icon" type="image/png" href="{{ $store->getLogoUrlAttribute() }}">
-        <link rel="apple-touch-icon" href="{{ $store->getLogoUrlAttribute() }}">
+     <!-- App favicon - Using School Logo -->
+    @if($schoolInfo && $schoolInfo->getLogoUrlAttribute())
+        <link rel="shortcut icon" href="{{ $schoolInfo->getLogoUrlAttribute() }}">
+        <link rel="icon" type="image/png" href="{{ $schoolInfo->getLogoUrlAttribute() }}">
+        <!-- Apple Touch Icon (for iOS) -->
+        <link rel="apple-touch-icon" href="{{ $schoolInfo->getLogoUrlAttribute() }}">
     @else
         <link rel="shortcut icon" href="{{ asset('theme/layouts/assets/images/favicon.ico') }}">
         <link rel="icon" type="image/png" href="{{ asset('theme/layouts/assets/images/logo-dark.png') }}">
     @endif
-
     <!-- Fonts css load -->
     <link rel="preconnect" href="https://fonts.googleapis.com/">
     <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin>
@@ -40,7 +37,7 @@
 
     <style>
         /* =====================================================
-           APPLE OS STYLE LOGIN PAGE FOR POS
+           APPLE OS STYLE LOGIN PAGE
            ===================================================== */
 
         /* Smooth page entrance animation */
@@ -123,11 +120,6 @@
         /* Page container animation */
         .auth-page-wrapper {
             animation: pageFadeInUp 0.6s cubic-bezier(0.2, 0.9, 0.4, 1.1) forwards;
-            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-        }
-
-        .dark .auth-page-wrapper {
-            background: linear-gradient(135deg, #0c4a6e 0%, #082f49 100%);
         }
 
         /* Card entrance animation */
@@ -366,9 +358,10 @@
             border-radius: 50%;
         }
 
-        .avatar-title i {
-            font-size: 24px;
-            color: white;
+        .avatar-title img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
         /* Tooltip styling */
@@ -381,8 +374,8 @@
             font-weight: 500;
         }
 
-        /* Store logo styling */
-        .store-login-logo {
+        /* School logo styling */
+        .school-login-logo {
             height: 55px;
             width: auto;
             border-radius: 14px;
@@ -390,7 +383,7 @@
             transition: transform 0.3s ease;
         }
 
-        .store-login-logo:hover {
+        .school-login-logo:hover {
             transform: scale(1.02);
         }
 
@@ -398,6 +391,22 @@
         .logo-container {
             text-align: center;
             margin-bottom: 20px;
+            animation: fadeInScale 0.5s ease;
+        }
+
+        /* No staff message styling */
+        .no-staff-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .no-staff-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
             animation: fadeInScale 0.5s ease;
         }
 
@@ -445,12 +454,33 @@
                 from { transform: rotate(0deg) translate(80px, 0) rotate(0deg); }
                 to { transform: rotate(-360deg) translate(80px, 0) rotate(360deg); }
             }
-            .store-login-logo { height: 40px; }
+            .school-login-logo { height: 40px; }
         }
     </style>
 </head>
 
 <body>
+    @php
+        use App\Models\SchoolInformation;
+        use App\Models\User;
+
+        $schoolInfo = SchoolInformation::getActiveSchool();
+
+        // Get recently active staff users (based on updated_at - last 7 days)
+        $recentStaff = User::whereHas('roles', function($query) {
+                $query->where('name', 'staff');
+            })
+            ->with(['staffPicture'])
+            ->where('updated_at', '>=', now()->subDays(7))
+            ->orderBy('updated_at', 'desc')
+            ->limit(5)
+            ->get();
+
+        if($recentStaff->isEmpty()) {
+            $recentStaff = collect([]);
+        }
+    @endphp
+
     <section class="auth-page-wrapper position-relative d-flex align-items-center justify-content-center min-vh-100">
         <div class="container">
             <div class="row justify-content-center">
@@ -461,65 +491,59 @@
                                 <div class="card auth-card bg-secondary h-100 border-0 shadow-none d-none d-sm-block mb-0">
                                     <div class="card-body py-5 d-flex justify-content-between flex-column">
                                         <div class="text-center">
-                                            <h3 class="text-white" style="animation: fadeInScale 0.6s ease;">Smart POS Management</h3>
-                                            <p class="text-white opacity-75 fs-base">Make your inventory operations SEAMLESS...</p>
+                                            <h3 class="text-white" style="animation: fadeInScale 0.6s ease;">Start your journey with us.</h3>
+                                            <p class="text-white opacity-75 fs-base">It makes school operations SEAMLESS...</p>
                                         </div>
 
                                         <div class="auth-effect-main my-5 position-relative rounded-circle d-flex align-items-center justify-content-center mx-auto">
                                             <div class="effect-circle-1 position-relative mx-auto rounded-circle d-flex align-items-center justify-content-center" style="animation: pulse 2s infinite;">
                                                 <div class="effect-circle-2 position-relative mx-auto rounded-circle d-flex align-items-center justify-content-center">
                                                     <div class="effect-circle-3 mx-auto rounded-circle position-relative text-white fs-4xl d-flex align-items-center justify-content-center" style="background: rgba(255,255,255,0.1); backdrop-filter: blur(4px);">
-                                                        @if($store && $store->logo)
-                                                            <img src="{{ $store->getLogoUrlAttribute() }}" alt="{{ $storeName }}" style="height: 60px; width: auto; border-radius: 12px;">
-                                                        @else
-                                                            <span class="text-primary ms-1" style="font-weight: 600;">{{ $storeName }}</span>
-                                                        @endif
+                                                        <span class="text-primary ms-1" style="font-weight: 600;">Vite-eSchool 1.1</span>
                                                     </div>
                                                 </div>
                                             </div>
 
                                             <ul class="auth-user-list list-unstyled">
-                                                <li>
-                                                    <div class="avatar-sm d-inline-block">
-                                                        <div class="avatar-title bg-white bg-opacity-20 shadow-lg overflow-hidden rounded-circle d-flex align-items-center justify-content-center">
-                                                            <i class="ri-user-3-fill fs-2xl text-white"></i>
-                                                        </div>
+                                                @if($recentStaff->isNotEmpty())
+                                                    @foreach($recentStaff as $index => $staff)
+                                                        <li style="animation-delay: {{ $index * 0.2 }}s;">
+                                                            <a href="javascript:void(0)"
+                                                               class="avatar-sm d-inline-block"
+                                                               data-bs-toggle="tooltip"
+                                                               data-bs-placement="top"
+                                                               title="{{ $staff->name }}"
+                                                               onclick="fillStaffCredentials('{{ $staff->email }}')">
+                                                                <div class="avatar-title bg-white shadow-lg overflow-hidden rounded-circle">
+                                                                    @php
+                                                                        $avatarUrl = $staff->avatar
+                                                                            ? asset('storage/staff_avatars/' . $staff->avatar)
+                                                                            : ($staff->staffPicture?->picture
+                                                                                ? asset('storage/staff_avatars/' . $staff->staffPicture->picture)
+                                                                                : asset('theme/layouts/assets/images/users/avatar-default.jpg'));
+                                                                    @endphp
+
+                                                                    <img src="{{ $avatarUrl }}"
+                                                                         alt="{{ $staff->name }}"
+                                                                         class="img-fluid"
+                                                                         style="width: 100%; height: 100%; object-fit: cover;"
+                                                                         onerror="this.onerror=null; this.src='{{ asset('theme/layouts/assets/images/users/avatar-default.jpg') }}'">
+                                                                </div>
+                                                            </a>
+                                                        </li>
+                                                    @endforeach
+                                                @else
+                                                    <div class="no-staff-message">
+                                                        <i class="ri-user-line no-staff-icon"></i>
+                                                        <p class="text-white opacity-75">No active staff</p>
                                                     </div>
-                                                </li>
-                                                <li>
-                                                    <div class="avatar-sm d-inline-block">
-                                                        <div class="avatar-title bg-white bg-opacity-20 shadow-lg overflow-hidden rounded-circle d-flex align-items-center justify-content-center">
-                                                            <i class="ri-user-smile-fill fs-2xl text-white"></i>
-                                                        </div>
-                                                    </div>
-                                                </li>
-                                                <li>
-                                                    <div class="avatar-sm d-inline-block">
-                                                        <div class="avatar-title bg-white bg-opacity-20 shadow-lg overflow-hidden rounded-circle d-flex align-items-center justify-content-center">
-                                                            <i class="ri-user-star-fill fs-2xl text-white"></i>
-                                                        </div>
-                                                    </div>
-                                                </li>
-                                                <li>
-                                                    <div class="avatar-sm d-inline-block">
-                                                        <div class="avatar-title bg-white bg-opacity-20 shadow-lg overflow-hidden rounded-circle d-flex align-items-center justify-content-center">
-                                                            <i class="ri-user-heart-fill fs-2xl text-white"></i>
-                                                        </div>
-                                                    </div>
-                                                </li>
-                                                <li>
-                                                    <div class="avatar-sm d-inline-block">
-                                                        <div class="avatar-title bg-white bg-opacity-20 shadow-lg overflow-hidden rounded-circle d-flex align-items-center justify-content-center">
-                                                            <i class="ri-user-settings-fill fs-2xl text-white"></i>
-                                                        </div>
-                                                    </div>
-                                                </li>
+                                                @endif
                                             </ul>
                                         </div>
 
                                         <div class="text-center">
                                             <p class="text-white opacity-75 mb-0 mt-3">
-                                                © <script>document.write(new Date().getFullYear())</script> {{ $storeName }}. Created with <i class="mdi mdi-heart text-danger"></i> by Qudroid Systems
+                                                © <script>document.write(new Date().getFullYear())</script> {{ $schoolInfo?->school_name ?? 'Vite-ESchool' }}. Created with <i class="mdi mdi-heart text-danger"></i> by Qudroid Systems
                                             </p>
                                         </div>
                                     </div>
@@ -530,23 +554,23 @@
                             <div class="col-xxl-6 mx-auto">
                                 <div class="card mb-0 border-0 shadow-none mb-0" style="background: transparent;">
                                     <div class="card-body p-sm-5 m-lg-4">
-                                        <!-- Store Logo on Login Form -->
+                                        <!-- School Logo on Login Form -->
                                         <div class="logo-container">
-                                            @if($store && $store->logo)
-                                                <img src="{{ $store->getLogoUrlAttribute() }}"
-                                                     alt="{{ $storeName }}"
-                                                     class="store-login-logo"
+                                            @if($schoolInfo?->school_logo)
+                                                <img src="{{ $schoolInfo->getLogoUrlAttribute() }}"
+                                                     alt="{{ $schoolInfo->school_name }}"
+                                                     class="school-login-logo"
                                                      onerror="this.onerror=null; this.src='{{ asset('theme/layouts/assets/images/logo-dark.png') }}'">
                                             @else
                                                 <img src="{{ asset('theme/layouts/assets/images/logo-dark.png') }}"
-                                                     alt="Store Logo"
-                                                     class="store-login-logo">
+                                                     alt="School Logo"
+                                                     class="school-login-logo">
                                             @endif
                                         </div>
 
                                         <div class="text-center mt-2">
-                                            <h5 class="fs-2xl fw-semibold" style="animation: fadeInScale 0.5s ease;">{{ $storeName }} Portal</h5>
-                                            <p class="text-muted">Sign in to continue to POS</p>
+                                            <h5 class="fs-2xl fw-semibold" style="animation: fadeInScale 0.5s ease;">{{ $schoolInfo?->school_name ?? 'TopClass College' }} Portal</h5>
+                                            <p class="text-muted">Sign in to continue</p>
                                         </div>
 
                                         <div class="p-2 mt-3">
@@ -637,7 +661,7 @@
 
     <script>
         // =====================================================
-        // APPLE OS STYLE LOGIN PAGE FOR POS
+        // APPLE OS STYLE LOGIN PAGE
         // =====================================================
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -758,17 +782,32 @@
                 });
             }
 
-            // Add loading state on form submit
-            if (loginForm && loginButton) {
-                loginForm.addEventListener('submit', function() {
-                    loginButton.classList.add('loading');
-                    const buttonSpan = loginButton.querySelector('span');
-                    if (buttonSpan) {
-                        buttonSpan.style.opacity = '0';
-                    }
-                });
-            }
+            // NOTE: We DO NOT add a submit event listener that prevents default
+            // Let the form submit naturally to Laravel's login route
         });
+
+        // Staff credential fill function
+        function fillStaffCredentials(email) {
+            const emailInput = document.getElementById('email');
+            const passwordInput = document.getElementById('password');
+
+            if (emailInput) {
+                emailInput.value = email;
+                emailInput.classList.remove('is-invalid');
+                emailInput.dispatchEvent(new Event('focus'));
+                emailInput.style.transition = 'all 0.3s ease';
+                emailInput.style.backgroundColor = '#e8f0fe';
+                setTimeout(() => {
+                    emailInput.style.backgroundColor = '';
+                }, 500);
+            }
+
+            if (passwordInput) {
+                passwordInput.focus();
+            }
+
+            showToast('Staff Selected', 'Email filled. Enter your password to continue.', 'info');
+        }
 
         // Toast notification function
         function showToast(title, message, type = 'info') {
