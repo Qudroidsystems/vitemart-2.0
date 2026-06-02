@@ -838,30 +838,34 @@
     <!-- SPOTLIGHT SEARCH JAVASCRIPT -->
     <script>
     (function () {
-        var STATIC_PAGES = [
-            { title: 'Dashboard', url: '{{ route("dashboard") }}', icon: 'mdi-gauge', category: 'Main' },
-            { title: 'Users', url: '{{ route("users.index") }}', icon: 'mdi-account-group', category: 'Users & Privileges' },
-            { title: 'Roles', url: '{{ route("roles.index") }}', icon: 'mdi-shield-account', category: 'Users & Privileges' },
-            { title: 'Permissions', url: '{{ route("permissions.index") }}', icon: 'mdi-lock', category: 'Users & Privileges' },
-            { title: 'Products', url: '{{ route("products.index") }}', icon: 'mdi-package-variant', category: 'Inventory' },
-            { title: 'Categories', url: '{{ route("categories.index") }}', icon: 'mdi-view-list', category: 'Inventory' },
-            { title: 'Brands', url: '{{ route("brands.index") }}', icon: 'mdi-tag', category: 'Inventory' },
-            { title: 'Banners', url: '{{ route("banners.index") }}', icon: 'mdi-image', category: 'Marketing' },
-            { title: 'POS', url: '{{ route("pos.index") }}', icon: 'mdi-cart', category: 'Sales' },
-            { title: 'Grid POS', url: '{{ route("pos.grid") }}', icon: 'mdi-cart', category: 'Sales' },
-            { title: 'Orders', url: '{{ route("orders.index") }}', icon: 'mdi-cart-check', category: 'Sales' },
-            { title: 'Customers', url: '{{ route("customers.index") }}', icon: 'mdi-account', category: 'Sales' },
-            { title: 'Inventory', url: '{{ route("inventory.index") }}', icon: 'mdi-warehouse', category: 'Inventory' },
-            { title: 'Stock Levels', url: '{{ route("inventory.stock-levels") }}', icon: 'mdi-chart-line', category: 'Inventory' },
-            { title: 'Stock Locations', url: '{{ route("stock-locations.index") }}', icon: 'mdi-map-marker', category: 'Inventory' },
-            { title: 'Low Stock Alerts', url: '{{ route("inventory.low-stock-alerts") }}', icon: 'mdi-alert', category: 'Inventory' },
-            { title: 'Sales', url: '{{ route("sales.index") }}', icon: 'mdi-chart-line', category: 'Sales' },
-            { title: 'Sales Person Dashboard', url: '{{ route("salesperson.dashboard") }}', icon: 'mdi-account-tie', category: 'Sales' },
-            { title: 'My Commissions', url: '{{ route("salesperson.commissions") }}', icon: 'mdi-cash-multiple', category: 'Sales' },
-            { title: 'Store Settings', url: '{{ route("settings.store.index") }}', icon: 'mdi-cog', category: 'Settings' },
-            { title: 'My Profile', url: '{{ route("user.overview", ["id" => Auth::id()]) }}', icon: 'mdi-account-circle', category: 'User' },
-        ];
 
+        var STATIC_PAGES = [
+                            { title: 'Dashboard', url: '{{ route("dashboard") }}', icon: 'mdi-gauge', category: 'Main' },
+                            { title: 'Users', url: '{{ route("users.index") }}', icon: 'mdi-account-group', category: 'Users & Privileges' },
+                            { title: 'Roles', url: '{{ route("roles.index") }}', icon: 'mdi-shield-account', category: 'Users & Privileges' },
+                            { title: 'Permissions', url: '{{ route("permissions.index") }}', icon: 'mdi-lock', category: 'Users & Privileges' },
+                            { title: 'Products', url: '{{ route("products.index") }}', icon: 'mdi-package-variant', category: 'Inventory' },
+                            { title: 'Categories', url: '{{ route("categories.index") }}', icon: 'mdi-view-list', category: 'Inventory' },
+                            { title: 'Brands', url: '{{ route("brands.index") }}', icon: 'mdi-tag', category: 'Inventory' },
+                            { title: 'Banners', url: '{{ route("banners.index") }}', icon: 'mdi-image', category: 'Marketing' },
+                            { title: 'POS', url: '{{ route("pos.index") }}', icon: 'mdi-cart', category: 'Sales' },
+                            { title: 'Grid POS', url: '{{ route("pos.grid") }}', icon: 'mdi-cart', category: 'Sales' },
+                            { title: 'Orders', url: '{{ route("orders.index") }}', icon: 'mdi-cart-check', category: 'Sales' },
+                            { title: 'Customers', url: '{{ route("customers.index") }}', icon: 'mdi-account', category: 'Sales' },
+                            { title: 'Inventory', url: '{{ route("inventory.index") }}', icon: 'mdi-warehouse', category: 'Inventory' },
+                            { title: 'Stock Levels', url: '{{ route("inventory.stock-levels") }}', icon: 'mdi-chart-line', category: 'Inventory' },
+                            { title: 'Stock Locations', url: '{{ route("stock-locations.index") }}', icon: 'mdi-map-marker', category: 'Inventory' },
+                            { title: 'Low Stock Alerts', url: '{{ route("inventory.low-stock-alerts") }}', icon: 'mdi-alert', category: 'Inventory' },
+                            { title: 'Sales', url: '{{ route("sales.index") }}', icon: 'mdi-chart-line', category: 'Sales' },
+                            { title: 'Sales Person Dashboard', url: '{{ route("salesperson.dashboard") }}', icon: 'mdi-account-tie', category: 'Sales' },
+                            { title: 'My Commissions', url: '{{ route("salesperson.commissions") }}', icon: 'mdi-cash-multiple', category: 'Sales' },
+                            { title: 'Store Settings', url: '{{ route("settings.store.index") }}', icon: 'mdi-cog', category: 'Settings' },
+                            @auth
+                            { title: 'My Profile', url: '{{ route("user.overview", Auth::user()) }}', icon: 'mdi-account-circle', category: 'User' },
+                            @else
+                            { title: 'My Profile', url: '#', icon: 'mdi-account-circle', category: 'User' },
+                            @endauth
+                        ];
         var CAT_COLORS = {
             'Main': '#4f8ef7', 'Users & Privileges': '#405189', 'Inventory': '#e76f51',
             'Marketing': '#2a9d8f', 'Sales': '#10b981', 'Settings': '#6a0572', 'User': '#e9c46a'
