@@ -2,114 +2,387 @@
 <html lang="en" data-layout="vertical" data-sidebar="dark" data-sidebar-size="lg" data-preloader="disable" data-theme="default" data-topbar="light" data-bs-theme="light">
 
 <head>
-
     <meta charset="utf-8">
-   <!-- Dynamic Title: Page Title | Supermarket Name -->
+    <!-- Dynamic Title -->
     @php
         $store = \App\Models\StoreSetting::getSettings();
         $pageTitle = $pagetitle ?? 'Dashboard';
-        $storeName = $store?->store_name ?? 'Supermarket';
+        $storeName = $store?->store_name ?? 'Frost Hub';
     @endphp
     <title>{{ $pageTitle }} | {{ $storeName }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta content="school management software" name="description">
-    <meta content="" name="author">
+    <meta content="Smart Inventory Management System" name="description">
+    <meta content="Qudroid Systems" name="author">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <!-- App favicon -->
-   <head>
-    <!-- Other meta tags, title, css, etc. -->
 
     <!-- Dynamic Favicon -->
-    @if($store?->logo)
+    @if($store && $store->logo)
         <link rel="shortcut icon" href="{{ $store->getLogoUrlAttribute() }}" type="image/png">
         <link rel="icon" href="{{ $store->getLogoUrlAttribute() }}" type="image/png">
         <link rel="apple-touch-icon" href="{{ $store->getLogoUrlAttribute() }}">
     @else
         <link rel="shortcut icon" href="{{ asset('theme/layouts/assets/images/favicon.ico') }}">
-        <link rel="icon" href="{{ asset('theme/layouts/assets/images/favicon.ico') }}">
-        <link rel="apple-touch-icon" href="{{ asset('theme/layouts/assets/images/favicon.ico') }}">
+        <link rel="icon" type="image/png" href="{{ asset('theme/layouts/assets/images/logo-dark.png') }}">
     @endif
 
-    <!-- Rest of head -->
-</head>
-
-    <!-- Fonts css load -->
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com/">
     <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin>
     <link id="fontsLink" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" rel="stylesheet">
     <link href="{{ asset('theme/layouts/assets/fonts/materialdesignicons-webfont.woff2') }}?v=6.5.95" rel="stylesheet" type="font/woff2">
+    <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.0.3/src/bold/style.css">
+
+    <!-- NProgress -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js"></script>
+
     <style>
+        /* =====================================================
+           NPROGRESS CUSTOM STYLE
+           ===================================================== */
+        #nprogress .bar {
+            background: #4f8ef7 !important;
+            height: 3px !important;
+            box-shadow: 0 0 8px rgba(79, 142, 247, 0.6) !important;
+        }
+        #nprogress .peg { box-shadow: none !important; }
+        #nprogress .spinner { display: none !important; }
+
+        /* =====================================================
+           PAGINATION
+           ===================================================== */
         .pagination-wrap .page-item { margin: 0 5px; }
         .pagination-wrap .page-link { padding: 5px 10px; }
         .pagination-wrap .active .page-link { background-color: #007bff; color: white; }
         .pagination-wrap .disabled .page-link { pointer-events: none; opacity: 0.5; }
-    </style>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 
-    <!-- CSS includes for different routes -->
+        /* =====================================================
+           LOADING SPINNER
+           ===================================================== */
+        .spin { animation: spin 1s linear infinite; }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* =====================================================
+           CHECKBOX
+           ===================================================== */
+        .form-check-input:checked { background-color: #405189; border-color: #405189; }
+
+        /* =====================================================
+           TABLE ROW HOVER
+           ===================================================== */
+        .table tbody tr {
+            transition: background-color 0.15s ease;
+        }
+        .table tbody tr:hover { background-color: rgba(67, 97, 238, 0.05); }
+
+        /* =====================================================
+           MODAL ANIMATIONS
+           ===================================================== */
+        .modal.fade .modal-dialog {
+            transform: translate(0, -50px);
+            transition: transform 0.3s ease-out;
+        }
+        .modal.show .modal-dialog { transform: translate(0, 0); }
+
+        /* =====================================================
+           SIDEBAR SCROLLBAR
+           ===================================================== */
+        #scrollbar { overflow-y: auto; }
+        #scrollbar::-webkit-scrollbar { width: 4px; }
+        #scrollbar::-webkit-scrollbar-track { background: transparent; }
+        #scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
+        #scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.28); }
+        .bg-light::-webkit-scrollbar { width: 6px; }
+        .bg-light::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        .bg-light::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        .bg-light::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        /* =====================================================
+           SIDEBAR: SMOOTH ACCORDION
+           ===================================================== */
+        #navbar-nav .menu-dropdown { overflow: hidden; }
+
+        /* Chevron rotation */
+        #navbar-nav .nav-link.menu-link .ri-arrow-down-s-line {
+            transition: transform 0.25s ease;
+            display: inline-block;
+        }
+        #navbar-nav .nav-link.menu-link[aria-expanded="true"] .ri-arrow-down-s-line {
+            transform: rotate(180deg);
+        }
+
+        /* =====================================================
+           SIDEBAR: ACTIVE PARENT ITEM
+           ===================================================== */
+        #navbar-nav .nav-link.menu-link.nav-active-parent {
+            color: #fff !important;
+            background: rgba(79, 142, 247, 0.18) !important;
+            border-left: 3px solid #4f8ef7;
+            padding-left: calc(1.3rem - 3px);
+        }
+        #navbar-nav .nav-link.menu-link.nav-active-parent i {
+            color: #4f8ef7 !important;
+        }
+
+        /* =====================================================
+           SIDEBAR: ACTIVE CHILD LINK
+           ===================================================== */
+        #navbar-nav .nav-sm .nav-link.nav-active-child {
+            color: #7eb8fb !important;
+            font-weight: 500;
+        }
+        #navbar-nav .nav-sm .nav-link.nav-active-child::before {
+            content: '';
+            display: inline-block;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #4f8ef7;
+            margin-right: 8px;
+            box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.25);
+            vertical-align: middle;
+            flex-shrink: 0;
+            animation: dotPop 0.25s ease;
+        }
+        @keyframes dotPop {
+            from { transform: scale(0); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        /* =====================================================
+           RIPPLE EFFECT ON NAV LINKS
+           ===================================================== */
+        #navbar-nav .nav-link {
+            position: relative;
+            overflow: hidden;
+            transition: color 0.18s ease, background-color 0.18s ease, padding-left 0.18s ease;
+        }
+        .nav-ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.18);
+            transform: scale(0);
+            animation: ripple-anim 0.55s linear;
+            pointer-events: none;
+            z-index: 0;
+        }
+        @keyframes ripple-anim {
+            to { transform: scale(5); opacity: 0; }
+        }
+
+        /* =====================================================
+           BACK TO TOP BUTTON
+           ===================================================== */
+        #back-to-top {
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(12px);
+            transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease;
+        }
+        #back-to-top.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        #back-to-top:hover {
+            transform: translateY(-3px) !important;
+        }
+
+        /* =====================================================
+           PAGE CONTENT FADE-IN
+           ===================================================== */
+        .page-content {
+            animation: pageFadeIn 0.35s ease;
+        }
+        @keyframes pageFadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* =====================================================
+           PROFILE AVATAR HOVER
+           ===================================================== */
+        .header-profile-user-enhanced {
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        .header-profile-user-enhanced:hover {
+            transform: scale(1.07);
+            box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.35) !important;
+        }
+
+        /* =====================================================
+           CARD HOVER LIFT
+           ===================================================== */
+        .card {
+            transition: box-shadow 0.25s ease, transform 0.25s ease;
+        }
+        .card:hover {
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        /* =====================================================
+           BUTTON MICRO-INTERACTION
+           ===================================================== */
+        .btn {
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        /* =====================================================
+           MENU TITLE FADE-IN (stagger)
+           ===================================================== */
+        #navbar-nav > li {
+            animation: navItemFadeIn 0.4s ease both;
+        }
+        #navbar-nav > li:nth-child(1)  { animation-delay: 0.02s; }
+        #navbar-nav > li:nth-child(2)  { animation-delay: 0.04s; }
+        #navbar-nav > li:nth-child(3)  { animation-delay: 0.06s; }
+        #navbar-nav > li:nth-child(4)  { animation-delay: 0.08s; }
+        #navbar-nav > li:nth-child(5)  { animation-delay: 0.10s; }
+        #navbar-nav > li:nth-child(6)  { animation-delay: 0.12s; }
+        #navbar-nav > li:nth-child(7)  { animation-delay: 0.14s; }
+        #navbar-nav > li:nth-child(8)  { animation-delay: 0.16s; }
+        #navbar-nav > li:nth-child(9)  { animation-delay: 0.18s; }
+        #navbar-nav > li:nth-child(10) { animation-delay: 0.20s; }
+        @keyframes navItemFadeIn {
+            from { opacity: 0; transform: translateX(-8px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* =====================================================
+           DROPDOWN MENU ANIMATION
+           ===================================================== */
+        .dropdown-menu {
+            animation: dropdownFadeIn 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-origin: top right;
+        }
+        @keyframes dropdownFadeIn {
+            from { opacity: 0; transform: translateY(-15px) scale(0.96); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .topbar-user .dropdown-menu {
+            animation: userDropdownSlideIn 0.4s cubic-bezier(0.34, 1.2, 0.64, 1);
+        }
+        @keyframes userDropdownSlideIn {
+            from { opacity: 0; transform: translateY(-20px) scale(0.94); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* =====================================================
+           PRINT STYLES
+           ===================================================== */
+        @media print {
+            .no-print { display: none !important; }
+            body { padding: 0; margin: 0; }
+        }
+
+        /* =====================================================
+           SPOTLIGHT SEARCH ENHANCED ANIMATIONS
+           ===================================================== */
+        @keyframes spotlightOverlayFadeIn {
+            from { background: rgba(0, 0, 0, 0.2); backdrop-filter: blur(0px); }
+            to { background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(8px); }
+        }
+        @keyframes spotlightOverlayFadeOut {
+            from { background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(8px); }
+            to { background: rgba(0, 0, 0, 0.2); backdrop-filter: blur(0px); }
+        }
+        @keyframes spotlightModalBounceIn {
+            0% { opacity: 0; transform: translateY(-40px) scale(0.9); }
+            40% { opacity: 0.8; transform: translateY(8px) scale(1.02); }
+            70% { opacity: 0.95; transform: translateY(-3px) scale(0.99); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes resultBounceIn {
+            0% { opacity: 0; transform: translateX(-20px) scale(0.95); }
+            60% { opacity: 0.8; transform: translateX(4px) scale(1.02); }
+            100% { opacity: 1; transform: translateX(0) scale(1); }
+        }
+        @keyframes loadingSpin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes typingDot {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+            30% { transform: translateY(-4px); opacity: 1; }
+        }
+
+        .spotlight-result-item {
+            animation: resultBounceIn 0.35s cubic-bezier(0.34, 1.3, 0.64, 1) forwards;
+            opacity: 0;
+        }
+        .spotlight-result-item:nth-child(1) { animation-delay: 0.00s; }
+        .spotlight-result-item:nth-child(2) { animation-delay: 0.03s; }
+        .spotlight-result-item:nth-child(3) { animation-delay: 0.06s; }
+        .spotlight-result-item.top-match {
+            animation: resultBounceIn 0.4s cubic-bezier(0.34, 1.3, 0.64, 1) forwards;
+            border-left: 3px solid #4f8ef7;
+            background: linear-gradient(90deg, rgba(79, 142, 247, 0.08) 0%, transparent 100%);
+        }
+
+        .typing-dot {
+            display: inline-block;
+            animation: typingDot 1.4s infinite ease-in-out;
+        }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    </style>
+
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- Route-specific CSS includes -->
     @if (Route::is('dashboard'))
         @include('layouts.pages-assets.css.users-list-css')
     @endif
-
     @if (Route::is('users.*'))
         @include('layouts.pages-assets.css.users-list-css')
     @endif
-
-     @if (Route::is('user.*'))
-        @include('layouts.pages-assets.css.users-list-css')
-    @endif
-
     @if (Route::is('roles.*'))
         @include('layouts.pages-assets.css.roles-list-css')
     @endif
-
     @if (Route::is('permissions.*'))
         @include('layouts.pages-assets.css.permission-list-css')
     @endif
-
     @if (Route::is('brands.*'))
         @include('layouts.pages-assets.css.users-list-css')
     @endif
-
     @if (Route::is('categories.*'))
         @include('layouts.pages-assets.css.users-list-css')
     @endif
-
     @if (Route::is('banners.*'))
         @include('layouts.pages-assets.css.users-list-css')
     @endif
-
     @if (Route::is('products.*'))
         @include('layouts.pages-assets.css.users-list-css')
     @endif
-
     @if (Route::is('pos.*'))
         @include('layouts.pages-assets.css.users-list-css')
     @endif
-
     @if (Route::is('inventory.*') || Route::is('stock-locations.*'))
-         @include('layouts.pages-assets.css.users-list-css')
+        @include('layouts.pages-assets.css.users-list-css')
     @endif
-
-     @if (Route::is('orders.*'))
-         @include('layouts.pages-assets.css.users-list-css')
+    @if (Route::is('orders.*'))
+        @include('layouts.pages-assets.css.users-list-css')
     @endif
-
     @if (Route::is('customers.*'))
-         @include('layouts.pages-assets.css.users-list-css')
+        @include('layouts.pages-assets.css.users-list-css')
     @endif
-
-   @if (Route::is('settings.store.*'))
-         @include('layouts.pages-assets.css.users-list-css')
+    @if (Route::is('settings.store.*'))
+        @include('layouts.pages-assets.css.users-list-css')
     @endif
-
-     @if (Route::is('sales.*'))
-         @include('layouts.pages-assets.css.users-list-css')
+    @if (Route::is('sales.*'))
+        @include('layouts.pages-assets.css.users-list-css')
     @endif
-
     @if (Route::is('salesperson.*'))
-         @include('layouts.pages-assets.css.users-list-css')
+        @include('layouts.pages-assets.css.users-list-css')
     @endif
 </head>
 
@@ -122,40 +395,40 @@
         <div class="app-menu navbar-menu">
             <!-- LOGO -->
             <div class="navbar-brand-box">
-               <!-- Replace the old static logo with this dynamic one -->
-<a href="{{ route('dashboard') }}" class="logo logo-dark">
-    <span class="logo-sm">
-        @if($store?->logo)
-            <img src="{{ $store->getLogoUrlAttribute() }}" alt="{{ $storeName }} Logo" height="22">
-        @else
-            <img src="{{ asset('theme/layouts/assets/images/logo-sm.png') }}" alt="Default Logo" height="22">
-        @endif
-    </span>
-    <span class="logo-lg">
-        @if($store?->logo)
-            <img src="{{ $store->getLogoUrlAttribute() }}" alt="{{ $storeName }} Logo" height="60">
-        @else
-            <img src="{{ asset('theme/layouts/assets/images/logo-dark.png') }}" alt="Default Logo" height="60">
-        @endif
-    </span>
-</a>
+                <a href="{{ route('dashboard') }}" class="logo logo-dark">
+                    <span class="logo-sm">
+                        @if($store && $store->logo)
+                            <img src="{{ $store->getLogoUrlAttribute() }}" alt="{{ $storeName }}" height="22">
+                        else
+                            <img src="{{ asset('theme/layouts/assets/images/logo-sm.png') }}" alt="Logo" height="22">
+                        @endif
+                    </span>
+                    <span class="logo-lg">
+                        @if($store && $store->logo)
+                            <img src="{{ $store->getLogoUrlAttribute() }}" alt="{{ $storeName }}" height="60">
+                        else
+                            <img src="{{ asset('theme/layouts/assets/images/logo-dark.png') }}" alt="Logo" height="60">
+                        @endif
+                    </span>
+                </a>
 
-<a href="{{ route('dashboard') }}" class="logo logo-light">
-    <span class="logo-sm">
-        @if($store?->logo)
-            <img src="{{ $store->getLogoUrlAttribute() }}" alt="{{ $storeName }} Logo" height="22">
-        @else
-            <img src="{{ asset('theme/layouts/assets/images/logo-sm.png') }}" alt="Default Logo" height="60">
-        @endif
-    </span>
-    <span class="logo-lg">
-        @if($store?->logo)
-            <img src="{{ $store->getLogoUrlAttribute() }}" alt="{{ $storeName }} Logo" height="60">
-        @else
-            <img src="{{ asset('theme/layouts/assets/images/logo-light.png') }}" alt="Default Logo" height="60">
-        @endif
-    </span>
-</a>
+                <a href="{{ route('dashboard') }}" class="logo logo-light">
+                    <span class="logo-sm">
+                        @if($store && $store->logo)
+                            <img src="{{ $store->getLogoUrlAttribute() }}" alt="{{ $storeName }}" height="22">
+                        else
+                            <img src="{{ asset('theme/layouts/assets/images/logo-sm.png') }}" alt="Logo" height="22">
+                        @endif
+                    </span>
+                    <span class="logo-lg">
+                        @if($store && $store->logo)
+                            <img src="{{ $store->getLogoUrlAttribute() }}" alt="{{ $storeName }}" height="60">
+                        else
+                            <img src="{{ asset('theme/layouts/assets/images/logo-light.png') }}" alt="Logo" height="60">
+                        @endif
+                    </span>
+                </a>
+
                 <button type="button" class="btn btn-sm p-0 fs-3xl header-item float-end btn-vertical-sm-hover" id="vertical-hover">
                     <i class="ri-record-circle-line"></i>
                 </button>
@@ -163,428 +436,67 @@
 
             <div id="scrollbar">
                 <div class="container-fluid">
-
-                    <div id="two-column-menu">
-                    </div>
+                    <div id="two-column-menu"></div>
                     <ul class="navbar-nav" id="navbar-nav">
-
-                        <li class="menu-title"><span data-key="t-menu">Menu</span></li>
-                        <li class="nav-item">
-                            <a class="nav-link menu-link collapsed " href="#sidebarDashboards" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarDashboards">
-                                <i class="ph-gauge"></i> <span data-key="t-dashboards">Dashboards</span>
-                            </a>
-                            <div class="collapse menu-dropdown" id="sidebarDashboards">
-                                <ul class="nav nav-sm flex-column">
-                                    @can('dashboard')
-                                        <li class="nav-item">
-                                            <a href="{{ route('dashboard') }}" class="nav-link" data-key="t-analytics"> Administration Analytics </a>
-                                        </li>
-                                    @endcan
-                                    @can('finance dashboard')
-                                        <li class="nav-item">
-                                            <a href="dashboard-crm.html" class="nav-link" data-key="t-crm"> Finance Analytics</a>
-                                        </li>
-                                    @endcan
-                                    @can('academics dashboard')
-                                        <li class="nav-item">
-                                            <a href="index.html" class="nav-link" data-key="t-ecommerce"> Academics Analytics </a>
-                                        </li>
-                                    @endcan
-
-                                    <!-- Inventory Dashboard -->
-                                    @can('View inventory dashboard|View inventory')
-                                        <li class="nav-item">
-                                            <a href="{{ route('inventory.dashboard') }}" class="nav-link" data-key="t-inventory"> Inventory Dashboard </a>
-                                        </li>
-                                    @endcan
-                                </ul>
-                            </div>
-                        </li>
-
-
-                        <li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-pages">USERS & PRIVILEDGES</span></li>
-
-                        @can('View user')
-                            <li class="nav-item">
-                                <a class="nav-link menu-link collapsed" href="#sidebarusers" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarAuth">
-                                    <i class="ph-user-circle"></i> <span data-key="t-authentication">User Managements</span>
-                                </a>
-                                <div class="collapse menu-dropdown" id="sidebarusers">
-                                    <ul class="nav nav-sm flex-column">
-                                        <li class="nav-item">
-                                            <a href="{{ route('users.index') }}" class="nav-link" role="button" data-key="t-signin"> Users </a>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </li>
-                        @endcan
-
-                        @can('View role')
-                            <li class="nav-item">
-                                <a class="nav-link menu-link collapsed" href="#sidebarroles" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarPages">
-                                    <i class="ph-address-book"></i> <span data-key="t-pages">Roles And Permissions</span>
-                                </a>
-                                <div class="collapse menu-dropdown" id="sidebarroles">
-                                    <ul class="nav nav-sm flex-column">
-                                        @can('View role')
-                                            <li class="nav-item">
-                                                <a href="{{ route('roles.index') }}" class="nav-link" data-key="t-starter"> Roles </a>
-                                            </li>
-                                        @endcan
-                                        @can('View permission')
-                                            <li class="nav-item">
-                                                <a href="{{ route('permissions.index') }}" class="nav-link" data-key="t-profile"> Permissions </a>
-                                            </li>
-                                        @endcan
-                                    </ul>
-                                </div>
-                            </li>
-                        @endcan
-
-
-                        <li class="nav-item">
-                            <a class="nav-link menu-link collapsed" href="#sidebaraccount" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebaraccoun">
-                                <i class="ph-address-book"></i> <span data-key="t-pages">User Account</span>
-                            </a>
-                            <div class="collapse menu-dropdown" id="sidebaraccount">
-                                <ul class="nav nav-sm flex-column">
-                                    <li class="nav-item">
-                                        <a href="{{ auth()->user() ? route('user.overview', auth()->id()) : '#' }}" class="nav-link" data-key="t-starter"> My Account </a>
-                                    </li>
-                                </ul>
-                            </div>
-                        </li>
-
-                        <li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-pages">INVENTORY MANAGEMENT</span></li>
-
-                        @can('View banner')
-                            <li class="nav-item">
-                                <a class="nav-link menu-link collapsed" href="#sidebarbanner" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarbanner">
-                                    <i class="ph-user-circle"></i> <span data-key="t-authentication">Banner Managements</span>
-                                </a>
-                                <div class="collapse menu-dropdown" id="sidebarbanner">
-                                    <ul class="nav nav-sm flex-column">
-                                        <li class="nav-item">
-                                            <a href="{{ route('banners.index') }}" class="nav-link" role="button" data-key="t-signin"> Banner </a>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </li>
-                        @endcan
-
-                        @can('View category')
-                            <li class="nav-item">
-                                <a class="nav-link menu-link collapsed" href="#sidebarcategories" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarcategories">
-                                    <i class="ph-user-circle"></i> <span data-key="t-authentication">Category Managements</span>
-                                </a>
-                                <div class="collapse menu-dropdown" id="sidebarcategories">
-                                    <ul class="nav nav-sm flex-column">
-                                        <li class="nav-item">
-                                            <a href="{{ route('categories.index') }}" class="nav-link" role="button" data-key="t-signin"> Category </a>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </li>
-                        @endcan
-
-                        @can('View brand')
-                            <li class="nav-item">
-                                <a class="nav-link menu-link collapsed" href="#sidebarbrand" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarbrand">
-                                    <i class="ph-user-circle"></i> <span data-key="t-authentication">Brand Managements</span>
-                                </a>
-                                <div class="collapse menu-dropdown" id="sidebarbrand">
-                                    <ul class="nav nav-sm flex-column">
-                                        <li class="nav-item">
-                                            <a href="{{ route('brands.index') }}" class="nav-link" role="button" data-key="t-signin"> Brand </a>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </li>
-                        @endcan
-
-                        @can('View product')
-                            <li class="nav-item">
-                                <a class="nav-link menu-link collapsed" href="#sidebarproduct" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarproduct">
-                                    <i class="ph-user-circle"></i> <span data-key="t-authentication">Product Managements</span>
-                                </a>
-                                <div class="collapse menu-dropdown" id="sidebarproduct">
-                                    <ul class="nav nav-sm flex-column">
-                                        <li class="nav-item">
-                                            <a href="{{ route('products.index') }}" class="nav-link" role="button" data-key="t-signin"> Product </a>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </li>
-                        @endcan
-
-                        @can('View pos')
-                            <li class="nav-item">
-                                <a class="nav-link menu-link collapsed" href="#sidebarpos" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarpos">
-                                    <i class="ph-user-circle"></i> <span data-key="t-authentication">Pos Managements</span>
-                                </a>
-                                <div class="collapse menu-dropdown" id="sidebarpos">
-                                    <ul class="nav nav-sm flex-column">
-                                        <li class="nav-item">
-                                            <a href="{{ route('pos.index') }}" class="nav-link" role="button" data-key="t-signin"> POS</a>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </li>
-                        @endcan
-
-                        <!-- =========================================== -->
-                        <!-- INVENTORY MANAGEMENT MENU -->
-                        <!-- =========================================== -->
-
-                        @can('View inventory')
-                            <li class="nav-item">
-                                <a class="nav-link menu-link collapsed" href="#sidebarmanageinventory" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarmanageinventory">
-                                    <i class="ph-user-circle"></i> <span data-key="t-authentication">Inventory Management</span>
-                                </a>
-                                <div class="collapse menu-dropdown" id="sidebarmanageinventory">
-                                    <ul class="nav nav-sm flex-column">
-                                        @can('View inventory')
-                                            <li class="nav-item">
-                                                <a href="{{ route('inventory.index') }}" class="nav-link" role="button" data-key="t-signin"> Transactions </a>
-                                            </li>
-                                        @endcan
-
-                                        @can('View stock levels')
-                                            <li class="nav-item">
-                                                <a href="{{ route('inventory.stock-levels') }}" class="nav-link" role="button" data-key="t-signin"> Stock Levels </a>
-                                            </li>
-                                        @endcan
-
-                                        @can('Manage stock locations')
-                                            <li class="nav-item">
-                                                <a href="{{ route('stock-locations.index') }}" class="nav-link" role="button" data-key="t-signin"> Stock Locations </a>
-                                            </li>
-                                        @endcan
-
-                                        @can('View inventory reports')
-                                            <li class="nav-item">
-                                                <a href="{{ route('inventory.stock-value-report') }}" class="nav-link" role="button" data-key="t-signin"> Stock Value Report </a>
-                                            </li>
-                                        @endcan
-
-                                        @can('View low stock alerts')
-                                            <li class="nav-item">
-                                                <a href="{{ route('inventory.low-stock-alerts') }}" class="nav-link" role="button" data-key="t-signin"> Low Stock Alerts </a>
-                                            </li>
-                                        @endcan
-
-                                         @can('View sale')
-                                            <li class="nav-item">
-                                                <a href="{{ route('sales.index') }}" class="nav-link" role="button" data-key="t-signin"> Sales Management </a>
-                                            </li>
-                                        @endcan
-
-                                        @can('View personal sales dashboard')
-                                            <li class="nav-item">
-                                                <a href="{{ route('salesperson.dashboard') }}" class="nav-link" role="button" data-key="t-signin"> Sales Person Management </a>
-                                            </li>
-                                        @endcan
-                                    </ul>
-                                </div>
-                            </li>
-                        @endcan
-
-                        <!-- =========================================== -->
-                        <!-- PRODUCT REVIEWS MENU -->
-                        <!-- =========================================== -->
-
-                        @can('View review')
-                            {{-- <li class="nav-item">
-                                <a class="nav-link menu-link collapsed" href="#sidebarreviews" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarreviews">
-                                    <i class="ph-star"></i> <span data-key="t-authentication">Reviews Management</span>
-                                </a>
-                                <div class="collapse menu-dropdown" id="sidebarreviews">
-                                    <ul class="nav nav-sm flex-column">
-                                        <li class="nav-item">
-                                            <a href="{{ route('reviews.index') }}" class="nav-link" role="button" data-key="t-signin"> Product Reviews </a>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </li> --}}
-                        @endcan
-
-                         @can('View order')
-                            <li class="nav-item">
-                                <a class="nav-link menu-link collapsed" href="#sidebarorders" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarorders">
-                                    <i class="ph-star"></i> <span data-key="t-authentication">Orders Management</span>
-                                </a>
-                                <div class="collapse menu-dropdown" id="sidebarorders">
-                                    <ul class="nav nav-sm flex-column">
-                                        <li class="nav-item">
-                                            <a href="{{ route('orders.index') }}" class="nav-link" role="button" data-key="t-signin"> Orders </a>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </li>
-                        @endcan
-
-                        @can('View customer')
-                            <li class="nav-item">
-                                <a class="nav-link menu-link collapsed" href="#sidebarcustomer" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarcustomer">
-                                    <i class="ph-star"></i> <span data-key="t-authentication">Customers Management</span>
-                                </a>
-                                <div class="collapse menu-dropdown" id="sidebarcustomer">
-                                    <ul class="nav nav-sm flex-column">
-                                        <li class="nav-item">
-                                            <a href="{{ route('customers.index') }}" class="nav-link" role="button" data-key="t-signin"> Customers </a>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </li>
-                        @endcan
-
-                        <li class="menu-title"><span data-key="t-menu">Settings</span></li>
-                        @can('View store setting')
-                            <li class="nav-item">
-                                <a class="nav-link menu-link collapsed" href="#sidebarsetting" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarsetting">
-                                    <i class="ph-star"></i> <span data-key="t-authentication">Store Settings Management</span>
-                                </a>
-                                <div class="collapse menu-dropdown" id="sidebarsetting">
-                                    <ul class="nav nav-sm flex-column">
-                                        <li class="nav-item">
-                                            <a href="{{ route('settings.store.index') }}" class="nav-link" role="button" data-key="t-signin"> Store Settings </a>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </li>
-                        @endcan
+                        @yield('sidebar')
                     </ul>
                 </div>
-                <!-- Sidebar -->
             </div>
-
             <div class="sidebar-background"></div>
         </div>
-<!-- Left Sidebar End -->
-<!-- Vertical Overlay-->
-<div class="vertical-overlay"></div>
+        <!-- Left Sidebar End -->
 
+        <div class="vertical-overlay"></div>
+
+        <!-- ========== Header ========== -->
         <header id="page-topbar">
             <div class="layout-width">
                 <div class="navbar-header">
                     <div class="d-flex">
-                        <!-- LOGO -->
                         <div class="navbar-brand-box horizontal-logo">
-                            <a href="index.html" class="logo logo-dark">
+                            <a href="{{ route('dashboard') }}" class="logo logo-dark">
                                 <span class="logo-sm">
-                                    <img src="{{ asset('theme/layouts/assets/images/logo-sm.png')}}" alt="" height="22">
+                                    <img src="{{ asset('theme/layouts/assets/images/logo-sm.png') }}" alt="" height="22">
                                 </span>
                                 <span class="logo-lg">
-                                    <img src="{{ asset('theme/layouts/assets/images/logo-dark.png')}}" alt="" height="22">
+                                    <img src="{{ asset('theme/layouts/assets/images/logo-dark.png') }}" alt="" height="22">
                                 </span>
                             </a>
-
-                            <a href="index.html" class="logo logo-light">
+                            <a href="{{ route('dashboard') }}" class="logo logo-light">
                                 <span class="logo-sm">
-                                    <img src="{{ asset('theme/layouts/assets/images/logo-sm.png')}}" alt="" height="22">
+                                    <img src="{{ asset('theme/layouts/assets/images/logo-sm.png') }}" alt="" height="22">
                                 </span>
                                 <span class="logo-lg">
-                                    <img src="{{ asset('theme/layouts/assets/images/logo-light.png')}}" alt="" height="22">
+                                    <img src="{{ asset('theme/layouts/assets/images/logo-light.png') }}" alt="" height="22">
                                 </span>
                             </a>
                         </div>
 
                         <button type="button" class="btn btn-sm px-3 fs-16 header-item vertical-menu-btn topnav-hamburger shadow-none" id="topnav-hamburger-icon">
-                            <span class="hamburger-icon">
-                                <span></span>
-                                <span></span>
-                                <span></span>
-                            </span>
+                            <span class="hamburger-icon"><span></span><span></span><span></span></span>
                         </button>
 
-                        <form class="app-search d-none d-md-inline-flex">
-                            <div class="position-relative">
-                                <input type="text" class="form-control" placeholder="Search..." autocomplete="off" id="search-options" value="">
-                                <span class="mdi mdi-magnify search-widget-icon"></span>
-                                <span class="mdi mdi-close-circle search-widget-icon search-widget-icon-close d-none" id="search-close-options"></span>
-                            </div>
-                            <div class="dropdown-menu dropdown-menu-lg" id="search-dropdown">
-                                <div data-simplebar style="max-height: 320px;">
-                                    <!-- item-->
-                                    <div class="dropdown-header">
-                                        <h6 class="text-overflow text-muted mb-0 text-uppercase">Recent Searches</h6>
-                                    </div>
-
-                                    <div class="dropdown-item bg-transparent text-wrap">
-                                        <a href="index.html" class="btn btn-subtle-secondary btn-sm btn-rounded">how to setup <i class="mdi mdi-magnify ms-1"></i></a>
-                                        <a href="index.html" class="btn btn-subtle-secondary btn-sm btn-rounded">buttons <i class="mdi mdi-magnify ms-1"></i></a>
-                                    </div>
-                                    <!-- item-->
-                                    <div class="dropdown-header mt-2">
-                                        <h6 class="text-overflow text-muted mb-1 text-uppercase">Pages</h6>
-                                    </div>
-
-                                    <!-- item-->
-                                    <a href="javascript:void(0);" class="dropdown-item notify-item">
-                                        <i class="ri-bubble-chart-line align-middle fs-18 text-muted me-2"></i>
-                                        <span>Analytics Dashboard</span>
-                                    </a>
-
-                                    <!-- item-->
-                                    <a href="javascript:void(0);" class="dropdown-item notify-item">
-                                        <i class="ri-lifebuoy-line align-middle fs-18 text-muted me-2"></i>
-                                        <span>Help Center</span>
-                                    </a>
-
-                                    <!-- item-->
-                                    <a href="javascript:void(0);" class="dropdown-item notify-item">
-                                        <i class="ri-user-settings-line align-middle fs-18 text-muted me-2"></i>
-                                        <span>My account settings</span>
-                                    </a>
-
-                                    <!-- item-->
-                                    <div class="dropdown-header mt-2">
-                                        <h6 class="text-overflow text-muted mb-2 text-uppercase">Members</h6>
-                                    </div>
-
-                                    <div class="notification-list">
-                                        <!-- item -->
-                                        <a href="javascript:void(0);" class="dropdown-item notify-item py-2">
-                                            <div class="d-flex">
-                                                <img src="assets/images/users/avatar-2.jpg" class="me-3 rounded-circle avatar-xs" alt="user-pic">
-                                                <div class="flex-1">
-                                                    <h6 class="m-0">Angela Bernier</h6>
-                                                    <span class="fs-11 mb-0 text-muted">Manager</span>
-                                                </div>
-                                            </div>
-                                        </a>
-                                        <!-- item -->
-                                        <a href="javascript:void(0);" class="dropdown-item notify-item py-2">
-                                            <div class="d-flex">
-                                                <img src="assets/images/users/avatar-3.jpg" class="me-3 rounded-circle avatar-xs" alt="user-pic">
-                                                <div class="flex-1">
-                                                    <h6 class="m-0">David Grasso</h6>
-                                                    <span class="fs-11 mb-0 text-muted">Web Designer</span>
-                                                </div>
-                                            </div>
-                                        </a>
-                                        <!-- item -->
-                                        <a href="javascript:void(0);" class="dropdown-item notify-item py-2">
-                                            <div class="d-flex">
-                                                <img src="assets/images/users/avatar-5.jpg" class="me-3 rounded-circle avatar-xs" alt="user-pic">
-                                                <div class="flex-1">
-                                                    <h6 class="m-0">Mike Bunch</h6>
-                                                    <span class="fs-11 mb-0 text-muted">React Developer</span>
-                                                </div>
-                                            </div>
-                                        </a>
-                                    </div>
+                        <!-- SPOTLIGHT SEARCH TRIGGER BUTTON -->
+                        <div class="d-none d-md-inline-flex align-items-center" style="position:relative;">
+                            <button type="button"
+                                    id="spotlight-trigger"
+                                    style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:10px; padding:7px 14px; cursor:pointer; transition:all 0.2s ease; min-width:220px;">
+                                <i class="mdi mdi-magnify" style="font-size:16px; opacity:0.6;"></i>
+                                <span style="font-size:13px; opacity:0.55; flex:1; text-align:left;">Search everything…</span>
+                                <div style="display:flex; gap:4px;">
+                                    <kbd style="font-size:10px; padding:2px 6px; border-radius:4px; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.2); opacity:0.7;">⌘</kbd>
+                                    <kbd style="font-size:10px; padding:2px 6px; border-radius:4px; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.2); opacity:0.7;">K</kbd>
                                 </div>
-
-                                <div class="text-center pt-3 pb-1">
-                                    <a href="#" class="btn btn-primary btn-sm">View All Results <i class="ri-arrow-right-line ms-1"></i></a>
-                                </div>
+                            </button>
+                            <div class="search-tooltip"
+                                 style="position:absolute; bottom:-35px; left:0; background:rgba(0,0,0,0.85); color:#fff; font-size:11px; padding:4px 10px; border-radius:6px; white-space:nowrap; opacity:0; transition:opacity 0.2s; pointer-events:none; z-index:100; backdrop-filter:blur(4px);">
+                                Press <kbd style="background:rgba(255,255,255,0.2); padding:2px 5px; border-radius:4px; margin:0 2px;">⌘K</kbd> or
+                                <kbd style="background:rgba(255,255,255,0.2); padding:2px 5px; border-radius:4px; margin:0 2px;">Ctrl+K</kbd> to search
                             </div>
-                        </form>
+                        </div>
                     </div>
 
                     <div class="d-flex align-items-center">
-
                         <div class="dropdown topbar-head-dropdown ms-1 header-item">
                             <button type="button" class="btn btn-icon btn-topbar btn-ghost-dark rounded-circle mode-layout" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                 <i class="bi bi-sun align-middle fs-3xl"></i>
@@ -601,24 +513,17 @@
                                 <span class="d-flex align-items-center">
                                     @php
                                         use App\Models\User;
-                                        $userdata = User::find(Auth::id());
+                                        $userdata = Auth::user();
                                     @endphp
 
-                                    <?php
-                                        $image = "unnamed.png";
-                                        if ($userdata && $userdata->avatar) {
-                                            $image = $userdata->avatar;
-                                        }
-                                    ?>
-
                                     @if($userdata)
-                                        <img class="rounded-circle header-profile-user" src="{{ asset('storage/' . $userdata->profile_image) }}"  alt="{{ $userdata->name }}">
+                                        <img class="rounded-circle header-profile-user-enhanced" src="{{ $userdata->profile_image ? asset('storage/' . $userdata->profile_image) : asset('theme/layouts/assets/images/users/user-dummy-img.jpg') }}" alt="{{ $userdata->name }}" style="width:42px; height:42px; object-fit:cover;">
                                         <span class="text-start ms-xl-2">
                                             <span class="d-none d-xl-inline-block ms-1 fw-medium user-name-text">{{ $userdata->name }}</span>
                                             <span class="d-none d-xl-block ms-1 fs-sm user-name-sub-text">{{ $userdata->roles->first()->name ?? 'User' }}</span>
                                         </span>
                                     @else
-                                        <img class="rounded-circle header-profile-user" src="{{ asset('theme/layouts/assets/images/users/user-dummy-img.jpg') }}" alt="User">
+                                        <img class="rounded-circle header-profile-user-enhanced" src="{{ asset('theme/layouts/assets/images/users/user-dummy-img.jpg') }}" alt="User" style="width:42px; height:42px; object-fit:cover;">
                                         <span class="text-start ms-xl-2">
                                             <span class="d-none d-xl-inline-block ms-1 fw-medium user-name-text">Guest</span>
                                             <span class="d-none d-xl-block ms-1 fs-sm user-name-sub-text">Not logged in</span>
@@ -633,16 +538,6 @@
                                         <i class="mdi mdi-account-circle text-muted fs-lg align-middle me-1"></i>
                                         <span class="align-middle">Profile</span>
                                     </a>
-                                    {{-- <div class="dropdown-divider"></div>
-                                    <a class="dropdown-item" href="{{ route('user.settings', $userdata->id) }}">
-                                        <i class="mdi mdi-cog text-muted fs-lg align-middle me-1"></i>
-                                        <span class="align-middle">Settings</span>
-                                    </a> --}}
-                                    <a class="dropdown-item" href="auth-lockscreen.html">
-                                        <i class="mdi mdi-lock text-muted fs-lg align-middle me-1"></i>
-                                        <span class="align-middle">Lock screen</span>
-                                    </a>
-
                                     <form method="POST" action="{{ route('logout') }}">
                                         @csrf
                                         <a class="dropdown-item" href="{{ route('logout') }}" onclick="event.preventDefault(); this.closest('form').submit();">
@@ -663,62 +558,43 @@
             </div>
         </header>
 
-          @yield('content')
+        <!-- Main Content -->
+        @yield('content')
 
-       <footer class="footer">
+        <!-- Footer -->
+        <footer class="footer">
             <div class="container-fluid">
                 <div class="row">
                     <div class="col-sm-6">
-                        <script>document.write(new Date().getFullYear())</script> ©
-                        @php
-                            $storeSettings = \App\Models\StoreSetting::first();
-                        @endphp
-                        {{ $storeSettings->store_name ?? 'Store Name' }}
+                        <script>document.write(new Date().getFullYear())</script> © {{ $storeName }}
                     </div>
                     <div class="col-sm-6">
-                        <div class="text-sm-end d-none d-sm-block">
-                            Powered by Qudroid Systems
-                        </div>
+                        <div class="text-sm-end d-none d-sm-block">Powered by Qudroid Systems</div>
                     </div>
                 </div>
             </div>
         </footer>
     </div>
-    <!-- end main content-->
 
-    </div>
-    <!-- END layout-wrapper -->
-
-
-    <!--start back-to-top-->
-    <button class="btn btn-dark btn-icon" id="back-to-top">
+    <!-- Back to Top -->
+    <button class="btn btn-dark btn-icon" id="back-to-top" title="Back to top">
         <i class="bi bi-caret-up fs-3xl"></i>
     </button>
-    <!--end back-to-top-->
 
-    <!--preloader-->
-    <div id="preloader">
-        <div id="status">
-            <div class="spinner-border text-primary avatar-sm" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-        </div>
-    </div>
+    <!-- Preloader -->
+    <div id="preloader"><div id="status"><div class="spinner-border text-primary avatar-sm" role="status"><span class="visually-hidden">Loading...</span></div></div></div>
 
+    <!-- Customizer -->
     <div class="customizer-setting d-none d-md-block">
         <div class="btn btn-info p-2 text-uppercase rounded-end-0 shadow-lg" data-bs-toggle="offcanvas" data-bs-target="#theme-settings-offcanvas" aria-controls="theme-settings-offcanvas">
             <i class="bi bi-gear mb-1"></i> Customizer
         </div>
     </div>
 
-    <!-- Theme Settings -->
+    <!-- Theme Settings Offcanvas -->
     <div class="offcanvas offcanvas-end border-0" tabindex="-1" id="theme-settings-offcanvas">
         <div class="d-flex align-items-center bg-primary bg-gradient p-3 offcanvas-header">
-            <div class="me-2">
-                <h5 class="mb-1 text-white">Steex Builder</h5>
-                <p class="text-white text-opacity-75 mb-0">Choose your themes & layouts etc.</p>
-            </div>
-
+            <div class="me-2"><h5 class="mb-1 text-white">Theme Customizer</h5><p class="text-white text-opacity-75 mb-0">Customize your experience</p></div>
             <button type="button" class="btn-close btn-close-white ms-auto" id="customizerclose-btn" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
         <div class="offcanvas-body p-0">
@@ -726,27 +602,14 @@
                 <div class="p-4">
                     <h6 class="fs-md mb-1">Layout</h6>
                     <p class="text-muted fs-sm">Choose your layout</p>
-
                     <div class="row">
                         <div class="col-4">
                             <div class="form-check card-radio">
                                 <input id="customizer-layout01" name="data-layout" type="radio" value="vertical" class="form-check-input">
                                 <label class="form-check-label p-0 avatar-md w-100" for="customizer-layout01">
                                     <span class="d-flex gap-1 h-100">
-                                        <span class="flex-shrink-0">
-                                            <span class="bg-light d-flex h-100 flex-column gap-1 p-1">
-                                                <span class="d-block p-1 px-2 bg-primary-subtle rounded mb-2"></span>
-                                                <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                            </span>
-                                        </span>
-                                        <span class="flex-grow-1">
-                                            <span class="d-flex h-100 flex-column">
-                                                <span class="bg-light d-block p-1"></span>
-                                                <span class="bg-light d-block p-1 mt-auto"></span>
-                                            </span>
-                                        </span>
+                                        <span class="flex-shrink-0"><span class="bg-light d-flex h-100 flex-column gap-1 p-1"><span class="d-block p-1 px-2 bg-primary-subtle rounded mb-2"></span><span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span><span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span><span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span></span></span>
+                                        <span class="flex-grow-1"><span class="d-flex h-100 flex-column"><span class="bg-light d-block p-1"></span><span class="bg-light d-block p-1 mt-auto"></span></span></span>
                                     </span>
                                 </label>
                             </div>
@@ -756,118 +619,15 @@
                             <div class="form-check card-radio">
                                 <input id="customizer-layout02" name="data-layout" type="radio" value="horizontal" class="form-check-input">
                                 <label class="form-check-label p-0 avatar-md w-100" for="customizer-layout02">
-                                    <span class="d-flex h-100 flex-column gap-1">
-                                        <span class="bg-light d-flex p-1 gap-1 align-items-center">
-                                            <span class="d-block p-1 bg-primary-subtle rounded me-1"></span>
-                                            <span class="d-block p-1 pb-0 px-2 bg-primary-subtle ms-auto"></span>
-                                            <span class="d-block p-1 pb-0 px-2 bg-primary-subtle"></span>
-                                        </span>
-                                        <span class="bg-light d-block p-1"></span>
-                                        <span class="bg-light d-block p-1 mt-auto"></span>
-                                    </span>
+                                    <span class="d-flex h-100 flex-column gap-1"><span class="bg-light d-flex p-1 gap-1 align-items-center"><span class="d-block p-1 bg-primary-subtle rounded me-1"></span><span class="d-block p-1 pb-0 px-2 bg-primary-subtle ms-auto"></span><span class="d-block p-1 pb-0 px-2 bg-primary-subtle"></span></span><span class="bg-light d-block p-1"></span><span class="bg-light d-block p-1 mt-auto"></span></span>
                                 </label>
                             </div>
                             <h5 class="fs-sm text-center fw-medium mt-2">Horizontal</h5>
                         </div>
-                        <div class="col-4">
-                            <div class="form-check card-radio">
-                                <input id="customizer-layout03" name="data-layout" type="radio" value="twocolumn" class="form-check-input">
-                                <label class="form-check-label p-0 avatar-md w-100" for="customizer-layout03">
-                                    <span class="d-flex gap-1 h-100">
-                                        <span class="flex-shrink-0">
-                                            <span class="bg-light d-flex h-100 flex-column gap-1">
-                                                <span class="d-block p-1 bg-primary-subtle mb-2"></span>
-                                                <span class="d-block p-1 pb-0 bg-primary-subtle"></span>
-                                                <span class="d-block p-1 pb-0 bg-primary-subtle"></span>
-                                                <span class="d-block p-1 pb-0 bg-primary-subtle"></span>
-                                            </span>
-                                        </span>
-                                        <span class="flex-shrink-0">
-                                            <span class="bg-light d-flex h-100 flex-column gap-1 p-1">
-                                                <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                            </span>
-                                        </span>
-                                        <span class="flex-grow-1">
-                                            <span class="d-flex h-100 flex-column">
-                                                <span class="bg-light d-block p-1"></span>
-                                                <span class="bg-light d-block p-1 mt-auto"></span>
-                                            </span>
-                                        </span>
-                                    </span>
-                                </label>
-                            </div>
-                            <h5 class="fs-sm text-center fw-medium mt-2">Two Column</h5>
-                        </div>
-                        <!-- end col -->
-                    </div>
-
-                    <h6 class="mt-4 fs-md mb-1">Theme</h6>
-                    <p class="text-muted fs-sm">Choose your suitable Theme.</p>
-
-                    <div class="row">
-                        <div class="col-6">
-                            <div class="form-check card-radio">
-                                <input id="customizer-theme01" name="data-theme" type="radio" value="default" class="form-check-input">
-                                <label class="form-check-label p-0" for="customizer-theme01">
-                                    <img src="{{ asset('theme/layouts/assets/images/custom-theme/light-mode.png')}}" alt="" class="img-fluid">
-                                </label>
-                            </div>
-                            <h5 class="fs-sm text-center fw-medium mt-2">Default</h5>
-                        </div>
-                        <div class="col-6">
-                            <div class="form-check card-radio">
-                                <input id="customizer-theme02" name="data-theme" type="radio" value="material" class="form-check-input">
-                                <label class="form-check-label p-0" for="customizer-theme02">
-                                    <img src="{{ asset('theme/layouts/assets/images/custom-theme/material.png')}}" alt="" class="img-fluid">
-                                </label>
-                            </div>
-                            <h5 class="fs-sm text-center fw-medium mt-2">Material</h5>
-                        </div>
-                        <div class="col-6">
-                            <div class="form-check card-radio">
-                                <input id="customizer-theme03" name="data-theme" type="radio" value="creative" class="form-check-input">
-                                <label class="form-check-label p-0" for="customizer-theme03">
-                                    <img src="{{ asset('theme/layouts/assets/images/custom-theme/creative.png')}}" alt="" class="img-fluid">
-                                </label>
-                            </div>
-                            <h5 class="fs-sm text-center fw-medium mt-2">Creative</h5>
-                        </div>
-                        <div class="col-6">
-                            <div class="form-check card-radio">
-                                <input id="customizer-theme04" name="data-theme" type="radio" value="minimal" class="form-check-input">
-                                <label class="form-check-label p-0" for="customizer-theme04">
-                                    <img src="{{ asset('theme/layouts/assets/images/custom-theme/minimal.png')}}" alt="" class="img-fluid">
-                                </label>
-                            </div>
-                            <h5 class="fs-sm text-center fw-medium mt-2">Minimal</h5>
-                        </div>
-                        <div class="col-6">
-                            <div class="form-check card-radio">
-                                <input id="customizer-theme05" name="data-theme" type="radio" value="modern" class="form-check-input">
-                                <label class="form-check-label p-0" for="customizer-theme05">
-                                    <img src="{{ asset('theme/layouts/assets/images/custom-theme/modern.png')}}" alt="" class="img-fluid">
-                                </label>
-                            </div>
-                            <h5 class="fs-sm text-center fw-medium mt-2">Modern</h5>
-                        </div>
-                        <!-- end col -->
-                        <div class="col-6">
-                            <div class="form-check card-radio">
-                                <input id="customizer-theme06" name="data-theme" type="radio" value="interaction" class="form-check-input">
-                                <label class="form-check-label p-0" for="customizer-theme06">
-                                    <img src="{{ asset('theme/layouts/assets/images/custom-theme/interaction.png')}}" alt="" class="img-fluid">
-                                </label>
-                            </div>
-                            <h5 class="fs-sm text-center fw-medium mt-2">Interaction</h5>
-                        </div><!-- end col -->
                     </div>
 
                     <h6 class="mt-4 fs-md mb-1">Color Scheme</h6>
                     <p class="text-muted fs-sm">Choose Light or Dark Scheme.</p>
-
                     <div class="colorscheme-cardradio">
                         <div class="row g-3">
                             <div class="col-6">
@@ -879,7 +639,6 @@
                                 </div>
                                 <h5 class="fs-sm text-center fw-medium mt-2">Light</h5>
                             </div>
-
                             <div class="col-6">
                                 <div class="form-check card-radio dark">
                                     <input class="form-check-input" type="radio" name="data-bs-theme" id="layout-mode-dark" value="dark">
@@ -892,438 +651,27 @@
                         </div>
                     </div>
 
-                    <div id="layout-width">
-                        <h6 class="mt-4 fs-md mb-1">Layout Width</h6>
-                        <p class="text-muted fs-sm">Choose Fluid or Boxed layout.</p>
-
-                        <div class="row">
-                            <div class="col-4">
-                                <div class="form-check card-radio">
-                                    <input class="form-check-input" type="radio" name="data-layout-width" id="layout-width-fluid" value="fluid">
-                                    <label class="form-check-label p-0 avatar-md w-100" for="layout-width-fluid">
-                                        <span class="d-flex gap-1 h-100">
-                                            <span class="flex-shrink-0">
-                                                <span class="bg-light d-flex h-100 flex-column gap-1 p-1">
-                                                    <span class="d-block p-1 px-2 bg-primary-subtle rounded mb-2"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                </span>
-                                            </span>
-                                            <span class="flex-grow-1">
-                                                <span class="d-flex h-100 flex-column">
-                                                    <span class="bg-light d-block p-1"></span>
-                                                    <span class="bg-light d-block p-1 mt-auto"></span>
-                                                </span>
-                                            </span>
-                                        </span>
-                                    </label>
-                                </div>
-                                <h5 class="fs-sm text-center fw-medium mt-2">Fluid</h5>
-                            </div>
-                            <div class="col-4">
-                                <div class="form-check card-radio">
-                                    <input class="form-check-input" type="radio" name="data-layout-width" id="layout-width-boxed" value="boxed">
-                                    <label class="form-check-label p-0 avatar-md w-100 px-2" for="layout-width-boxed">
-                                        <span class="d-flex gap-1 h-100 border-start border-end">
-                                            <span class="flex-shrink-0">
-                                                <span class="bg-light d-flex h-100 flex-column gap-1 p-1">
-                                                    <span class="d-block p-1 px-2 bg-primary-subtle rounded mb-2"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                </span>
-                                            </span>
-                                            <span class="flex-grow-1">
-                                                <span class="d-flex h-100 flex-column">
-                                                    <span class="bg-light d-block p-1"></span>
-                                                    <span class="bg-light d-block p-1 mt-auto"></span>
-                                                </span>
-                                            </span>
-                                        </span>
-                                    </label>
-                                </div>
-                                <h5 class="fs-sm text-center fw-medium mt-2">Boxed</h5>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="layout-position">
-                        <h6 class="mt-4 fs-md mb-1">Layout Position</h6>
-                        <p class="text-muted fs-sm">Choose Fixed or Scrollable Layout Position.</p>
-
-                        <div class="btn-group radio" role="group">
-                            <input type="radio" class="btn-check" name="data-layout-position" id="layout-position-fixed" value="fixed">
-                            <label class="btn btn-light w-sm" for="layout-position-fixed">Fixed</label>
-
-                            <input type="radio" class="btn-check" name="data-layout-position" id="layout-position-scrollable" value="scrollable">
-                            <label class="btn btn-light w-sm ms-0" for="layout-position-scrollable">Scrollable</label>
-                        </div>
-                    </div>
-
-                    <h6 class="mt-4 fs-md mb-1">Topbar Color</h6>
-                    <p class="text-muted fs-sm">Choose Light or Dark Topbar Color.</p>
-
-                    <div class="row">
-                        <div class="col-4">
-                            <div class="form-check card-radio">
-                                <input class="form-check-input" type="radio" name="data-topbar" id="topbar-color-light" value="light">
-                                <label class="form-check-label p-0 avatar-md w-100" for="topbar-color-light">
-                                    <span class="d-flex gap-1 h-100">
-                                        <span class="flex-shrink-0">
-                                            <span class="bg-light d-flex h-100 flex-column gap-1 p-1">
-                                                <span class="d-block p-1 px-2 bg-primary-subtle rounded mb-2"></span>
-                                                <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                            </span>
-                                        </span>
-                                        <span class="flex-grow-1">
-                                            <span class="d-flex h-100 flex-column">
-                                                <span class="bg-light d-block p-1"></span>
-                                                <span class="bg-light d-block p-1 mt-auto"></span>
-                                            </span>
-                                        </span>
-                                    </span>
-                                </label>
-                            </div>
-                            <h5 class="fs-sm text-center fw-medium mt-2">Light</h5>
-                        </div>
-                        <div class="col-4">
-                            <div class="form-check card-radio">
-                                <input class="form-check-input" type="radio" name="data-topbar" id="topbar-color-dark" value="dark">
-                                <label class="form-check-label p-0 avatar-md w-100" for="topbar-color-dark">
-                                    <span class="d-flex gap-1 h-100">
-                                        <span class="flex-shrink-0">
-                                            <span class="bg-light d-flex h-100 flex-column gap-1 p-1">
-                                                <span class="d-block p-1 px-2 bg-primary-subtle rounded mb-2"></span>
-                                                <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                            </span>
-                                        </span>
-                                        <span class="flex-grow-1">
-                                            <span class="d-flex h-100 flex-column">
-                                                <span class="bg-primary d-block p-1"></span>
-                                                <span class="bg-light d-block p-1 mt-auto"></span>
-                                            </span>
-                                        </span>
-                                    </span>
-                                </label>
-                            </div>
-                            <h5 class="fs-sm text-center fw-medium mt-2">Dark</h5>
-                        </div>
-                    </div>
-
-                    <div id="sidebar-size">
-                        <h6 class="mt-4 fs-md mb-1">Sidebar Size</h6>
-                        <p class="text-muted fs-sm">Choose a size of Sidebar.</p>
-
-                        <div class="row">
-                            <div class="col-4">
-                                <div class="form-check sidebar-setting card-radio">
-                                    <input class="form-check-input" type="radio" name="data-sidebar-size" id="sidebar-size-default" value="lg">
-                                    <label class="form-check-label p-0 avatar-md w-100" for="sidebar-size-default">
-                                        <span class="d-flex gap-1 h-100">
-                                            <span class="flex-shrink-0">
-                                                <span class="bg-light d-flex h-100 flex-column gap-1 p-1">
-                                                    <span class="d-block p-1 px-2 bg-primary-subtle rounded mb-2"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                </span>
-                                            </span>
-                                            <span class="flex-grow-1">
-                                                <span class="d-flex h-100 flex-column">
-                                                    <span class="bg-light d-block p-1"></span>
-                                                    <span class="bg-light d-block p-1 mt-auto"></span>
-                                                </span>
-                                            </span>
-                                        </span>
-                                    </label>
-                                </div>
-                                <h5 class="fs-sm text-center fw-medium mt-2">Default</h5>
-                            </div>
-
-                            <div class="col-4">
-                                <div class="form-check sidebar-setting card-radio">
-                                    <input class="form-check-input" type="radio" name="data-sidebar-size" id="sidebar-size-compact" value="md">
-                                    <label class="form-check-label p-0 avatar-md w-100" for="sidebar-size-compact">
-                                        <span class="d-flex gap-1 h-100">
-                                            <span class="flex-shrink-0">
-                                                <span class="bg-light d-flex h-100 flex-column gap-1 p-1">
-                                                    <span class="d-block p-1 bg-primary-subtle rounded mb-2"></span>
-                                                    <span class="d-block p-1 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 pb-0 bg-primary-subtle"></span>
-                                                </span>
-                                            </span>
-                                            <span class="flex-grow-1">
-                                                <span class="d-flex h-100 flex-column">
-                                                    <span class="bg-light d-block p-1"></span>
-                                                    <span class="bg-light d-block p-1 mt-auto"></span>
-                                                </span>
-                                            </span>
-                                        </span>
-                                    </label>
-                                </div>
-                                <h5 class="fs-sm text-center fw-medium mt-2">Compact</h5>
-                            </div>
-
-                            <div class="col-4">
-                                <div class="form-check sidebar-setting card-radio">
-                                    <input class="form-check-input" type="radio" name="data-sidebar-size" id="sidebar-size-small" value="sm">
-                                    <label class="form-check-label p-0 avatar-md w-100" for="sidebar-size-small">
-                                        <span class="d-flex gap-1 h-100">
-                                            <span class="flex-shrink-0">
-                                                <span class="bg-light d-flex h-100 flex-column gap-1">
-                                                    <span class="d-block p-1 bg-primary-subtle mb-2"></span>
-                                                    <span class="d-block p-1 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 pb-0 bg-primary-subtle"></span>
-                                                </span>
-                                            </span>
-                                            <span class="flex-grow-1">
-                                                <span class="d-flex h-100 flex-column">
-                                                    <span class="bg-light d-block p-1"></span>
-                                                    <span class="bg-light d-block p-1 mt-auto"></span>
-                                                </span>
-                                            </span>
-                                        </span>
-                                    </label>
-                                </div>
-                                <h5 class="fs-sm text-center fw-medium mt-2">Small (Icon View)</h5>
-                            </div>
-
-                            <div class="col-4">
-                                <div class="form-check sidebar-setting card-radio">
-                                    <input class="form-check-input" type="radio" name="data-sidebar-size" id="sidebar-size-small-hover" value="sm-hover">
-                                    <label class="form-check-label p-0 avatar-md w-100" for="sidebar-size-small-hover">
-                                        <span class="d-flex gap-1 h-100">
-                                            <span class="flex-shrink-0">
-                                                <span class="bg-light d-flex h-100 flex-column gap-1">
-                                                    <span class="d-block p-1 bg-primary-subtle mb-2"></span>
-                                                    <span class="d-block p-1 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 pb-0 bg-primary-subtle"></span>
-                                                </span>
-                                            </span>
-                                            <span class="flex-grow-1">
-                                                <span class="d-flex h-100 flex-column">
-                                                    <span class="bg-light d-block p-1"></span>
-                                                    <span class="bg-light d-block p-1 mt-auto"></span>
-                                                </span>
-                                            </span>
-                                        </span>
-                                    </label>
-                                </div>
-                                <h5 class="fs-sm text-center fw-medium mt-2">Small Hover View</h5>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="sidebar-view">
-                        <h6 class="mt-4 fs-md mb-1">Sidebar View</h6>
-                        <p class="text-muted fs-sm">Choose Default or Detached Sidebar view.</p>
-
-                        <div class="row">
-                            <div class="col-4">
-                                <div class="form-check sidebar-setting card-radio">
-                                    <input class="form-check-input" type="radio" name="data-layout-style" id="sidebar-view-default" value="default">
-                                    <label class="form-check-label p-0 avatar-md w-100" for="sidebar-view-default">
-                                        <span class="d-flex gap-1 h-100">
-                                            <span class="flex-shrink-0">
-                                                <span class="bg-light d-flex h-100 flex-column gap-1 p-1">
-                                                    <span class="d-block p-1 px-2 bg-primary-subtle rounded mb-2"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                </span>
-                                            </span>
-                                            <span class="flex-grow-1">
-                                                <span class="d-flex h-100 flex-column">
-                                                    <span class="bg-light d-block p-1"></span>
-                                                    <span class="bg-light d-block p-1 mt-auto"></span>
-                                                </span>
-                                            </span>
-                                        </span>
-                                    </label>
-                                </div>
-                                <h5 class="fs-sm text-center fw-medium mt-2">Default</h5>
-                            </div>
-                            <div class="col-4">
-                                <div class="form-check sidebar-setting card-radio">
-                                    <input class="form-check-input" type="radio" name="data-layout-style" id="sidebar-view-detached" value="detached">
-                                    <label class="form-check-label p-0 avatar-md w-100" for="sidebar-view-detached">
-                                        <span class="d-flex h-100 flex-column">
-                                            <span class="bg-light d-flex p-1 gap-1 align-items-center px-2">
-                                                <span class="d-block p-1 bg-primary-subtle rounded me-1"></span>
-                                                <span class="d-block p-1 pb-0 px-2 bg-primary-subtle ms-auto"></span>
-                                                <span class="d-block p-1 pb-0 px-2 bg-primary-subtle"></span>
-                                            </span>
-                                            <span class="d-flex gap-1 h-100 p-1 px-2">
-                                                <span class="flex-shrink-0">
-                                                    <span class="bg-light d-flex h-100 flex-column gap-1 p-1">
-                                                        <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                        <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                        <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    </span>
-                                                </span>
-                                            </span>
-                                            <span class="bg-light d-block p-1 mt-auto px-2"></span>
-                                        </span>
-                                    </label>
-                                </div>
-                                <h5 class="fs-sm text-center fw-medium mt-2">Detached</h5>
-                            </div>
-                        </div>
-                    </div>
                     <div id="sidebar-color">
                         <h6 class="mt-4 fs-md mb-1">Sidebar Color</h6>
                         <p class="text-muted fs-sm">Choose a color of Sidebar.</p>
-
                         <div class="row">
                             <div class="col-4">
-                                <div class="form-check sidebar-setting card-radio" data-bs-toggle="collapse" data-bs-target="#collapseBgGradient.show">
+                                <div class="form-check sidebar-setting card-radio">
                                     <input class="form-check-input" type="radio" name="data-sidebar" id="sidebar-color-light" value="light">
                                     <label class="form-check-label p-0 avatar-md w-100" for="sidebar-color-light">
-                                        <span class="d-flex gap-1 h-100">
-                                            <span class="flex-shrink-0">
-                                                <span class="bg-white border-end d-flex h-100 flex-column gap-1 p-1">
-                                                    <span class="d-block p-1 px-2 bg-primary-subtle rounded mb-2"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                </span>
-                                            </span>
-                                            <span class="flex-grow-1">
-                                                <span class="d-flex h-100 flex-column">
-                                                    <span class="bg-light d-block p-1"></span>
-                                                    <span class="bg-light d-block p-1 mt-auto"></span>
-                                                </span>
-                                            </span>
-                                        </span>
+                                        <span class="d-flex gap-1 h-100"><span class="flex-shrink-0"><span class="bg-white border-end d-flex h-100 flex-column gap-1 p-1"><span class="d-block p-1 px-2 bg-primary-subtle rounded mb-2"></span><span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span><span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span><span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span></span></span><span class="flex-grow-1"><span class="d-flex h-100 flex-column"><span class="bg-light d-block p-1"></span><span class="bg-light d-block p-1 mt-auto"></span></span></span></span>
                                     </label>
                                 </div>
                                 <h5 class="fs-sm text-center fw-medium mt-2">Light</h5>
                             </div>
                             <div class="col-4">
-                                <div class="form-check sidebar-setting card-radio" data-bs-toggle="collapse" data-bs-target="#collapseBgGradient.show">
+                                <div class="form-check sidebar-setting card-radio">
                                     <input class="form-check-input" type="radio" name="data-sidebar" id="sidebar-color-dark" value="dark">
                                     <label class="form-check-label p-0 avatar-md w-100" for="sidebar-color-dark">
-                                        <span class="d-flex gap-1 h-100">
-                                            <span class="flex-shrink-0">
-                                                <span class="bg-primary d-flex h-100 flex-column gap-1 p-1">
-                                                    <span class="d-block p-1 px-2 bg-soft-light rounded mb-2"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-soft-light"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-soft-light"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-soft-light"></span>
-                                                </span>
-                                            </span>
-                                            <span class="flex-grow-1">
-                                                <span class="d-flex h-100 flex-column">
-                                                    <span class="bg-light d-block p-1"></span>
-                                                    <span class="bg-light d-block p-1 mt-auto"></span>
-                                                </span>
-                                            </span>
-                                        </span>
+                                        <span class="d-flex gap-1 h-100"><span class="flex-shrink-0"><span class="bg-primary d-flex h-100 flex-column gap-1 p-1"><span class="d-block p-1 px-2 bg-soft-light rounded mb-2"></span><span class="d-block p-1 px-2 pb-0 bg-soft-light"></span><span class="d-block p-1 px-2 pb-0 bg-soft-light"></span><span class="d-block p-1 px-2 pb-0 bg-soft-light"></span></span></span><span class="flex-grow-1"><span class="d-flex h-100 flex-column"><span class="bg-light d-block p-1"></span><span class="bg-light d-block p-1 mt-auto"></span></span></span></span>
                                     </label>
                                 </div>
                                 <h5 class="fs-sm text-center fw-medium mt-2">Dark</h5>
-                            </div>
-                            <div class="col-4">
-                                <button class="btn btn-link avatar-md w-100 p-0 overflow-hidden border collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBgGradient" aria-expanded="false" aria-controls="collapseBgGradient">
-                                    <span class="d-flex gap-1 h-100">
-                                        <span class="flex-shrink-0">
-                                            <span class="bg-vertical-gradient d-flex h-100 flex-column gap-1 p-1">
-                                                <span class="d-block p-1 px-2 bg-soft-light rounded mb-2"></span>
-                                                <span class="d-block p-1 px-2 pb-0 bg-soft-light"></span>
-                                                <span class="d-block p-1 px-2 pb-0 bg-soft-light"></span>
-                                                <span class="d-block p-1 px-2 pb-0 bg-soft-light"></span>
-                                            </span>
-                                        </span>
-                                        <span class="flex-grow-1">
-                                            <span class="d-flex h-100 flex-column">
-                                                <span class="bg-light d-block p-1"></span>
-                                                <span class="bg-light d-block p-1 mt-auto"></span>
-                                            </span>
-                                        </span>
-                                    </span>
-                                </button>
-                                <h5 class="fs-sm text-center fw-medium mt-2">Gradient</h5>
-                            </div>
-                        </div>
-                        <!-- end row -->
-
-                        <div class="collapse" id="collapseBgGradient">
-                            <div class="d-flex gap-2 flex-wrap img-switch p-2 px-3 bg-light rounded">
-
-                                <div class="form-check sidebar-setting card-radio">
-                                    <input class="form-check-input" type="radio" name="data-sidebar" id="sidebar-color-gradient" value="gradient">
-                                    <label class="form-check-label p-0 avatar-xs rounded-circle" for="sidebar-color-gradient">
-                                        <span class="avatar-title rounded-circle bg-vertical-gradient"></span>
-                                    </label>
-                                </div>
-                                <div class="form-check sidebar-setting card-radio">
-                                    <input class="form-check-input" type="radio" name="data-sidebar" id="sidebar-color-gradient-2" value="gradient-2">
-                                    <label class="form-check-label p-0 avatar-xs rounded-circle" for="sidebar-color-gradient-2">
-                                        <span class="avatar-title rounded-circle bg-vertical-gradient-2"></span>
-                                    </label>
-                                </div>
-                                <div class="form-check sidebar-setting card-radio">
-                                    <input class="form-check-input" type="radio" name="data-sidebar" id="sidebar-color-gradient-3" value="gradient-3">
-                                    <label class="form-check-label p-0 avatar-xs rounded-circle" for="sidebar-color-gradient-3">
-                                        <span class="avatar-title rounded-circle bg-vertical-gradient-3"></span>
-                                    </label>
-                                </div>
-                                <div class="form-check sidebar-setting card-radio">
-                                    <input class="form-check-input" type="radio" name="data-sidebar" id="sidebar-color-gradient-4" value="gradient-4">
-                                    <label class="form-check-label p-0 avatar-xs rounded-circle" for="sidebar-color-gradient-4">
-                                        <span class="avatar-title rounded-circle bg-vertical-gradient-4"></span>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="sidebar-img">
-                        <h6 class="mt-4 fw-semibold fs-base">Sidebar Images</h6>
-                        <p class="text-muted fs-sm">Choose a image of Sidebar.</p>
-
-                        <div class="d-flex gap-2 flex-wrap img-switch">
-                            <div class="form-check sidebar-setting card-radio">
-                                <input class="form-check-input" type="radio" name="data-sidebar-image" id="sidebarimg-none" value="none">
-                                <label class="form-check-label p-0 avatar-sm h-auto" for="sidebarimg-none">
-                                    <span class="avatar-md w-auto bg-light d-flex align-items-center justify-content-center">
-                                        <i class="ri-close-fill fs-3xl"></i>
-                                    </span>
-                                </label>
-                            </div>
-
-                            <div class="form-check sidebar-setting card-radio">
-                                <input class="form-check-input" type="radio" name="data-sidebar-image" id="sidebarimg-01" value="img-1">
-                                <label class="form-check-label p-0 avatar-sm h-auto" for="sidebarimg-01">
-                                    <img src="{{ asset('theme/layouts/assets/images/sidebar/img-sm-1.jpg')}}" alt="" class="avatar-md w-auto object-cover">
-                                </label>
-                            </div>
-
-                            <div class="form-check sidebar-setting card-radio">
-                                <input class="form-check-input" type="radio" name="data-sidebar-image" id="sidebarimg-02" value="img-2">
-                                <label class="form-check-label p-0 avatar-sm h-auto" for="sidebarimg-02">
-                                    <img src="{{ asset('theme/layouts/assets/images/sidebar/img-sm-2.jpg')}}" alt="" class="avatar-md w-auto object-cover">
-                                </label>
-                            </div>
-                            <div class="form-check sidebar-setting card-radio">
-                                <input class="form-check-input" type="radio" name="data-sidebar-image" id="sidebarimg-03" value="img-3">
-                                <label class="form-check-label p-0 avatar-sm h-auto" for="sidebarimg-03">
-                                    <img src="{{ asset('theme/layouts/assets/images/sidebar/img-sm-3.jpg')}}" alt="" class="avatar-md w-auto object-cover">
-                                </label>
-                            </div>
-                            <div class="form-check sidebar-setting card-radio">
-                                <input class="form-check-input" type="radio" name="data-sidebar-image" id="sidebarimg-04" value="img-4">
-                                <label class="form-check-label p-0 avatar-sm h-auto" for="sidebarimg-04">
-                                    <img src="{{ asset('theme/layouts/assets/images/sidebar/img-sm-4.jpg')}}" alt="" class="avatar-md w-auto object-cover">
-                                </label>
                             </div>
                         </div>
                     </div>
@@ -1331,35 +679,13 @@
                     <div id="preloader-menu">
                         <h6 class="mt-4 fw-semibold fs-base">Preloader</h6>
                         <p class="text-muted fs-sm">Choose a preloader.</p>
-
                         <div class="row">
                             <div class="col-4">
                                 <div class="form-check sidebar-setting card-radio">
                                     <input class="form-check-input" type="radio" name="data-preloader" id="preloader-view-custom" value="enable">
                                     <label class="form-check-label p-0 avatar-md w-100" for="preloader-view-custom">
-                                        <span class="d-flex gap-1 h-100">
-                                            <span class="flex-shrink-0">
-                                                <span class="bg-light d-flex h-100 flex-column gap-1 p-1">
-                                                    <span class="d-block p-1 px-2 bg-primary-subtle rounded mb-2"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                </span>
-                                            </span>
-                                            <span class="flex-grow-1">
-                                                <span class="d-flex h-100 flex-column">
-                                                    <span class="bg-light d-block p-1"></span>
-                                                    <span class="bg-light d-block p-1 mt-auto"></span>
-                                                </span>
-                                            </span>
-                                        </span>
-                                        <!-- <div id="preloader"> -->
-                                        <span class="d-flex align-items-center justify-content-center">
-                                            <span class="spinner-border text-primary avatar-xxs m-auto" role="status">
-                                                <span class="visually-hidden">Loading...</span>
-                                            </span>
-                                        </span>
-                                        <!-- </div> -->
+                                        <span class="d-flex gap-1 h-100"><span class="flex-shrink-0"><span class="bg-light d-flex h-100 flex-column gap-1 p-1"><span class="d-block p-1 px-2 bg-primary-subtle rounded mb-2"></span><span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span><span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span><span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span></span></span><span class="flex-grow-1"><span class="d-flex h-100 flex-column"><span class="bg-light d-block p-1"></span><span class="bg-light d-block p-1 mt-auto"></span></span></span></span>
+                                        <span class="d-flex align-items-center justify-content-center mt-2"><span class="spinner-border text-primary avatar-xxs m-auto" role="status"></span></span>
                                     </label>
                                 </div>
                                 <h5 class="fs-sm text-center fw-medium mt-2">Enable</h5>
@@ -1368,32 +694,15 @@
                                 <div class="form-check sidebar-setting card-radio">
                                     <input class="form-check-input" type="radio" name="data-preloader" id="preloader-view-none" value="disable">
                                     <label class="form-check-label p-0 avatar-md w-100" for="preloader-view-none">
-                                        <span class="d-flex gap-1 h-100">
-                                            <span class="flex-shrink-0">
-                                                <span class="bg-light d-flex h-100 flex-column gap-1 p-1">
-                                                    <span class="d-block p-1 px-2 bg-primary-subtle rounded mb-2"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                    <span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span>
-                                                </span>
-                                            </span>
-                                            <span class="flex-grow-1">
-                                                <span class="d-flex h-100 flex-column">
-                                                    <span class="bg-light d-block p-1"></span>
-                                                    <span class="bg-light d-block p-1 mt-auto"></span>
-                                                </span>
-                                            </span>
-                                        </span>
+                                        <span class="d-flex gap-1 h-100"><span class="flex-shrink-0"><span class="bg-light d-flex h-100 flex-column gap-1 p-1"><span class="d-block p-1 px-2 bg-primary-subtle rounded mb-2"></span><span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span><span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span><span class="d-block p-1 px-2 pb-0 bg-primary-subtle"></span></span></span><span class="flex-grow-1"><span class="d-flex h-100 flex-column"><span class="bg-light d-block p-1"></span><span class="bg-light d-block p-1 mt-auto"></span></span></span></span>
                                     </label>
                                 </div>
                                 <h5 class="fs-sm text-center fw-medium mt-2">Disable</h5>
                             </div>
                         </div>
-
-                    </div><!-- end preloader-menu -->
+                    </div>
                 </div>
             </div>
-
         </div>
         <div class="offcanvas-footer border-top p-3 text-center">
             <div class="row">
@@ -1404,68 +713,348 @@
         </div>
     </div>
 
+    <!-- SPOTLIGHT SEARCH MODAL -->
+    <div id="spotlight-overlay"
+         style="display:none; position:fixed; inset:0; z-index:9999; align-items:flex-start; justify-content:center; padding-top:6vh;">
+        <div id="spotlight-box"
+             style="width:100%; max-width:860px; margin:0 24px; background:rgba(24, 26, 32, 0.96); border:1px solid rgba(255,255,255,0.1); border-radius:28px; box-shadow:0 32px 80px rgba(0,0,0,0.6); overflow:hidden;">
+            <div style="display:flex; align-items:center; gap:16px; padding:20px 24px; border-bottom:1px solid rgba(255,255,255,0.08);">
+                <i class="mdi mdi-magnify" style="font-size:26px; color:#4f8ef7; flex-shrink:0;"></i>
+                <input id="spotlight-input" type="text" placeholder="Search for pages, products, customers, orders…" autocomplete="off"
+                    style="flex:1; background:transparent; border:none; outline:none; font-size:18px; color:#fff; caret-color:#4f8ef7; padding:8px 0;">
+                <div style="display:flex; gap:8px;">
+                    <kbd id="spotlight-esc"
+                         style="font-size:12px; padding:4px 10px; border-radius:8px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.6); cursor:pointer;">
+                        ESC
+                    </kbd>
+                </div>
+            </div>
+            <div id="spotlight-results" style="max-height:520px; overflow-y:auto; padding:12px 0;">
+                <div id="spotlight-empty" style="padding:48px 24px; text-align:center; color:rgba(255,255,255,0.35);">
+                    <i class="mdi mdi-lightning-bolt" style="font-size:48px; display:block; margin-bottom:16px; opacity:0.4;"></i>
+                    <span style="font-size:15px;">Start typing to search…</span>
+                </div>
+                <div id="spotlight-loading" style="display:none; padding:48px; text-align:center;">
+                    <div style="display:inline-block; width:32px; height:32px; border:2px solid rgba(255,255,255,0.15); border-top-color:#4f8ef7; border-radius:50%; animation:loadingSpin 0.7s linear infinite;"></div>
+                    <div style="margin-top:16px; font-size:13px; color:rgba(255,255,255,0.45);">Searching<span class="typing-dot">.</span><span class="typing-dot">.</span><span class="typing-dot">.</span></div>
+                </div>
+                <ul id="spotlight-list" style="list-style:none; margin:0; padding:0; display:none;"></ul>
+            </div>
+            <div style="padding:14px 24px; border-top:1px solid rgba(255,255,255,0.07); display:flex; gap:24px; font-size:12px; color:rgba(255,255,255,0.35); flex-wrap:wrap;">
+                <span><kbd style="background:rgba(255,255,255,0.1); border-radius:5px; padding:2px 6px;">⌘K</kbd> or <kbd style="background:rgba(255,255,255,0.1); border-radius:5px; padding:2px 6px;">Ctrl+K</kbd> open</span>
+                <span><kbd style="background:rgba(255,255,255,0.1); border-radius:5px; padding:2px 6px;">↑↓</kbd> navigate</span>
+                <span><kbd style="background:rgba(255,255,255,0.1); border-radius:5px; padding:2px 6px;">↵</kbd> open</span>
+                <span><kbd style="background:rgba(255,255,255,0.1); border-radius:5px; padding:2px 6px;">ESC</kbd> close</span>
+            </div>
+        </div>
+    </div>
 
-      @if (Route::is('dashboard'))
-            @include('layouts.pages-assets.js.dashboard-list-js')
-      @endif
+    <!-- Scripts -->
+    <script src="{{ asset('theme/layouts/assets/libs/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ asset('theme/layouts/assets/libs/simplebar/simplebar.min.js') }}"></script>
+    <script src="{{ asset('theme/layouts/assets/js/plugins.js') }}"></script>
 
-      @if (Route::is('users.*'))
-            @include('layouts.pages-assets.js.users-list-js')
-      @endif
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // NProgress
+        if (typeof NProgress !== 'undefined') {
+            NProgress.configure({ showSpinner: false, speed: 400, minimum: 0.1 });
+            document.querySelectorAll('a[href]').forEach(function (a) {
+                var href = a.getAttribute('href');
+                if (href && !href.startsWith('#') && !href.startsWith('javascript') && !href.startsWith('mailto') && !href.startsWith('tel') && !a.hasAttribute('data-bs-toggle') && !a.hasAttribute('data-bs-dismiss') && a.getAttribute('target') !== '_blank') {
+                    a.addEventListener('click', function () { NProgress.start(); });
+                }
+            });
+            window.addEventListener('pageshow', function () { NProgress.done(); });
+            window.addEventListener('load', function () { NProgress.done(); });
+        }
 
-      @if (Route::is('user.*'))
-            @include('layouts.pages-assets.js.users-list-js')
-      @endif
+        // Active Link Detection
+        (function () {
+            var currentPath = window.location.pathname;
+            var childLinks = document.querySelectorAll('#navbar-nav .nav-sm a.nav-link');
+            childLinks.forEach(function (link) {
+                try {
+                    var linkPath = new URL(link.href, window.location.origin).pathname;
+                    var isActive = linkPath === currentPath || (linkPath.length > 1 && currentPath.startsWith(linkPath));
+                    if (!isActive) return;
+                    link.classList.add('nav-active-child');
+                    var parentCollapse = link.closest('.collapse');
+                    if (parentCollapse) {
+                        parentCollapse.classList.add('show');
+                        var collapseId = parentCollapse.getAttribute('id');
+                        var parentToggle = document.querySelector('[data-bs-target="#' + collapseId + '"], [href="#' + collapseId + '"]');
+                        if (parentToggle) {
+                            parentToggle.setAttribute('aria-expanded', 'true');
+                            parentToggle.classList.remove('collapsed');
+                            parentToggle.classList.add('nav-active-parent');
+                        }
+                    }
+                } catch (e) {}
+            });
+        })();
 
-      @if (Route::is('roles.*'))
-             @include('layouts.pages-assets.js.role-list-js')
-      @endif
+        // Ripple Effect
+        document.querySelectorAll('#navbar-nav .nav-link').forEach(function (link) {
+            link.addEventListener('click', function (e) {
+                if (link.hasAttribute('data-bs-toggle')) return;
+                var ripple = document.createElement('span');
+                ripple.classList.add('nav-ripple');
+                var rect = link.getBoundingClientRect();
+                var size = Math.max(rect.width, rect.height);
+                var x = e.clientX - rect.left - size / 2;
+                var y = e.clientY - rect.top - size / 2;
+                ripple.style.cssText = 'width:' + size + 'px;height:' + size + 'px;left:' + x + 'px;top:' + y + 'px;';
+                link.appendChild(ripple);
+                setTimeout(function () { if (ripple.parentNode) ripple.parentNode.removeChild(ripple); }, 650);
+            });
+        });
 
-      @if (Route::is('permissions.*'))
-            @include('layouts.pages-assets.js.permissions-list-js')
-      @endif
+        // Back to Top
+        var backToTop = document.getElementById('back-to-top');
+        if (backToTop) {
+            window.addEventListener('scroll', function () { backToTop.classList.toggle('show', window.scrollY > 300); }, { passive: true });
+            backToTop.addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+        }
 
-      @if (Route::is('brands.*'))
-            @include('layouts.pages-assets.js.brand-list-js')
-      @endif
+        // Reset Layout
+        var resetBtn = document.getElementById('reset-layout');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', function () { localStorage.clear(); location.reload(); });
+        }
 
-      @if (Route::is('categories.*'))
-            @include('layouts.pages-assets.js.category-list-js')
-      @endif
+        // Form Submission NProgress
+        document.querySelectorAll('form').forEach(function (form) {
+            if (form.getAttribute('action') && !form.dataset.noProgress) {
+                form.addEventListener('submit', function () { if (typeof NProgress !== 'undefined') NProgress.start(); });
+            }
+        });
+    });
+    </script>
 
-       @if (Route::is('banners.*'))
-            @include('layouts.pages-assets.js.banner-list-js')
-      @endif
+    <!-- SPOTLIGHT SEARCH JAVASCRIPT -->
+    <script>
+    (function () {
+        var STATIC_PAGES = [
+            { title: 'Dashboard', url: '{{ route("dashboard") }}', icon: 'mdi-gauge', category: 'Main' },
+            { title: 'Users', url: '{{ route("users.index") }}', icon: 'mdi-account-group', category: 'Users & Privileges' },
+            { title: 'Roles', url: '{{ route("roles.index") }}', icon: 'mdi-shield-account', category: 'Users & Privileges' },
+            { title: 'Permissions', url: '{{ route("permissions.index") }}', icon: 'mdi-lock', category: 'Users & Privileges' },
+            { title: 'Products', url: '{{ route("products.index") }}', icon: 'mdi-package-variant', category: 'Inventory' },
+            { title: 'Categories', url: '{{ route("categories.index") }}', icon: 'mdi-view-list', category: 'Inventory' },
+            { title: 'Brands', url: '{{ route("brands.index") }}', icon: 'mdi-tag', category: 'Inventory' },
+            { title: 'Banners', url: '{{ route("banners.index") }}', icon: 'mdi-image', category: 'Marketing' },
+            { title: 'POS', url: '{{ route("pos.index") }}', icon: 'mdi-cart', category: 'Sales' },
+            { title: 'Orders', url: '{{ route("orders.index") }}', icon: 'mdi-cart-check', category: 'Sales' },
+            { title: 'Customers', url: '{{ route("customers.index") }}', icon: 'mdi-account', category: 'Sales' },
+            { title: 'Inventory', url: '{{ route("inventory.index") }}', icon: 'mdi-warehouse', category: 'Inventory' },
+            { title: 'Stock Levels', url: '{{ route("inventory.stock-levels") }}', icon: 'mdi-chart-line', category: 'Inventory' },
+            { title: 'Stock Locations', url: '{{ route("stock-locations.index") }}', icon: 'mdi-map-marker', category: 'Inventory' },
+            { title: 'Low Stock Alerts', url: '{{ route("inventory.low-stock-alerts") }}', icon: 'mdi-alert', category: 'Inventory' },
+            { title: 'Sales', url: '{{ route("sales.index") }}', icon: 'mdi-chart-line', category: 'Sales' },
+            { title: 'Sales Person Dashboard', url: '{{ route("salesperson.dashboard") }}', icon: 'mdi-account-tie', category: 'Sales' },
+            { title: 'Store Settings', url: '{{ route("settings.store.index") }}', icon: 'mdi-cog', category: 'Settings' },
+            { title: 'My Account', url: '{{ route("user.overview", ["id" => Auth::id()]) }}', icon: 'mdi-account-circle', category: 'User' },
+        ];
 
-      @if (Route::is('products.*'))
-            @include('layouts.pages-assets.js.product-list-js')
-      @endif
+        var CAT_COLORS = {
+            'Main': '#4f8ef7', 'Users & Privileges': '#405189', 'Inventory': '#e76f51',
+            'Marketing': '#2a9d8f', 'Sales': '#10b981', 'Settings': '#6a0572', 'User': '#e9c46a'
+        };
 
-      @if (Route::is('pos.*'))
-            @include('layouts.pages-assets.js.pos-list-js')
-      @endif
+        var overlay = document.getElementById('spotlight-overlay');
+        var input = document.getElementById('spotlight-input');
+        var emptyState = document.getElementById('spotlight-empty');
+        var loadingEl = document.getElementById('spotlight-loading');
+        var list = document.getElementById('spotlight-list');
+        var trigger = document.getElementById('spotlight-trigger');
+        var escBtn = document.getElementById('spotlight-esc');
 
-     @if (Route::is('inventory.*') || Route::is('stock-locations.*'))
-            @include('layouts.pages-assets.js.inventory-list-js')
-     @endif
+        var debounceTimer = null;
+        var activeIndex = -1;
+        var currentResults = [];
 
-     @if (Route::is('orders.*'))
-         @include('layouts.pages-assets.js.order-list-js')
-     @endif
+        function openSpotlight() {
+            if (!overlay) return;
+            overlay.style.display = 'flex';
+            overlay.style.animation = 'spotlightOverlayFadeIn 0.25s ease forwards';
+            setTimeout(function() { if (input) input.focus(); }, 100);
+        }
 
-     @if (Route::is('customers.*'))
-            @include('layouts.pages-assets.js.customer-list-js')
-     @endif
+        function closeSpotlight() {
+            if (overlay) overlay.style.animation = 'spotlightOverlayFadeOut 0.2s ease forwards';
+            setTimeout(function() {
+                if (overlay) overlay.style.display = 'none';
+                if (input) input.value = '';
+                showEmptyState();
+            }, 200);
+        }
 
+        function showEmptyState() {
+            if (emptyState) emptyState.style.display = 'block';
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (list) { list.style.display = 'none'; list.innerHTML = ''; }
+            currentResults = [];
+            activeIndex = -1;
+        }
+
+        function showLoading() {
+            if (emptyState) emptyState.style.display = 'none';
+            if (loadingEl) loadingEl.style.display = 'block';
+            if (list) list.style.display = 'none';
+        }
+
+        function performSearch(query) {
+            if (!query || query.trim().length === 0) { showEmptyState(); return; }
+            showLoading();
+            var staticResults = STATIC_PAGES.filter(function(p) { return p.title.toLowerCase().includes(query.toLowerCase()) || p.category.toLowerCase().includes(query.toLowerCase()); }).slice(0, 15);
+            renderResults(staticResults);
+
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(function() {
+                if (query.length < 2) return;
+                fetch('/api/search?q=' + encodeURIComponent(query) + '&_token={{ csrf_token() }}', {
+                    headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
+                }).then(function(r) { return r.ok ? r.json() : { results: [] }; }).then(function(data) {
+                    if (input.value.trim() !== query) return;
+                    var dynamicResults = data.results || [];
+                    var merged = staticResults.concat(dynamicResults);
+                    var seen = {};
+                    var deduped = merged.filter(function(r) { if (seen[r.url]) return false; seen[r.url] = true; return true; });
+                    renderResults(deduped);
+                }).catch(function() {});
+            }, 280);
+        }
+
+        function renderResults(results) {
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (emptyState) emptyState.style.display = 'none';
+            if (list) { list.innerHTML = ''; list.style.display = 'block'; }
+            activeIndex = -1;
+            currentResults = results;
+
+            if (!results.length) {
+                if (emptyState) {
+                    emptyState.innerHTML = '<i class="mdi mdi-magnify-close" style="font-size:42px; display:block; margin-bottom:16px; opacity:0.4;"></i><span style="font-size:15px;">No results found for "' + (input ? input.value : '') + '"</span>';
+                    emptyState.style.display = 'block';
+                }
+                if (list) list.style.display = 'none';
+                return;
+            }
+
+            var grouped = {};
+            results.forEach(function(r) { if (!grouped[r.category]) grouped[r.category] = []; grouped[r.category].push(r); });
+
+            var idx = 0;
+            Object.keys(grouped).forEach(function(cat) {
+                var header = document.createElement('li');
+                header.style.cssText = 'padding:12px 24px 6px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:rgba(255,255,255,0.35);';
+                header.textContent = cat;
+                list.appendChild(header);
+
+                grouped[cat].forEach(function(r) {
+                    var li = document.createElement('li');
+                    li.className = 'spotlight-result-item';
+                    li.style.cssText = 'display:flex; align-items:center; gap:14px; padding:12px 24px; cursor:pointer; transition:all 0.2s ease; border-radius:10px; margin:4px 12px;';
+
+                    var accentColor = CAT_COLORS[r.category] || '#4f8ef7';
+                    var iconWrap = document.createElement('span');
+                    iconWrap.style.cssText = 'width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; background:' + accentColor + '22;';
+                    var icon = document.createElement('i');
+                    icon.className = (r.icon || 'mdi-chevron-right') + ' mdi';
+                    icon.style.cssText = 'font-size:18px; color:' + accentColor + ';';
+                    iconWrap.appendChild(icon);
+
+                    var textWrap = document.createElement('span');
+                    textWrap.style.cssText = 'flex:1; min-width:0;';
+                    var title = document.createElement('span');
+                    title.style.cssText = 'display:block; font-size:15px; font-weight:500; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
+                    title.textContent = r.title;
+                    var sub = document.createElement('span');
+                    sub.style.cssText = 'display:block; font-size:12px; color:rgba(255,255,255,0.4); margin-top:2px;';
+                    sub.textContent = r.subtitle || r.category;
+                    textWrap.appendChild(title);
+                    textWrap.appendChild(sub);
+
+                    var arrow = document.createElement('i');
+                    arrow.className = 'mdi mdi-arrow-right';
+                    arrow.style.cssText = 'font-size:16px; color:rgba(255,255,255,0.25); flex-shrink:0; transition:transform 0.2s ease;';
+
+                    li.appendChild(iconWrap);
+                    li.appendChild(textWrap);
+                    li.appendChild(arrow);
+                    li.addEventListener('click', function() { window.location.href = r.url; });
+                    list.appendChild(li);
+                    idx++;
+                });
+            });
+        }
+
+        if (trigger) trigger.addEventListener('click', openSpotlight);
+        if (escBtn) escBtn.addEventListener('click', closeSpotlight);
+        if (overlay) overlay.addEventListener('click', function(e) { if (e.target === overlay) closeSpotlight(); });
+
+        document.addEventListener('keydown', function(e) {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); overlay && overlay.style.display === 'flex' ? closeSpotlight() : openSpotlight(); }
+            if (e.key === 'Escape' && overlay && overlay.style.display === 'flex') closeSpotlight();
+        });
+
+        if (input) {
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'ArrowDown') { e.preventDefault(); }
+                else if (e.key === 'ArrowUp') { e.preventDefault(); }
+                else if (e.key === 'Enter' && activeIndex >= 0 && currentResults[activeIndex]) { window.location.href = currentResults[activeIndex].url; }
+            });
+            input.addEventListener('input', function() { performSearch(this.value.trim()); });
+        }
+    })();
+    </script>
+
+    <!-- Route-specific JS includes -->
+    @if (Route::is('dashboard'))
+        @include('layouts.pages-assets.js.dashboard-list-js')
+    @endif
+    @if (Route::is('users.*'))
+        @include('layouts.pages-assets.js.users-list-js')
+    @endif
+    @if (Route::is('roles.*'))
+        @include('layouts.pages-assets.js.role-list-js')
+    @endif
+    @if (Route::is('permissions.*'))
+        @include('layouts.pages-assets.js.permissions-list-js')
+    @endif
+    @if (Route::is('brands.*'))
+        @include('layouts.pages-assets.js.brand-list-js')
+    @endif
+    @if (Route::is('categories.*'))
+        @include('layouts.pages-assets.js.category-list-js')
+    @endif
+    @if (Route::is('banners.*'))
+        @include('layouts.pages-assets.js.banner-list-js')
+    @endif
+    @if (Route::is('products.*'))
+        @include('layouts.pages-assets.js.product-list-js')
+    @endif
+    @if (Route::is('pos.*'))
+        @include('layouts.pages-assets.js.pos-list-js')
+    @endif
+    @if (Route::is('inventory.*') || Route::is('stock-locations.*'))
+        @include('layouts.pages-assets.js.inventory-list-js')
+    @endif
+    @if (Route::is('orders.*'))
+        @include('layouts.pages-assets.js.order-list-js')
+    @endif
+    @if (Route::is('customers.*'))
+        @include('layouts.pages-assets.js.customer-list-js')
+    @endif
     @if (Route::is('settings.store.*'))
-            @include('layouts.pages-assets.js.storesetting-list-js')
+        @include('layouts.pages-assets.js.storesetting-list-js')
     @endif
     @if (Route::is('sales.*'))
-            @include('layouts.pages-assets.js.sale-list-js')
+        @include('layouts.pages-assets.js.sale-list-js')
     @endif
-     @if (Route::is('salesperson.*'))
-            @include('layouts.pages-assets.js.sale-list-js')
+    @if (Route::is('salesperson.*'))
+        @include('layouts.pages-assets.js.sale-list-js')
     @endif
-      </body>
-
-      </html>
+</body>
+</html>
