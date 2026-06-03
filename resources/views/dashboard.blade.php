@@ -1,6 +1,6 @@
-{{-- @extends('layouts.master')
+@extends('layouts.master')
 
-@section('title', 'Dashboard')
+{{-- @section('title', 'Dashboard')
 
 @section('css')
     <!-- ApexCharts CSS -->
