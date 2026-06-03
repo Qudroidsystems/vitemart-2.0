@@ -275,6 +275,45 @@
         }
 
         /* =====================================================
+           TOPBAR USER DROPDOWN — ensure it's always visible
+           ===================================================== */
+        .topbar-user .dropdown-menu {
+            min-width: 200px;
+            z-index: 9999;
+        }
+
+        /* =====================================================
+           SIDEBAR LOGOUT SECTION
+           ===================================================== */
+        .sidebar-logout-section {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px 16px 16px;
+            margin-top: 8px;
+        }
+        .sidebar-logout-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 8px;
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+            text-decoration: none;
+        }
+        .sidebar-logout-btn:hover {
+            background: rgba(239, 68, 68, 0.22);
+            border-color: rgba(239, 68, 68, 0.4);
+            color: #fca5a5;
+        }
+        .sidebar-logout-btn i { font-size: 18px; flex-shrink: 0; }
+
+        /* =====================================================
            PRINT STYLES
            ===================================================== */
         @media print {
@@ -783,10 +822,37 @@
                                     </div>
                                 </li>
                             @endcan
+
                         @endif
                     </ul>
                 </div>
+
+                {{-- ===== SIDEBAR LOGOUT SECTION ===== --}}
+                @auth
+                    <div class="sidebar-logout-section">
+                        {{-- User mini-card --}}
+                        <div style="display:flex; align-items:center; gap:10px; padding:0 4px 12px; border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:12px;">
+                            <img src="{{ auth()->user()->profile_image ? asset('storage/' . auth()->user()->profile_image) : asset('theme/layouts/assets/images/users/user-dummy-img.jpg') }}"
+                                 alt="{{ auth()->user()->name }}"
+                                 style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.15);flex-shrink:0;">
+                            <div style="min-width:0;flex:1;">
+                                <div style="font-size:13px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ auth()->user()->name }}</div>
+                                <div style="font-size:11px;color:rgba(255,255,255,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ auth()->user()->roles->first()->name ?? 'User' }}</div>
+                            </div>
+                        </div>
+                        {{-- Logout form --}}
+                        <form method="POST" action="{{ route('logout') }}" id="sidebar-logout-form">
+                            @csrf
+                            <button type="submit" class="sidebar-logout-btn">
+                                <i class="mdi mdi-logout"></i>
+                                <span>Sign Out</span>
+                            </button>
+                        </form>
+                    </div>
+                @endauth
             </div>
+            <!-- /scrollbar -->
+
             <div class="sidebar-background"></div>
         </div>
         <!-- Left Sidebar End -->
@@ -829,68 +895,110 @@
                     </div>
 
                     <div class="d-flex align-items-center">
-                        <!-- Dark mode toggle -->
-                        <div class="dropdown topbar-head-dropdown ms-1 header-item">
-                            <button type="button" class="btn btn-icon btn-topbar btn-ghost-dark rounded-circle mode-layout" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <i class="bi bi-sun align-middle fs-3xl"></i>
-                            </button>
-                            <div class="dropdown-menu p-2 dropdown-menu-end" id="light-dark-mode">
-                                <a href="#!" class="dropdown-item" data-mode="light"><i class="bi bi-sun align-middle me-2"></i> Default (light mode)</a>
-                                <a href="#!" class="dropdown-item" data-mode="dark"><i class="bi bi-moon align-middle me-2"></i> Dark</a>
-                                <a href="#!" class="dropdown-item" data-mode="auto"><i class="bi bi-moon-stars align-middle me-2"></i> Auto (system default)</a>
+
+                        <!-- ===== DARK MODE TOGGLE (FIXED) ===== -->
+                        <div class="ms-1 header-item d-flex align-items-center">
+                            <div class="dropdown">
+                                <button type="button"
+                                        class="btn btn-icon btn-topbar btn-ghost-dark rounded-circle"
+                                        id="theme-toggle-btn"
+                                        data-bs-toggle="dropdown"
+                                        aria-haspopup="true"
+                                        aria-expanded="false"
+                                        title="Change theme">
+                                    <i class="bi bi-sun align-middle fs-3xl" id="theme-icon"></i>
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-end p-2" style="min-width:180px;" id="light-dark-mode">
+                                    <a href="javascript:void(0);" class="dropdown-item rounded-2 d-flex align-items-center gap-2" data-mode="light">
+                                        <i class="bi bi-sun fs-md"></i>
+                                        <span>Light</span>
+                                    </a>
+                                    <a href="javascript:void(0);" class="dropdown-item rounded-2 d-flex align-items-center gap-2" data-mode="dark">
+                                        <i class="bi bi-moon fs-md"></i>
+                                        <span>Dark</span>
+                                    </a>
+                                    <a href="javascript:void(0);" class="dropdown-item rounded-2 d-flex align-items-center gap-2" data-mode="auto">
+                                        <i class="bi bi-moon-stars fs-md"></i>
+                                        <span>Auto (system)</span>
+                                    </a>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- User dropdown -->
+                        <!-- ===== USER DROPDOWN (FIXED) ===== -->
+                        @php $userdata = Auth::user(); @endphp
                         <div class="dropdown ms-sm-3 header-item topbar-user">
-                            @php $userdata = Auth::user(); @endphp
-                            <button type="button" class="btn shadow-none" id="page-header-user-dropdown"
-                                    data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <span class="d-flex align-items-center">
-                                    @if($userdata)
-                                        <img class="rounded-circle header-profile-user-enhanced"
-                                             src="{{ $userdata->profile_image ? asset('storage/' . $userdata->profile_image) : asset('theme/layouts/assets/images/users/user-dummy-img.jpg') }}"
-                                             alt="{{ $userdata->name }}"
-                                             style="width:42px; height:42px; object-fit:cover;">
-                                        <span class="text-start ms-xl-2">
-                                            <span class="d-none d-xl-inline-block ms-1 fw-medium user-name-text">{{ $userdata->name }}</span>
-                                            <span class="d-none d-xl-block ms-1 fs-sm user-name-sub-text">{{ $userdata->roles->first()->name ?? 'User' }}</span>
-                                        </span>
-                                    @else
-                                        <img class="rounded-circle header-profile-user-enhanced"
-                                             src="{{ asset('theme/layouts/assets/images/users/user-dummy-img.jpg') }}"
-                                             alt="User"
-                                             style="width:42px; height:42px; object-fit:cover;">
-                                        <span class="text-start ms-xl-2">
-                                            <span class="d-none d-xl-inline-block ms-1 fw-medium user-name-text">Guest</span>
-                                            <span class="d-none d-xl-block ms-1 fs-sm user-name-sub-text">Not logged in</span>
-                                        </span>
-                                    @endif
-                                </span>
-                            </button>
-                            <div class="dropdown-menu dropdown-menu-end">
+                            <button type="button"
+                                    class="btn shadow-none d-flex align-items-center gap-2"
+                                    id="page-header-user-dropdown"
+                                    data-bs-toggle="dropdown"
+                                    aria-haspopup="true"
+                                    aria-expanded="false"
+                                    style="padding: 5px 10px; border-radius: 10px;">
                                 @if($userdata)
-                                    <h6 class="dropdown-header">Welcome {{ $userdata->name }}!</h6>
-                                    <a class="dropdown-item" href="{{ route('user.overview', $userdata) }}">
-                                        <i class="mdi mdi-account-circle text-muted fs-lg align-middle me-1"></i>
-                                        <span class="align-middle">Profile</span>
+                                    <img class="rounded-circle header-profile-user-enhanced"
+                                         src="{{ $userdata->profile_image ? asset('storage/' . $userdata->profile_image) : asset('theme/layouts/assets/images/users/user-dummy-img.jpg') }}"
+                                         alt="{{ $userdata->name }}"
+                                         style="width:38px; height:38px; object-fit:cover; flex-shrink:0;">
+                                    <span class="d-none d-xl-flex flex-column align-items-start">
+                                        <span class="fw-semibold user-name-text lh-sm" style="font-size:13px; max-width:120px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ $userdata->name }}</span>
+                                        <span class="text-muted user-name-sub-text lh-sm" style="font-size:11px;">{{ $userdata->roles->first()->name ?? 'User' }}</span>
+                                    </span>
+                                    <i class="bi bi-chevron-down d-none d-xl-inline ms-1" style="font-size:10px; opacity:0.6;"></i>
+                                @else
+                                    <img class="rounded-circle header-profile-user-enhanced"
+                                         src="{{ asset('theme/layouts/assets/images/users/user-dummy-img.jpg') }}"
+                                         alt="User"
+                                         style="width:38px; height:38px; object-fit:cover; flex-shrink:0;">
+                                    <span class="d-none d-xl-flex flex-column align-items-start">
+                                        <span class="fw-semibold user-name-text lh-sm" style="font-size:13px;">Guest</span>
+                                        <span class="text-muted user-name-sub-text lh-sm" style="font-size:11px;">Not logged in</span>
+                                    </span>
+                                @endif
+                            </button>
+
+                            <div class="dropdown-menu dropdown-menu-end mt-2 shadow" style="min-width:200px; border-radius:12px; overflow:hidden;">
+                                @if($userdata)
+                                    {{-- Header --}}
+                                    <div class="px-3 py-2 d-flex align-items-center gap-2" style="background: linear-gradient(135deg, #405189 0%, #4f8ef7 100%);">
+                                        <img src="{{ $userdata->profile_image ? asset('storage/' . $userdata->profile_image) : asset('theme/layouts/assets/images/users/user-dummy-img.jpg') }}"
+                                             alt="{{ $userdata->name }}"
+                                             style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.4);flex-shrink:0;">
+                                        <div style="min-width:0;">
+                                            <div class="text-white fw-semibold" style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;">{{ $userdata->name }}</div>
+                                            <div style="font-size:11px;color:rgba(255,255,255,0.75);">{{ $userdata->roles->first()->name ?? 'User' }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="dropdown-divider my-0"></div>
+
+                                    {{-- Profile link --}}
+                                    <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('user.overview', $userdata) }}">
+                                        <i class="mdi mdi-account-circle-outline fs-lg text-muted"></i>
+                                        <span>My Profile</span>
                                     </a>
-                                    <form method="POST" action="{{ route('logout') }}">
+
+                                    <div class="dropdown-divider my-1"></div>
+
+                                    {{-- Logout --}}
+                                    <form method="POST" action="{{ route('logout') }}" id="topbar-logout-form">
                                         @csrf
-                                        <a class="dropdown-item" href="{{ route('logout') }}"
-                                           onclick="event.preventDefault(); this.closest('form').submit();">
-                                            <i class="mdi mdi-logout text-muted fs-lg align-middle me-1"></i>
-                                            <span class="align-middle" data-key="t-logout">Logout</span>
+                                        <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger"
+                                           href="{{ route('logout') }}"
+                                           onclick="event.preventDefault(); document.getElementById('topbar-logout-form').submit();">
+                                            <i class="mdi mdi-logout fs-lg"></i>
+                                            <span>Sign Out</span>
                                         </a>
                                     </form>
                                 @else
-                                    <a class="dropdown-item" href="{{ route('login') }}">
-                                        <i class="mdi mdi-login text-muted fs-lg align-middle me-1"></i>
-                                        <span class="align-middle">Login</span>
+                                    <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('login') }}">
+                                        <i class="mdi mdi-login fs-lg text-muted"></i>
+                                        <span>Login</span>
                                     </a>
                                 @endif
                             </div>
                         </div>
+                        {{-- /user dropdown --}}
+
                     </div>
                 </div>
             </div>
@@ -904,7 +1012,7 @@
             <div class="container-fluid">
                 <div class="row">
                     <div class="col-sm-6">
-                        <script>document.write(new Date().getFullYear())</script> © {{ $storeName }}
+                        <script>document.write(new Date().getFullYear())</script> &copy; {{ $storeName }}
                     </div>
                     <div class="col-sm-6">
                         <div class="text-sm-end d-none d-sm-block">Powered by Qudroid Systems</div>
@@ -1101,9 +1209,7 @@
     </div>
 
     <!-- =====================================================
-         SCRIPTS — correct load order:
-         1. jQuery  2. Bootstrap bundle  3. app.min.js (theme JS)
-         4. simplebar  5. plugins
+         SCRIPTS — correct load order
          ===================================================== -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="{{ asset('theme/layouts/assets/libs/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
@@ -1118,7 +1224,7 @@
         // ── SimpleBar sidebar scroll ──────────────────────────────────
         var scrollbarEl = document.getElementById('scrollbar');
         if (scrollbarEl && typeof SimpleBar !== 'undefined') {
-            new SimpleBar(scrollbarEl);
+            new SimpleBar(scrollbarEl, { autoHide: true });
         }
 
         // ── NProgress page-load bar ───────────────────────────────────
@@ -1126,10 +1232,10 @@
             NProgress.configure({ showSpinner: false, speed: 400, minimum: 0.1 });
             document.querySelectorAll('a[href]').forEach(function (a) {
                 var href = a.getAttribute('href');
-                if (href && !href.startsWith('#') && !href.startsWith('javascript')
-                    && !href.startsWith('mailto') && !href.startsWith('tel')
-                    && !a.hasAttribute('data-bs-toggle') && !a.hasAttribute('data-bs-dismiss')
-                    && a.getAttribute('target') !== '_blank') {
+                if (href && !href.startsWith('#') && href !== 'javascript:void(0);'
+                    && !href.startsWith('javascript') && !href.startsWith('mailto')
+                    && !href.startsWith('tel') && !a.hasAttribute('data-bs-toggle')
+                    && !a.hasAttribute('data-bs-dismiss') && a.getAttribute('target') !== '_blank') {
                     a.addEventListener('click', function () { NProgress.start(); });
                 }
             });
@@ -1206,22 +1312,18 @@
             }
         });
 
-        // ── Hamburger / sidebar toggle (fallback if app.min.js
-        //    doesn't bind it automatically) ──────────────────────────
+        // ── Hamburger / sidebar toggle ────────────────────────────────
         var hamburger = document.getElementById('topnav-hamburger-icon');
         if (hamburger) {
             hamburger.addEventListener('click', function () {
                 var body = document.body;
-                // Velzon theme toggles these classes on <body>
                 if (body.classList.contains('vertical-sidebar-enable')) {
                     body.classList.remove('vertical-sidebar-enable');
                 } else {
                     body.classList.add('vertical-sidebar-enable');
                 }
-                // Also toggle sidebar-enable for desktop collapsed state
                 if (window.innerWidth >= 1025) {
                     body.classList.toggle('sidebar-enable');
-                    // The theme uses data-sidebar-size to switch between lg/sm
                     var html = document.documentElement;
                     if (html.getAttribute('data-sidebar-size') === 'sm') {
                         html.setAttribute('data-sidebar-size', 'lg');
@@ -1232,7 +1334,7 @@
             });
         }
 
-        // ── Vertical overlay click closes sidebar on mobile ──────────
+        // ── Vertical overlay click closes sidebar ─────────────────────
         var overlay = document.querySelector('.vertical-overlay');
         if (overlay) {
             overlay.addEventListener('click', function () {
@@ -1240,16 +1342,74 @@
             });
         }
 
-        // ── Manually initialise Bootstrap dropdowns (safety net) ─────
-        // app.min.js should handle this, but if it doesn't we do it here.
+        // ── Bootstrap dropdowns init ──────────────────────────────────
         if (typeof bootstrap !== 'undefined' && bootstrap.Dropdown) {
             document.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(function (el) {
-                // Only init if not already initialised
                 if (!bootstrap.Dropdown.getInstance(el)) {
                     new bootstrap.Dropdown(el);
                 }
             });
         }
+
+        // ── DARK MODE TOGGLE (self-contained, no reliance on app.js) ──
+        (function () {
+            var html        = document.documentElement;
+            var themeIcon   = document.getElementById('theme-icon');
+            var modeLinks   = document.querySelectorAll('#light-dark-mode [data-mode]');
+
+            var ICONS = { light: 'bi bi-sun align-middle fs-3xl', dark: 'bi bi-moon align-middle fs-3xl', auto: 'bi bi-moon-stars align-middle fs-3xl' };
+
+            function applyMode(mode) {
+                var resolved = mode;
+                if (mode === 'auto') {
+                    resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                html.setAttribute('data-bs-theme', resolved);
+                html.setAttribute('data-topbar', resolved === 'dark' ? 'dark' : 'light');
+                if (themeIcon) themeIcon.className = ICONS[mode] || ICONS.light;
+                localStorage.setItem('theme-mode', mode);
+
+                // Sync customizer radios
+                var radio = document.getElementById(resolved === 'dark' ? 'layout-mode-dark' : 'layout-mode-light');
+                if (radio) radio.checked = true;
+
+                // Mark active item
+                modeLinks.forEach(function (l) {
+                    l.classList.toggle('active', l.getAttribute('data-mode') === mode);
+                });
+            }
+
+            // Load saved or default
+            var saved = localStorage.getItem('theme-mode') || 'light';
+            applyMode(saved);
+
+            // Listen for clicks
+            modeLinks.forEach(function (link) {
+                link.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    applyMode(link.getAttribute('data-mode'));
+                    // Close the dropdown
+                    var dropdownEl = document.getElementById('theme-toggle-btn');
+                    if (dropdownEl && typeof bootstrap !== 'undefined') {
+                        var dd = bootstrap.Dropdown.getInstance(dropdownEl);
+                        if (dd) dd.hide();
+                    }
+                });
+            });
+
+            // Also wire up customizer radios
+            document.querySelectorAll('[name="data-bs-theme"]').forEach(function (radio) {
+                radio.addEventListener('change', function () {
+                    applyMode(this.value);
+                });
+            });
+
+            // React to OS-level changes when mode is 'auto'
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
+                if (localStorage.getItem('theme-mode') === 'auto') applyMode('auto');
+            });
+        })();
+
     });
     </script>
 
