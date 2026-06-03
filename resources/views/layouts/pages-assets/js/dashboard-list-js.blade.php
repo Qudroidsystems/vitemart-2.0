@@ -15,7 +15,7 @@
 
       <script src="{{ asset('theme/layouts/assets/js/pages/dashboard-real-estate.init.js')}}"></script>
       <!-- Choices.js JS -->
-<script src="{{ asset('theme/layouts/assets/libs/choices.js/choices.min.js') }}"></script>
+{{-- <script src="{{ asset('theme/layouts/assets/libs/choices.js/choices.min.js') }}"></script> --}}
 
 <!-- Chart.js CSS -->
 <link href="{{ asset('theme/layouts/assets/libs/chart.js/chart.min.css') }}" rel="stylesheet" type="text/css">
@@ -26,4 +26,4 @@
 <!-- Axios JS -->
 <script src="{{ asset('theme/layouts/assets/libs/axios/axios.min.js') }}"></script>
       <!-- App js -->
-      <script src="{{ asset('theme/layouts/assets/js/app.js')}}"></script>
+      {{-- <script src="{{ asset('theme/layouts/assets/js/app.js')}}"></script> --}}
