@@ -1,4 +1,4 @@
-@extends('layouts.master')
+{{-- @extends('layouts.master')
 
 @section('title', 'Dashboard')
 
@@ -532,4 +532,4 @@
         // Initialize charts (assuming dashboard-ecommerce.init.js handles initialization)
         // You may need to customize the JS file to use these dynamic data
     </script>
-@endsection
+@endsection --}}
