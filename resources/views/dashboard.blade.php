@@ -1,6 +1,6 @@
 @extends('layouts.master')
 
-{{-- @section('title', 'Dashboard')
+@section('title', 'Dashboard')
 
 @section('css')
     <!-- ApexCharts CSS -->
@@ -532,4 +532,4 @@
         // Initialize charts (assuming dashboard-ecommerce.init.js handles initialization)
         // You may need to customize the JS file to use these dynamic data
     </script>
-@endsection --}}
+@endsection
